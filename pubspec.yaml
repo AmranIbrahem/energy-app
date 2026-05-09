@@ -1,0 +1,68 @@
+name: energy_store_app
+description: A professional alternative energy store app for Syria
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  lottie: ^2.7.0
+
+  # UI & Design
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.2.1
+  flutter_svg: ^2.0.9
+
+  animations: ^2.0.7          # لحركات متقدمة
+  flutter_staggered_animations: ^1.1.0  # لحركات متدرجة
+
+
+  firebase_core: ^3.12.1
+  firebase_messaging: ^15.2.2
+  flutter_local_notifications: ^18.0.0
+
+  # Networking
+  http: ^1.2.0
+  dio: ^5.4.0
+
+  # Storage
+  shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.0.0
+
+  # State Management
+  provider: ^6.1.1
+
+  # Image
+  image_picker: ^1.0.7
+  cached_network_image: ^3.3.1
+  photo_view: ^0.14.0
+
+  # Carousel & Sliders
+  carousel_slider: ^5.0.0
+  smooth_page_indicator: ^1.1.0
+
+  # Rating
+  flutter_rating_bar: ^4.0.1
+
+  # Markdown for chat
+  flutter_markdown: ^0.6.20
+
+  # Utilities
+  intl: ^0.18.1
+  connectivity_plus: ^5.0.2
+  shimmer: ^3.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/animations/

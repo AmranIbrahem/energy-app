@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "172626883992",
+    "project_id": "energy-store-new",
+    "storage_bucket": "energy-store-new.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:172626883992:android:af003dc7ad2bee1d0e27ed",
+        "android_client_info": {
+          "package_name": "com.example.energy_store_clean"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPhk6mXTMUNr53AiM1QyFyxlCtIYQC_Po"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
