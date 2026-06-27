@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:energy_store_app/widgets/floating_chat_button.dart';
-import 'package:energy_store_app/services/auth_service.dart';
+import 'package:GeniusHouse/widgets/floating_chat_button.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
 
 class ChatOverlay extends StatefulWidget {
   final Widget child;

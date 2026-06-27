@@ -10,11 +10,11 @@ class CartItemModel {
   int quantity;
   final double? discountPercentage;
 
-  // حقول جديدة للعروض
-  final String itemType; // 'product' or 'offer'
-  final List<Map<String, dynamic>>? productsInOffer; // للعروض فقط
-  final int? totalWattage; // للعروض فقط
-  final int? totalCapacity; // للعروض فقط
+
+  final String itemType;
+  final List<Map<String, dynamic>>? productsInOffer;
+  final int? totalWattage;
+  final int? totalCapacity;
 
   CartItemModel({
     required this.id,
@@ -34,7 +34,7 @@ class CartItemModel {
 
   double get totalPrice => finalPrice * quantity;
 
-  // هل هذا العنصر عرض؟
+
   bool get isOffer => itemType == 'offer';
 
   Map<String, dynamic> toJson() {
@@ -75,13 +75,13 @@ class CartItemModel {
     );
   }
 
-  // نسخة مخصصة لإنشاء عرض من بيانات API
+
   factory CartItemModel.fromOffer(Map<String, dynamic> offer, {int quantity = 1}) {
     final double price = double.tryParse(offer['price']?.toString() ?? '0') ?? 0;
     final double finalPrice = double.tryParse(offer['final_price']?.toString() ?? '0') ?? 0;
     final int stock = offer['stock'] ?? -1;
 
-    // تحضير قائمة المنتجات المضمنة في العرض
+
     List<Map<String, dynamic>> productsInOffer = [];
     if (offer['products_in_offer'] != null) {
       productsInOffer = List<Map<String, dynamic>>.from(
@@ -113,7 +113,7 @@ class CartItemModel {
     );
   }
 
-  // نسخة مخصصة لإنشاء منتج من بيانات API
+
   factory CartItemModel.fromProduct(Map<String, dynamic> product, {int quantity = 1}) {
     final double price = double.tryParse(product['price']?.toString() ?? '0') ?? 0;
     final double finalPrice = double.tryParse(product['final_price']?.toString() ?? '0') ?? 0;

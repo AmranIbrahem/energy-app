@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:energy_store_app/screens/chat/chat_screen.dart';
-import 'package:energy_store_app/services/api_service.dart';
-import 'package:energy_store_app/services/auth_service.dart';
-import 'package:energy_store_app/services/storage_service.dart';
+import 'package:GeniusHouse/screens/chat/chat_screen.dart';
+import 'package:GeniusHouse/screens/chat/guest_chat_screen.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FloatingChatButton extends StatefulWidget {
@@ -27,10 +28,14 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
   late Animation<double> _rotateAnimation;
   bool _isHovering = false;
 
-  // ✅ متغيرات للسحب
-  Offset _position = const Offset(16, 80); // الموقع الافتراضي (أسفل يمين)
+  Offset _position = const Offset(16, 80);
   bool _isDragging = false;
   bool _hasBeenDragged = false;
+
+  // ألوان الهوية الجديدة
+  static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
+  static const Color accentBlue = Color(0xFF60A5FA);
 
   @override
   void initState() {
@@ -63,14 +68,12 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
     super.dispose();
   }
 
-  // ✅ حفظ موقع الزر في SharedPreferences
   Future<void> _savePosition() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('chat_button_x', _position.dx);
     await prefs.setDouble('chat_button_y', _position.dy);
   }
 
-  // ✅ تحميل موقع الزر من SharedPreferences
   Future<void> _loadPosition() async {
     final prefs = await SharedPreferences.getInstance();
     final x = prefs.getDouble('chat_button_x');
@@ -85,7 +88,7 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
   void _openChat() {
     if (!_isDragging && !_hasBeenDragged) {
       if (widget.isGuest) {
-        _showLoginRequired();
+        _openGuestChat();
       } else {
         Navigator.push(
           context,
@@ -98,17 +101,20 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
         );
       }
     }
-    // إعادة تعيين حالة السحب بعد الفتح
     _hasBeenDragged = false;
   }
 
-  void _showLoginRequired() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('الرجاء تسجيل الدخول لاستخدام المساعد الذكي'),
-        backgroundColor: Colors.orange,
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
+  void _openGuestChat() {
+    final storageService = widget.authService?.storageService ?? StorageService();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GuestChatScreen(
+          apiService: ApiService(storageService: storageService),
+          storageService: storageService,
+          initialGovernorate: storageService.getGuestGovernorate(),
+        ),
       ),
     );
   }
@@ -129,11 +135,9 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
         },
         onPanUpdate: (details) {
           setState(() {
-            // حساب الموقع الجديد مع حدود الشاشة
             double newX = _position.dx + details.delta.dx;
             double newY = _position.dy + details.delta.dy;
 
-            // منع الخروج عن حدود الشاشة
             newX = newX.clamp(0, screenSize.width - 60);
             newY = newY.clamp(0, screenSize.height - 60 - kToolbarHeight);
 
@@ -162,30 +166,36 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          const Color(0xFF10B981),
-                          const Color(0xFF059669),
-                          const Color(0xFF047857),
+                          primaryBlue,
+                          secondaryBlue,
+                          Color(0xFF1E40AF),
                         ],
-                        stops: const [0.0, 0.5, 1.0],
+                        stops: [0.0, 0.5, 1.0],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF10B981).withOpacity(0.5),
+                          color: primaryBlue.withOpacity(0.5),
                           blurRadius: 20,
                           spreadRadius: 5,
                           offset: const Offset(0, 4),
+                        ),
+                        BoxShadow(
+                          color: secondaryBlue.withOpacity(0.3),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // أنيميشن الموجات
+                        // تأثيرات النبض
                         ...List.generate(3, (index) {
                           return AnimatedBuilder(
                             animation: _animationController,
@@ -200,7 +210,7 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: const Color(0xFF10B981).withOpacity(0.4),
+                                        color: primaryBlue.withOpacity(0.4),
                                         width: 2,
                                       ),
                                     ),
@@ -210,13 +220,13 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
                             },
                           );
                         }),
-                        // أيقونة المساعد
+                        // الأيقونة الرئيسية
                         Icon(
-                          _isDragging ? Icons.drag_handle : Icons.auto_awesome,
+                          _isDragging ? Icons.drag_handle_rounded : Icons.auto_awesome_rounded,
                           color: Colors.white,
                           size: 28,
                         ),
-                        // شارة "AI" متحركة
+                        // شارة AI
                         Positioned(
                           top: -4,
                           right: -4,
@@ -234,22 +244,30 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
                                   ),
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [Colors.orange, Colors.red],
+                                      colors: [Colors.amber, Colors.orange],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.orange.withOpacity(0.5),
+                                        color: Colors.amber.withOpacity(0.5),
                                         blurRadius: 8,
+                                        offset: const Offset(0, 2),
                                       ),
                                     ],
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.3),
+                                      width: 1,
+                                    ),
                                   ),
                                   child: Text(
                                     'AI',
-                                    style: GoogleFonts.cairo(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
+                                      letterSpacing: 0.5,
                                     ),
                                   ),
                                 ),

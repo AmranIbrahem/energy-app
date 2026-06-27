@@ -1,30 +1,35 @@
+import 'package:GeniusHouse/screens/settings_screen.dart';
+import 'package:GeniusHouse/screens/system_builder/system_builder_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:energy_store_app/utils/constants.dart';
-import 'package:energy_store_app/utils/helpers.dart';
-import 'package:energy_store_app/services/auth_service.dart';
-import 'package:energy_store_app/services/api_service.dart';
-import 'package:energy_store_app/services/storage_service.dart';
-import 'package:energy_store_app/screens/categories/main_categories_screen.dart';
-import 'package:energy_store_app/screens/products/products_list_screen.dart';
-import 'package:energy_store_app/screens/offers/offers_list_screen.dart';
-import 'package:energy_store_app/screens/search_screen.dart';
-import 'package:energy_store_app/screens/favorites/favorites_screen.dart';
-import 'package:energy_store_app/screens/profile/profile_screen.dart';
-import 'package:energy_store_app/screens/chat/chat_screen.dart';
-import 'package:energy_store_app/widgets/product_card.dart';
-import 'package:energy_store_app/widgets/offer_card.dart';
-import 'package:energy_store_app/widgets/category_card.dart';
-import 'package:energy_store_app/screens/categories/subcategories_screen.dart';
-import 'package:energy_store_app/screens/auth/login_screen.dart';
-import 'package:energy_store_app/widgets/cart_badge.dart';
-import 'package:energy_store_app/screens/cart/cart_screen.dart';
+import 'package:GeniusHouse/utils/constants.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:GeniusHouse/screens/categories/main_categories_screen.dart';
+import 'package:GeniusHouse/screens/products/products_list_screen.dart';
+import 'package:GeniusHouse/screens/offers/offers_list_screen.dart';
+import 'package:GeniusHouse/screens/search_screen.dart';
+import 'package:GeniusHouse/screens/favorites/favorites_screen.dart';
+import 'package:GeniusHouse/screens/profile/profile_screen.dart';
+import 'package:GeniusHouse/screens/chat/chat_screen.dart';
+import 'package:GeniusHouse/widgets/HomeProductCard.dart';
+import 'package:GeniusHouse/widgets/HomeOfferCard.dart';
+import 'package:GeniusHouse/screens/categories/subcategories_screen.dart';
+import 'package:GeniusHouse/screens/auth/login_screen.dart';
+import 'package:GeniusHouse/screens/cart/cart_screen.dart';
+import '../widgets/category_card.dart';
+import 'comparison/comparison_screen.dart';
 import 'maintenance/maintenance_screen.dart';
 import 'notifications/notifications_screen.dart';
-import 'package:energy_store_app/widgets/chat_overlay.dart';
+import 'package:GeniusHouse/widgets/chat_overlay.dart';
+import 'package:GeniusHouse/screens/chat/guest_chat_screen.dart';
+import 'package:GeniusHouse/screens/solar_systems/solar_systems_screen.dart';
+import 'package:GeniusHouse/services/text_ad_service.dart';
+import 'package:GeniusHouse/widgets/text_ads_carousel.dart';
 
 class HomeScreen extends StatefulWidget {
   final AuthService authService;
@@ -40,15 +45,28 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  List<Map<String, dynamic>> _textAds = [];
+  bool _isLoadingTextAds = true;
   late ApiService _apiService;
   int _currentIndex = 0;
   int _unreadCount = 0;
-  String _governorate = 'دمشق';  // ✅ متغير المحافظة
-  bool _isProductsExpanded = false;
-  bool _isOffersExpanded = false;
+  String _governorate = 'دمشق';
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Data
+  String _greetingMessage = 'مرحباً';
+
+  static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
+  static const Color accentBlue = Color(0xFF60A5FA);
+  static const Color darkColor = Color(0xFF111827);
+  static const Color mediumGray = Color(0xFF4B5563);
+
+  late AnimationController _drawerAnimationController;
+  late AnimationController _pulseAnimationController;
+  late AnimationController _centerPulseController;
+  late AnimationController _quickActionsAnimationController;
+
   List<dynamic> _advertisements = [];
   List<dynamic> _mainCategories = [];
   List<dynamic> _mostViewedProducts = [];
@@ -61,33 +79,125 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _highestPowerOffers = [];
   List<dynamic> _cheapestOffers = [];
   List<dynamic> _latestOffers = [];
+  List<dynamic> _ElectricalAppliances = [];
+  List<dynamic> _ElectricalExtensions = [];
+  List<dynamic> _Homelighting = [];
 
-  // Loading states
   bool _isLoadingAdvertisements = true;
   bool _isLoadingCategories = true;
   bool _isLoadingProducts = true;
   bool _isLoadingOffers = true;
+  bool _isLoadingElectricalAppliances = true;
+  bool _isLoadingElectricalExtensions = true;
+  bool _isLoadingHomelighting = true;
+
+  ScrollController? _scrollController;
+  bool _showScrollToTop = false;
+  bool _isInitialLoad = true;
 
   @override
   void initState() {
     super.initState();
     _apiService = ApiService(storageService: widget.storageService);
+
+    _drawerAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _centerPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _quickActionsAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..forward();
+
+    _scrollController = ScrollController();
+    _scrollController!.addListener(_scrollListener);
+
     _loadGovernorate();
+    _updateGreeting();
     _fetchHomeData();
     _fetchUnreadCount();
   }
 
+  @override
+  void dispose() {
+    _scrollController?.removeListener(_scrollListener);
+    _scrollController?.dispose();
+
+    _drawerAnimationController.dispose();
+    _pulseAnimationController.dispose();
+    _centerPulseController.dispose();
+    _quickActionsAnimationController.dispose();
+    super.dispose();
+  }
+
+  void _scrollListener() {
+    if (_scrollController == null) return;
+    final shouldShow = _scrollController!.offset > 500;
+    if (shouldShow != _showScrollToTop) {
+      setState(() => _showScrollToTop = shouldShow);
+    }
+  }
+
+  void _scrollToTop() {
+    _scrollController?.animateTo(
+      0,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _updateGreeting() {
+    final now = DateTime.now();
+    final hour = now.hour;
+
+    setState(() {
+      if (hour >= 5 && hour < 12) {
+        _greetingMessage = 'صباح الخير';
+      } else if (hour >= 12 && hour < 17) {
+        _greetingMessage = 'مساء الخير';
+      } else if (hour >= 17 && hour < 21) {
+        _greetingMessage = 'مساء الخير';
+      } else {
+        _greetingMessage = 'مساء الخير';
+      }
+    });
+  }
+
+  void _onCenterTap() {
+    setState(() => _currentIndex = 0);
+  }
+
   void _loadGovernorate() {
     final savedGov = widget.storageService.getGovernorate();
-    print('🔍 Saved governorate from storage: $savedGov');  // ✅ للتصحيح
-
     if (savedGov != null && savedGov.isNotEmpty) {
-      setState(() {
-        _governorate = savedGov;
-        print('📍 Governorate set to: $_governorate');
-      });
-    } else {
-      print('⚠️ No saved governorate found, using default: $_governorate');
+      setState(() => _governorate = savedGov);
+    }
+  }
+
+  Future<void> _fetchTextAds() async {
+    setState(() => _isLoadingTextAds = true);
+    try {
+      final TextAdService textAdService = TextAdService(
+        baseUrl: AppConstants.baseUrl,
+        authService: widget.authService,
+      );
+      final ads = await textAdService.getActiveTextAds();
+      if (mounted) {
+        setState(() {
+          _textAds = ads;
+          _isLoadingTextAds = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingTextAds = false);
     }
   }
 
@@ -95,20 +205,37 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final response = await _apiService.getUnreadNotificationsCount();
       if (response.containsKey('data') && mounted) {
-        setState(() {
-          _unreadCount = response['data']['unread_count'] ?? 0;
-        });
+        setState(() => _unreadCount = response['data']['unread_count'] ?? 0);
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
   }
 
   Future<void> _fetchHomeData() async {
+    setState(() {
+      _isLoadingProducts = true;
+      _isLoadingOffers = true;
+      _isLoadingTextAds = true;
+    });
+
     await Future.wait([
+      _fetchTextAds(),
       _fetchAdvertisements(),
       _fetchMainCategories(),
-      // ✅ استخدم دوال العامة التي تدعم الزائر والمستخدم
+      _fetchElectricalAppliances(),
+      _fetchElectricalExtensions(),
+      _fetchHomelighting(),
+    ]);
+
+    if (mounted) {
+      setState(() {
+        _isInitialLoad = false;
+        _isLoadingTextAds = false;
+      });
+    }
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    await Future.wait([
       _fetchMostViewedProductsPublic(),
       _fetchTopRatedProductsPublic(),
       _fetchLatestProductsPublic(),
@@ -118,8 +245,16 @@ class _HomeScreenState extends State<HomeScreen> {
       _fetchAllOffers(),
       _fetchHighestPowerOffers(),
       _fetchCheapestOffers(),
-      _fetchLatestOffers(),     // إضافة
+      _fetchLatestOffers(),
     ]);
+
+    if (mounted) {
+      setState(() {
+        _isLoadingProducts = false;
+        _isLoadingOffers = false;
+      });
+      _quickActionsAnimationController.forward(from: 0);
+    }
   }
 
   Future<void> _fetchAdvertisements() async {
@@ -136,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      setState(() => _isLoadingAdvertisements = false);
+      if (mounted) setState(() => _isLoadingAdvertisements = false);
     }
   }
 
@@ -144,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isLoadingCategories = true);
     try {
       final response = await _apiService.get(
-        '/v1/user/public/categories/main',
+        '/v1/user/public/categories/main/random',
         requiresAuth: false,
       );
       if (response.containsKey('data') && mounted) {
@@ -154,322 +289,268 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      setState(() => _isLoadingCategories = false);
+      if (mounted) setState(() => _isLoadingCategories = false);
     }
   }
 
-  Future<void> _fetchMostViewedProducts() async {
+  Future<void> _fetchElectricalAppliances() async {
+    setState(() => _isLoadingElectricalAppliances = true);
     try {
       final response = await _apiService.get(
-        '/v1/user/products/most-viewed',
-        requiresAuth: widget.authService.isAuthenticated,
+        '/v1/user/public/categories/main/7/subcategories',
+        requiresAuth: false,
       );
-      if (response.containsKey('data') && response['data'].containsKey('products') && mounted) {
+      if (response.containsKey('data') && mounted) {
         setState(() {
-          _mostViewedProducts = response['data']['products'];
+          _ElectricalAppliances = response['data'];
+          _isLoadingElectricalAppliances = false;
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingElectricalAppliances = false);
+    }
   }
 
-  Future<void> _fetchTopRatedProducts() async {
+  Future<void> _fetchElectricalExtensions() async {
+    setState(() => _isLoadingElectricalExtensions = true);
     try {
       final response = await _apiService.get(
-        '/v1/user/products/top-rated',
-        requiresAuth: widget.authService.isAuthenticated,
+        '/v1/user/public/categories/main/9/subcategories',
+        requiresAuth: false,
       );
-      if (response.containsKey('data') && response['data'].containsKey('products') && mounted) {
+      if (response.containsKey('data') && mounted) {
         setState(() {
-          _topRatedProducts = response['data']['products'];
+          _ElectricalExtensions = response['data'];
+          _isLoadingElectricalExtensions = false;
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingElectricalExtensions = false);
+    }
   }
 
-  Future<void> _fetchLatestProducts() async {
+  Future<void> _fetchHomelighting() async {
+    setState(() => _isLoadingHomelighting = true);
     try {
       final response = await _apiService.get(
-        '/v1/user/products/latest',
-        requiresAuth: widget.authService.isAuthenticated,
+        '/v1/user/public/categories/main/10/subcategories',
+        requiresAuth: false,
       );
-      if (response.containsKey('data') && response['data'].containsKey('products') && mounted) {
+      if (response.containsKey('data') && mounted) {
         setState(() {
-          _latestProducts = response['data']['products'];
+          _Homelighting = response['data'];
+          _isLoadingHomelighting = false;
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingHomelighting = false);
+    }
   }
 
-  Future<void> _fetchRandomProducts() async {
-    try {
-      final response = await _apiService.get(
-        '/v1/user/products/random',
-        requiresAuth: widget.authService.isAuthenticated,
-      );
-      if (response.containsKey('data') && response['data'].containsKey('products') && mounted) {
-        setState(() {
-          _randomProducts = response['data']['products'];
-        });
-      }
-    } catch (e) {}
-  }
-
-// ✅ 5) العروض المميزة (موجودة بالفعل)
   Future<void> _fetchFeaturedOffers() async {
-    setState(() => _isLoadingOffers = true);
     try {
       final endpoint = widget.authService.isAuthenticated
           ? '/v1/user/offers/featured'
           : '/v1/user/public/offers/featured/$_governorate';
-
       final response = await _apiService.get(
         endpoint,
         requiresAuth: widget.authService.isAuthenticated,
       );
-
       if (response.containsKey('data') && mounted) {
         final offers = response['data']['offers'] ?? response['data'];
-        setState(() {
-          _featuredOffers = offers is List ? offers : [offers];
-        });
+        setState(() => _featuredOffers = offers is List ? offers : [offers]);
       }
     } catch (e) {}
-    setState(() => _isLoadingOffers = false);
   }
 
-  // ✅ 6) العروض الأحدث
   Future<void> _fetchLatestOffers() async {
     try {
       final endpoint = widget.authService.isAuthenticated
           ? '/v1/user/offers/latest'
           : '/v1/user/public/offers/latest/$_governorate';
-
       final response = await _apiService.get(
         endpoint,
         requiresAuth: widget.authService.isAuthenticated,
       );
-
       if (response.containsKey('data') && mounted) {
         final offers = response['data']['offers'] ?? response['data'];
-        setState(() {
-          _latestOffers = offers is List ? offers : [offers];
-        });
+        setState(() => _latestOffers = offers is List ? offers : [offers]);
       }
     } catch (e) {}
   }
 
-  // ==================== المنتجات للعامة ====================
-
-// ✅ المنتجات العشوائية
   Future<void> _fetchRandomProductsPublic() async {
     try {
       final endpoint = widget.authService.isAuthenticated
           ? '/v1/user/products/random'
           : '/v1/user/public/products/random/$_governorate';
-
       final response = await _apiService.get(
         endpoint,
         requiresAuth: widget.authService.isAuthenticated,
       );
-
-      if (response.containsKey('data') && response['data'].containsKey('products') && mounted) {
-        setState(() {
-          _randomProducts = response['data']['products'];
-        });
-      }
-    } catch (e) {}
-  }
-
-// ✅ المنتجات الأكثر مشاهدة للعامة
-  Future<void> _fetchMostViewedProductsPublic() async {
-    try {
-      final endpoint = widget.authService.isAuthenticated
-          ? '/v1/user/products/most-viewed'
-          : '/v1/user/public/products/most-viewed/$_governorate';
-
-      final response = await _apiService.get(
-        endpoint,
-        requiresAuth: widget.authService.isAuthenticated,
-      );
-
-      if (response.containsKey('data') && response['data'].containsKey('products') && mounted) {
-        setState(() {
-          _mostViewedProducts = response['data']['products'];
-        });
-      }
-    } catch (e) {}
-  }
-
-// ✅ المنتجات الأعلى تقييماً للعامة
-  Future<void> _fetchTopRatedProductsPublic() async {
-    try {
-      final endpoint = widget.authService.isAuthenticated
-          ? '/v1/user/products/top-rated'
-          : '/v1/user/public/products/top-rated/$_governorate';
-
-      final response = await _apiService.get(
-        endpoint,
-        requiresAuth: widget.authService.isAuthenticated,
-      );
-
-      if (response.containsKey('data') && response['data'].containsKey('products') && mounted) {
-        setState(() {
-          _topRatedProducts = response['data']['products'];
-        });
-      }
-    } catch (e) {}
-  }
-
-// ✅ أحدث المنتجات للعامة
-  Future<void> _fetchLatestProductsPublic() async {
-    try {
-      final endpoint = widget.authService.isAuthenticated
-          ? '/v1/user/products/latest'
-          : '/v1/user/public/products/latest/$_governorate';
-
-      final response = await _apiService.get(
-        endpoint,
-        requiresAuth: widget.authService.isAuthenticated,
-      );
-
-      if (response.containsKey('data') && response['data'].containsKey('products') && mounted) {
-        setState(() {
-          _latestProducts = response['data']['products'];
-        });
-      }
-    } catch (e) {}
-  }
-
-
-  // ==================== العروض ====================
-
-// ✅ 1) اظهار العروض (جميع العروض)
-  Future<void> _fetchAllOffers() async {
-    try {
-      final endpoint = widget.authService.isAuthenticated
-          ? '/v1/user/offers'
-          : '/v1/user/public/offers/all/$_governorate';
-
-      final response = await _apiService.get(
-        endpoint,
-        requiresAuth: widget.authService.isAuthenticated,
-      );
-
       if (response.containsKey('data') && mounted) {
-        // معالجة البيانات حسب هيكل الـ API
-        if (response['data'].containsKey('offers')) {
-          // المستخدم المسجل
-          setState(() {
-            _allOffers = response['data']['offers'];
-          });
-        } else if (response['data']['offers'] != null) {
-          // الزائر
-          setState(() {
-            _allOffers = response['data']['offers'];
-          });
+        if (response['data'].containsKey('products')) {
+          setState(() => _randomProducts = response['data']['products']);
+        } else if (response['data'] is List) {
+          setState(() => _randomProducts = response['data']);
         }
       }
     } catch (e) {}
   }
 
-// ✅ 2) العروض الأكثر سعة
+  Future<void> _fetchMostViewedProductsPublic() async {
+    try {
+      final endpoint = widget.authService.isAuthenticated
+          ? '/v1/user/products/most-viewed'
+          : '/v1/user/public/products/most-viewed/$_governorate';
+      final response = await _apiService.get(
+        endpoint,
+        requiresAuth: widget.authService.isAuthenticated,
+      );
+      if (response.containsKey('data') && mounted) {
+        if (response['data'].containsKey('products')) {
+          setState(() => _mostViewedProducts = response['data']['products']);
+        } else if (response['data'] is List) {
+          setState(() => _mostViewedProducts = response['data']);
+        }
+      }
+    } catch (e) {}
+  }
+
+  Future<void> _fetchTopRatedProductsPublic() async {
+    try {
+      final endpoint = widget.authService.isAuthenticated
+          ? '/v1/user/products/top-rated'
+          : '/v1/user/public/products/top-rated/$_governorate';
+      final response = await _apiService.get(
+        endpoint,
+        requiresAuth: widget.authService.isAuthenticated,
+      );
+      if (response.containsKey('data') && mounted) {
+        if (response['data'].containsKey('products')) {
+          setState(() => _topRatedProducts = response['data']['products']);
+        } else if (response['data'] is List) {
+          setState(() => _topRatedProducts = response['data']);
+        }
+      }
+    } catch (e) {}
+  }
+
+  Future<void> _fetchLatestProductsPublic() async {
+    try {
+      final endpoint = widget.authService.isAuthenticated
+          ? '/v1/user/products/latest'
+          : '/v1/user/public/products/latest/$_governorate';
+      final response = await _apiService.get(
+        endpoint,
+        requiresAuth: widget.authService.isAuthenticated,
+      );
+      if (response.containsKey('data') && mounted) {
+        if (response['data'].containsKey('products')) {
+          setState(() => _latestProducts = response['data']['products']);
+        } else if (response['data'] is List) {
+          setState(() => _latestProducts = response['data']);
+        }
+      }
+    } catch (e) {}
+  }
+
+  Future<void> _fetchAllOffers() async {
+    try {
+      final endpoint = widget.authService.isAuthenticated
+          ? '/v1/user/offers'
+          : '/v1/user/public/offers/all/$_governorate';
+      final response = await _apiService.get(
+        endpoint,
+        requiresAuth: widget.authService.isAuthenticated,
+      );
+      if (response.containsKey('data') && mounted) {
+        if (response['data'].containsKey('offers')) {
+          setState(() => _allOffers = response['data']['offers']);
+        } else if (response['data'] is List) {
+          setState(() => _allOffers = response['data']);
+        }
+      }
+    } catch (e) {}
+  }
+
   Future<void> _fetchHighestPowerOffers() async {
     try {
       final endpoint = widget.authService.isAuthenticated
           ? '/v1/user/offers/highest-power'
           : '/v1/user/public/offers/highest-power/$_governorate';
-
       final response = await _apiService.get(
         endpoint,
         requiresAuth: widget.authService.isAuthenticated,
       );
-
       if (response.containsKey('data') && mounted) {
         final offers = response['data']['offers'] ?? response['data'];
-        setState(() {
-          _highestPowerOffers = offers is List ? offers : [offers];
-        });
+        setState(
+            () => _highestPowerOffers = offers is List ? offers : [offers]);
       }
     } catch (e) {}
   }
 
-// ✅ 3) العروض الأرخص
   Future<void> _fetchCheapestOffers() async {
     try {
       final endpoint = widget.authService.isAuthenticated
           ? '/v1/user/offers/cheapest'
           : '/v1/user/public/offers/cheapest/$_governorate';
-
       final response = await _apiService.get(
         endpoint,
         requiresAuth: widget.authService.isAuthenticated,
       );
-
       if (response.containsKey('data') && mounted) {
         final offers = response['data']['offers'] ?? response['data'];
-        setState(() {
-          _cheapestOffers = offers is List ? offers : [offers];
-        });
+        setState(() => _cheapestOffers = offers is List ? offers : [offers]);
       }
     } catch (e) {}
   }
 
-// ✅ 4) العروض المتنوعة (موجودة بالفعل ولكن للتأكيد)
   Future<void> _fetchVarietyOffers() async {
     try {
       final endpoint = widget.authService.isAuthenticated
           ? '/v1/user/offers/variety'
           : '/v1/user/public/offers/variety/$_governorate';
-
       final response = await _apiService.get(
         endpoint,
         requiresAuth: widget.authService.isAuthenticated,
       );
-
       if (response.containsKey('data') && mounted) {
         final offers = response['data']['offers'] ?? response['data'];
-        setState(() {
-          _varietyOffers = offers is List ? offers : [offers];
-        });
+        setState(() => _varietyOffers = offers is List ? offers : [offers]);
       }
     } catch (e) {}
   }
 
   void _logout() async {
-    // عرض رسالة تأكيد
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'تسجيل الخروج',
-          style: GoogleFonts.cairo(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'هل أنت متأكد من تسجيل الخروج؟',
-          style: GoogleFonts.cairo(),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('تسجيل الخروج',
+            style: GoogleFonts.cairo(
+                fontWeight: FontWeight.bold, color: darkColor)),
+        content: Text('هل أنت متأكد من تسجيل الخروج؟',
+            style: GoogleFonts.cairo(color: mediumGray)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'إلغاء',
-              style: GoogleFonts.cairo(),
-            ),
+            child: Text('إلغاء', style: GoogleFonts.cairo(color: mediumGray)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text(
-              'تسجيل خروج',
-              style: GoogleFonts.cairo(),
-            ),
+            child: Text('تسجيل خروج',
+                style: GoogleFonts.cairo(color: Colors.white)),
           ),
         ],
       ),
     );
-
     if (confirm == true) {
       await widget.authService.logout();
       if (mounted) {
@@ -496,570 +577,1253 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     ).then((_) {
-      // بعد العودة من شاشة تسجيل الدخول، تحديث الحالة
       if (mounted) {
         setState(() {});
-        _fetchHomeData(); // إعادة تحميل البيانات للمستخدم الجديد
+        _fetchHomeData();
       }
     });
   }
 
   void _showLoginRequired() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('الرجاء تسجيل الدخول للوصول إلى هذه الميزة'),
+      SnackBar(
+        content: Text(
+          'الرجاء تسجيل الدخول للوصول إلى هذه الميزة',
+          style: GoogleFonts.cairo(),
+        ),
         backgroundColor: Colors.orange,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(20),
       ),
     );
     _navigateToLogin();
   }
 
-  String _getUserName() {
-    if (!widget.authService.isAuthenticated) return 'زائر';
-    return 'مستخدم';
+  String _getUserName() =>
+      !widget.authService.isAuthenticated ? 'زائر' : 'مستخدم';
+
+  void _navigateToSystemBuilder() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            SystemBuilderScreen(authService: widget.authService),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final bool isGuest = !widget.authService.isAuthenticated;
-
     return ChatOverlay(
       authService: widget.authService,
       isGuest: isGuest,
       child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
-        appBar: _buildAppBar(),
+        key: _scaffoldKey,
+        backgroundColor: const Color(0xFFF8F9FA),
         drawer: _buildDrawer(),
         body: IndexedStack(
           index: _currentIndex,
           children: [
-            RefreshIndicator(
-              onRefresh: _fetchHomeData,
-              child: CustomScrollView(
-                slivers: [
-                  // Advertisements Carousel
-                  if (!_isLoadingAdvertisements && _advertisements.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildAdvertisementsCarousel(),
+            _buildHomeBody(),
+            MainCategoriesScreen(
+              apiService: _apiService,
+              authService: widget.authService,
+              storageService: widget.storageService,
+            ),
+            FavoritesScreen(
+                authService: widget.authService, apiService: _apiService),
+            OffersListScreen(
+                title: 'جميع العروض',
+                offers: null,
+                apiService: _apiService,
+                authService: widget.authService),
+            const CartScreen(),
+            isGuest
+                ? _buildLockedScreen(
+                    'حسابي', 'يجب تسجيل الدخول لعرض معلومات حسابك')
+                : ProfileScreen(
+                    authService: widget.authService,
+                    apiService: _apiService,
+                    onLogout: _logout,
+                  ),
+          ],
+        ),
+        bottomNavigationBar: _buildCenterHubNavBar(),
+      ),
+    );
+  }
+
+  Widget _buildHomeBody() {
+    return Stack(
+      children: [
+        RefreshIndicator(
+          color: primaryBlue,
+          backgroundColor: Colors.white,
+          onRefresh: _fetchHomeData,
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              _buildSliverAppBar(),
+              SliverToBoxAdapter(child: _buildGreetingWidget()),
+              if (!_isInitialLoad) ...[
+                if (!_isLoadingTextAds && _textAds.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: TextAdsCarousel(
+                          ads: _textAds, interval: const Duration(seconds: 4)),
                     ),
-                  // Main Categories
+                  ),
+                if (!_isLoadingAdvertisements && _advertisements.isNotEmpty)
+                  SliverToBoxAdapter(child: _buildAdvertisementsCarousel()),
+                SliverToBoxAdapter(child: _buildSocialProofBar()),
+                SliverToBoxAdapter(child: _buildQuickActionsBar()),
+              ],
+              SliverToBoxAdapter(
+                child: _buildSectionHeader(
+                  title: 'الأقسام الرئيسية',
+                  icon: Icons.grid_view_rounded,
+                  onSeeAll: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MainCategoriesScreen(
+                        apiService: _apiService,
+                        authService: widget.authService,
+                        storageService: widget.storageService,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (_isLoadingCategories)
+                SliverToBoxAdapter(child: _buildShimmerCategories())
+              else if (_mainCategories.isNotEmpty)
+                SliverToBoxAdapter(child: _buildMainCategories()),
+              if (_isLoadingElectricalAppliances)
+                SliverToBoxAdapter(child: _buildShimmerSubCategories())
+              else if (_ElectricalAppliances.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: _buildSectionHeader(
+                    title: 'أجهزة كهربائية',
+                    icon: Icons.kitchen_rounded,
+                    onSeeAll: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SubCategoriesScreen(
+                          category: {
+                            'id': 7,
+                            'name_ar': 'أجهزة كهربائية',
+                            'slug': 'aghz-khrbayy',
+                            'description': 'جميع أجهزة كهربائية الحديثة',
+                          },
+                          apiService: _apiService,
+                          authService: widget.authService,
+                          storageService: widget.storageService,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child:
+                      _buildSubCategoriesHorizontalList(_ElectricalAppliances),
+                ),
+              ],
+              if (_isLoadingElectricalExtensions)
+                SliverToBoxAdapter(child: _buildShimmerSubCategories())
+              else if (_ElectricalExtensions.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: _buildSectionHeader(
+                    title: 'تمديدات كهربائية',
+                    icon: Icons.electrical_services,
+                    onSeeAll: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SubCategoriesScreen(
+                          category: {
+                            'id': 9,
+                            'name_ar': 'تمديدات كهربائية',
+                            'slug': 'tmdydat-khrbayy',
+                            'description': 'جميع تمديدات الكهربائية الحديثة',
+                          },
+                          apiService: _apiService,
+                          authService: widget.authService,
+                          storageService: widget.storageService,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child:
+                      _buildSubCategoriesHorizontalList(_ElectricalExtensions),
+                ),
+              ],
+              if (_isLoadingHomelighting)
+                SliverToBoxAdapter(child: _buildShimmerSubCategories())
+              else if (_Homelighting.isNotEmpty) ...[
+                SliverToBoxAdapter(
+                  child: _buildSectionHeader(
+                    title: 'إنارة منزلية',
+                    icon: Icons.lightbulb_rounded,
+                    onSeeAll: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SubCategoriesScreen(
+                          category: {
+                            'id': 10,
+                            'name_ar': 'إنارة منزلية',
+                            'slug': 'anar-mnzly',
+                            'description':
+                                'جميع حلول الإضاءة الداخلية والخارجية للمنزل والمكتب، من المصابيح الموفرة للطاقة إلى الثريات الفاخرة، مع تشكيلة واسعة من الأضواء الذكية والمزودة بحساسات.',
+                          },
+                          apiService: _apiService,
+                          authService: widget.authService,
+                          storageService: widget.storageService,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: _buildSubCategoriesHorizontalList(_Homelighting),
+                ),
+              ],
+              if (!_isInitialLoad) ...[
+                if (_mostViewedProducts.isNotEmpty) ...[
                   SliverToBoxAdapter(
                     child: _buildSectionHeader(
-                      title: 'الأقسام الرئيسية',
-                      onSeeAll: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MainCategoriesScreen(
-                              categories: _mainCategories,
-                              apiService: _apiService,
+                      title: 'المنتجات الأكثر مشاهدة',
+                      icon: Icons.trending_up,
+                      onSeeAll: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProductsListScreen(
+                            title: 'الأكثر مشاهدة',
+                            products: _mostViewedProducts,
+                            apiService: _apiService,
+                            authService: widget.authService,
+                            storageService: widget.storageService,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                      child: _buildProductsHorizontalList(_mostViewedProducts)),
+                ],
+                if (_topRatedProducts.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
+                      title: 'منتجات مميزة',
+                      icon: Icons.star_rounded,
+                      onSeeAll: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProductsListScreen(
+                            title: 'أعلى تقييماً',
+                            products: _topRatedProducts,
+                            apiService: _apiService,
+                            authService: widget.authService,
+                            storageService: widget.storageService,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                      child: _buildProductsHorizontalList(_topRatedProducts)),
+                ],
+                if (_featuredOffers.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
+                      title: 'عروض مميزة',
+                      icon: Icons.local_fire_department,
+                      onSeeAll: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OffersListScreen(
+                            title: 'عروض مميزة',
+                            offers: _featuredOffers,
+                            apiService: _apiService,
+                            authService: widget.authService,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                      child: _buildOffersHorizontalList(_featuredOffers)),
+                ],
+                if (_latestProducts.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
+                      title: 'أحدث المنتجات',
+                      icon: Icons.new_releases,
+                      onSeeAll: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProductsListScreen(
+                            title: 'أحدث المنتجات',
+                            products: _latestProducts,
+                            apiService: _apiService,
+                            authService: widget.authService,
+                            storageService: widget.storageService,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                      child: _buildProductsHorizontalList(_latestProducts)),
+                ],
+                if (_highestPowerOffers.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
+                      title: 'أقوى العروض',
+                      icon: Icons.bolt,
+                      onSeeAll: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OffersListScreen(
+                            title: 'العروض الأكثر سعة',
+                            offers: _highestPowerOffers,
+                            apiService: _apiService,
+                            authService: widget.authService,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                      child: _buildOffersHorizontalList(_highestPowerOffers)),
+                ],
+                if (_randomProducts.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
+                      title: 'اقتراحات لك',
+                      icon: Icons.auto_awesome,
+                      onSeeAll: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProductsListScreen(
+                            title: 'اقتراحات لك',
+                            products: _randomProducts,
+                            apiService: _apiService,
+                            authService: widget.authService,
+                            storageService: widget.storageService,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                      child: _buildProductsHorizontalList(_randomProducts)),
+                ],
+                if (_cheapestOffers.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
+                      title: 'أفضل الأسعار',
+                      icon: Icons.savings,
+                      onSeeAll: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OffersListScreen(
+                            title: 'العروض الأرخص',
+                            offers: _cheapestOffers,
+                            apiService: _apiService,
+                            authService: widget.authService,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                      child: _buildOffersHorizontalList(_cheapestOffers)),
+                ],
+                if (_latestOffers.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
+                      title: 'أحدث العروض',
+                      icon: Icons.new_releases_outlined,
+                      onSeeAll: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OffersListScreen(
+                            title: 'أحدث العروض',
+                            offers: _latestOffers,
+                            apiService: _apiService,
+                            authService: widget.authService,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                      child: _buildOffersHorizontalList(_latestOffers)),
+                ],
+              ],
+              const SliverToBoxAdapter(child: SizedBox(height: 130)),
+            ],
+          ),
+        ),
+        if (_showScrollToTop)
+          Positioned(
+            bottom: 20,
+            left: 20,
+            child: AnimatedOpacity(
+              opacity: _showScrollToTop ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: GestureDetector(
+                onTap: _scrollToTop,
+                child: Container(
+                  width: 45,
+                  height: 45,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1E3A8A).withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.keyboard_arrow_up_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      backgroundColor: primaryBlue,
+      elevation: 0,
+      pinned: false,
+      floating: true,
+      snap: true,
+      expandedHeight: 125,
+      collapsedHeight: 56,
+      leading: Builder(
+        builder: (context) => Container(
+          margin: const EdgeInsets.all(8),
+          child: Material(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(15),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(15),
+              onTap: () => Scaffold.of(context).openDrawer(),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                child: const Icon(Icons.menu_rounded,
+                    color: Colors.white, size: 24),
+              ),
+            ),
+          ),
+        ),
+      ),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: _pulseAnimationController,
+            builder: (context, child) => Transform.scale(
+              scale: 1.0 + (_pulseAnimationController.value * 0.1),
+              child: const Icon(Icons.bolt, color: Colors.yellow, size: 24),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'GeniusHouse',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        _buildAppBarAction(
+          icon: Icons.notifications_outlined,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NotificationsScreen(
+                authService: widget.authService,
+                apiService: _apiService,
+              ),
+            ),
+          ),
+          badge: _unreadCount > 0 ? _unreadCount.toString() : null,
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryBlue, secondaryBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SearchScreen(
+                          authService: widget.authService,
+                          apiService: _apiService,
+                        ),
+                      ),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: Colors.white.withOpacity(0.3), width: 1),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.search_rounded,
+                              color: Colors.white.withOpacity(0.8), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'ابحث عن ألواح شمسية، بطاريات، انفرترات...',
+                              style: GoogleFonts.cairo(
+                                fontSize: 12,
+                                color: Colors.white.withOpacity(0.7),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.mic_rounded,
+                                    color: Colors.white.withOpacity(0.7),
+                                    size: 14),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'صوتي',
+                                  style: GoogleFonts.cairo(
+                                    fontSize: 10,
+                                    color: Colors.white.withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGreetingWidget() {
+    return TweenAnimationBuilder(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOutBack,
+      builder: (context, double value, child) {
+        return Transform.scale(
+          scale: 0.9 + (0.1 * value),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: primaryBlue.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+              spreadRadius: 1,
+            ),
+            BoxShadow(
+              color: accentBlue.withOpacity(0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF1E3A8A),
+                      const Color(0xFF2563EB),
+                      const Color(0xFF3B82F6).withOpacity(0.85),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -30,
+                right: -25,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: Colors.white.withOpacity(0.1), width: 1.5),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -35,
+                left: -30,
+                child: Container(
+                  width: 130,
+                  height: 130,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    AnimatedBuilder(
+                      animation: _pulseAnimationController,
+                      builder: (context, child) {
+                        final scale =
+                            1.0 + (_pulseAnimationController.value * 0.12);
+                        return Transform.scale(
+                          scale: scale,
+                          child: Container(
+                            width: 55,
+                            height: 55,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.25),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                _getGreetingIcon(),
+                                style: const TextStyle(fontSize: 28),
+                              ),
                             ),
                           ),
                         );
                       },
                     ),
-                  ),
-                  if (_isLoadingCategories)
-                    SliverToBoxAdapter(child: _buildShimmerCategories())
-                  else if (_mainCategories.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildMainCategories(),
-                    ),
-                  // Featured Offers
-                  if (!_isLoadingOffers && _featuredOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'عروض مميزة',
-                        icon: Icons.local_offer,
-                        onSeeAll: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OffersListScreen(
-                                title: 'عروض مميزة',
-                                offers: _featuredOffers,
-                                apiService: _apiService,
-                                authService: widget.authService,
-                              ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '$_greetingMessage، ${_getUserName()}',
+                            style: GoogleFonts.cairo(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.2,
                             ),
-                          );
-                        },
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _getWelcomeSubtitle(),
+                            style: GoogleFonts.cairo(
+                              fontSize: 12,
+                              color: Colors.white.withOpacity(0.9),
+                              height: 1.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
-                  if (!_isLoadingOffers && _featuredOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildOffersHorizontalList(_featuredOffers),
-                    ),
-                  // ✅ جميع العروض (All Offers)
-                  if (!_isLoadingOffers && _allOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'جميع العروض',
-                        icon: Icons.list_alt,
-                        onSeeAll: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OffersListScreen(
-                                title: 'جميع العروض',
-                                offers: _allOffers,
-                                apiService: _apiService,
-                                authService: widget.authService,
-                              ),
-                            ),
-                          );
-                        },
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Colors.white.withOpacity(0.6),
+                        size: 16,
                       ),
                     ),
-                  if (!_isLoadingOffers && _allOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildOffersHorizontalList(_allOffers),
-                    ),
-                  // ✅ العروض الأكثر سعة (Highest Power Offers)
-                  if (!_isLoadingOffers && _highestPowerOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'العروض الأكثر سعة',
-                        icon: Icons.flash_on,
-                        onSeeAll: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OffersListScreen(
-                                title: 'العروض الأكثر سعة',
-                                offers: _highestPowerOffers,
-                                apiService: _apiService,
-                                authService: widget.authService,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  if (!_isLoadingOffers && _highestPowerOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildOffersHorizontalList(_highestPowerOffers),
-                    ),
-                  // ✅ العروض الأرخص (Cheapest Offers)
-                  if (!_isLoadingOffers && _cheapestOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'العروض الأرخص',
-                        icon: Icons.attach_money,
-                        onSeeAll: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OffersListScreen(
-                                title: 'العروض الأرخص',
-                                offers: _cheapestOffers,
-                                apiService: _apiService,
-                                authService: widget.authService,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  if (!_isLoadingOffers && _cheapestOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildOffersHorizontalList(_cheapestOffers),
-                    ),
-                  // ✅ أحدث العروض (Latest Offers)
-                  if (!_isLoadingOffers && _latestOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'أحدث العروض',
-                        icon: Icons.fiber_new,
-                        onSeeAll: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OffersListScreen(
-                                title: 'أحدث العروض',
-                                offers: _latestOffers,
-                                apiService: _apiService,
-                                authService: widget.authService,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  if (!_isLoadingOffers && _latestOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildOffersHorizontalList(_latestOffers),
-                    ),
-                  // ✅ المنتجات العشوائية (Random Products)
-                  if (!_isLoadingProducts && _randomProducts.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'اقتراحات لك',
-                        icon: Icons.shuffle,
-                        onSeeAll: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProductsListScreen(
-                                title: 'اقتراحات لك',
-                                products: _randomProducts,
-                                apiService: _apiService,
-                                authService: widget.authService,
-                                storageService: widget.storageService,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  if (!_isLoadingProducts && _randomProducts.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildProductsHorizontalList(_randomProducts),
-                    ),
-                  // ✅ المنتجات الأكثر مشاهدة (Most Viewed Products)
-                  if (!_isLoadingProducts && _mostViewedProducts.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'الأكثر مشاهدة',
-                        icon: Icons.visibility,
-                        onSeeAll: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProductsListScreen(
-                                title: 'الأكثر مشاهدة',
-                                products: _mostViewedProducts,
-                                apiService: _apiService,
-                                authService: widget.authService,
-                                storageService: widget.storageService,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  if (!_isLoadingProducts && _mostViewedProducts.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildProductsHorizontalList(_mostViewedProducts),
-                    ),
-                  // ✅ المنتجات الأعلى تقييماً (Top Rated Products)
-                  if (!_isLoadingProducts && _topRatedProducts.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'أعلى تقييماً',
-                        icon: Icons.star,
-                        onSeeAll: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProductsListScreen(
-                                title: 'أعلى تقييماً',
-                                products: _topRatedProducts,
-                                apiService: _apiService,
-                                authService: widget.authService,
-                                storageService: widget.storageService,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  if (!_isLoadingProducts && _topRatedProducts.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildProductsHorizontalList(_topRatedProducts),
-                    ),
-                  // ✅ أحدث المنتجات (Latest Products)
-                  if (!_isLoadingProducts && _latestProducts.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'أحدث المنتجات',
-                        icon: Icons.fiber_new,
-                        onSeeAll: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProductsListScreen(
-                                title: 'أحدث المنتجات',
-                                products: _latestProducts,
-                                apiService: _apiService,
-                                authService: widget.authService,
-                                storageService: widget.storageService,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  if (!_isLoadingProducts && _latestProducts.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildProductsHorizontalList(_latestProducts),
-                    ),
-                  // Variety Offers
-                  if (_varietyOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildSectionHeader(
-                        title: 'عروض متنوعة',
-                        icon: Icons.category,
-                        onSeeAll: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OffersListScreen(
-                                title: 'عروض متنوعة',
-                                offers: _varietyOffers,
-                                apiService: _apiService,
-                                authService: widget.authService,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  if (_varietyOffers.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _buildOffersHorizontalList(_varietyOffers),
-                    ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 80)),
-                ],
+                  ],
+                ),
               ),
-            ),
-            // التصنيفات (Categories) - index 1
-            MainCategoriesScreen(
-              categories: _mainCategories,
-              apiService: _apiService,
-            ),
-            // ✅ المفضلة (Favorites) - index 2 (متاحة للجميع - تعمل محلياً)
-            FavoritesScreen(
-              authService: widget.authService,
-              apiService: _apiService,
-            ),
-            // العروض (Offers) - index 3
-            OffersListScreen(
-              title: 'جميع العروض',
-              offers: null,
-              apiService: _apiService,
-              authService: widget.authService,
-            ),
-            const CartScreen(),
-            // حسابي (Profile) - index 5
-            isGuest
-                ? _buildLockedScreen('حسابي', 'يجب تسجيل الدخول لعرض معلومات حسابك')
-                : ProfileScreen(
-              authService: widget.authService,
-              apiService: _apiService,
-              onLogout: _logout,
-            ),
-          ],
+            ],
+          ),
         ),
-        bottomNavigationBar: _buildBottomNavigationBar(),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      title: Text(
-        'متجر الطاقة البديلة',
-        style: GoogleFonts.cairo(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: const Color(0xFF4CAF50),
-        ),
-      ),
-      centerTitle: true,
-      leading: Builder(
-        builder: (context) => IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
+  String _getGreetingIcon() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) return '🌅';
+    if (hour >= 12 && hour < 17) return '☀️';
+    if (hour >= 17 && hour < 21) return '🌆';
+    return '🌙';
+  }
+
+  String _getWelcomeSubtitle() {
+    if (widget.authService.isAuthenticated) {
+      final hour = DateTime.now().hour;
+      if (hour >= 5 && hour < 12) {
+        return 'نتمنى لك صباحاً جميلاً مليئاً بالإنجازات';
+      } else if (hour >= 12 && hour < 17) {
+        return 'استمتع بتصفح أحدث منتجاتنا وعروضنا المميزة';
+      } else if (hour >= 17 && hour < 21) {
+        return 'تصفح عروض المساء الحصرية قبل انتهائها';
+      } else {
+        return 'مساء الخير، اكتشف جديدنا واستعد للغد';
+      }
+    }
+    return 'سجل دخولك الآن للاستفادة من جميع الميزات';
+  }
+
+  Widget _buildSocialProofBar() {
+    return TweenAnimationBuilder(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOut,
+      builder: (context, double value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+              offset: Offset(0, 20 * (1 - value)), child: child),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade100, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
             ),
-            child: const Icon(Icons.menu, color: Colors.black87),
-          ),
-          onPressed: () => Scaffold.of(context).openDrawer(),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF10B981).withOpacity(0.1),
+                    const Color(0xFF059669).withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.verified_user_rounded,
+                        color: Colors.white, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'موثوق من قبل آلاف العملاء',
+                    style: GoogleFonts.cairo(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF059669),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildSocialStat(
+                  icon: Icons.people_rounded,
+                  value: '+15,000',
+                  label: 'عميل سعيد',
+                  color: const Color(0xFF6366F1),
+                ),
+                _buildSocialStat(
+                  icon: Icons.shopping_bag_rounded,
+                  value: '+25,000',
+                  label: 'منتج مباع',
+                  color: const Color(0xFFF59E0B),
+                ),
+                _buildSocialStat(
+                  icon: Icons.star_rounded,
+                  value: '4.8',
+                  label: 'تقييم العملاء',
+                  color: const Color(0xFF10B981),
+                ),
+                _buildSocialStat(
+                  icon: Icons.support_agent_rounded,
+                  value: '24/7',
+                  label: 'دعم فني',
+                  color: const Color(0xFF3B82F6),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-      actions: [
+    );
+  }
+
+  Widget _buildSocialStat({
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color color,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
         Container(
-          margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+            border: Border.all(color: color.withOpacity(0.2), width: 1),
           ),
-          child: IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SearchScreen(
-                    authService: widget.authService,
-                    apiService: _apiService,
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.search, color: Colors.black87),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: GoogleFonts.cairo(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
           ),
         ),
-        // CartBadge(
-        //   child: Container(
-        //     margin: const EdgeInsets.only(right: 8),
-        //     decoration: BoxDecoration(
-        //       color: Colors.grey.shade100,
-        //       borderRadius: BorderRadius.circular(12),
-        //     ),
-        //     child: IconButton(
-        //       onPressed: () {
-        //         Navigator.push(
-        //           context,
-        //           MaterialPageRoute(
-        //             builder: (context) => const CartScreen(),
-        //           ),
-        //         );
-        //       },
-        //       icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black87),
-        //     ),
-        //   ),
-        // ),
-        Container(
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Stack(
-            children: [
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => NotificationsScreen(
-                        authService: widget.authService,
-                        apiService: _apiService,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.notifications_none, color: Colors.black87),
-              ),
-              // شارة العدد غير المقروء
-              if (_unreadCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '$_unreadCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: GoogleFonts.cairo(
+            fontSize: 10,
+            color: mediumGray,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(0),
-        child: Container(),
+    );
+  }
+
+  Widget _buildQuickActionsBar() {
+    final quickActions = [
+      {
+        'icon': Icons.compare_arrows_rounded,
+        'label': 'المقارنات',
+        'color': const Color(0xFF6366F1),
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ComparisonScreen(
+                apiService: _apiService,
+                authService: widget.authService,
+              ),
+            ),
+          );
+        },
+      },
+      {
+        'icon': Icons.build_rounded,
+        'label': 'صيانة',
+        'color': const Color(0xFFF59E0B),
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MaintenanceScreen(
+                authService: widget.authService,
+                apiService: _apiService,
+                storageService: widget.storageService,
+              ),
+            ),
+          );
+        },
+      },
+      {
+        'icon': Icons.settings_rounded,
+        'label': 'الإعدادات',
+        'color': const Color(0xFF3B82F6),
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SettingsScreen()),
+          );
+        },
+      },
+      {
+        'icon': Icons.design_services_rounded,
+        'label': 'تصميم منظومة',
+        'color': const Color(0xFF10B981),
+        'onTap': _navigateToSystemBuilder,
+      },
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              textDirection: TextDirection.rtl,
+              children: [
+                Container(
+                  width: 4,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: primaryBlue,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'إجراءات سريعة',
+                  style: GoogleFonts.cairo(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: quickActions.map((action) {
+              return TweenAnimationBuilder(
+                tween: Tween<double>(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOut,
+                builder: (context, double value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.scale(
+                        scale: 0.7 + (0.3 * value), child: child),
+                  );
+                },
+                child: GestureDetector(
+                  onTap: action['onTap'] as VoidCallback,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: (action['color'] as Color).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: (action['color'] as Color).withOpacity(0.2),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Icon(
+                          action['icon'] as IconData,
+                          color: action['color'] as Color,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: 70,
+                        child: Text(
+                          action['label'] as String,
+                          style: GoogleFonts.cairo(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: darkColor,
+                            height: 1.2,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainCategories() {
+    return SizedBox(
+      height: 120,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        itemCount: _mainCategories.length,
+        itemBuilder: (context, index) => TweenAnimationBuilder(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 400 + (index * 100)),
+          curve: Curves.easeOut,
+          builder: (context, double value, child) => Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 50 * (1 - value)),
+              child: child,
+            ),
+          ),
+          child: CategoryCard(
+            category: _mainCategories[index],
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SubCategoriesScreen(
+                  category: _mainCategories[index],
+                  apiService: _apiService,
+                  authService: widget.authService,
+                  storageService: widget.storageService,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBarAction({
+    required IconData icon,
+    required VoidCallback onPressed,
+    String? badge,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Material(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(15),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(15),
+          onTap: onPressed,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            child: Stack(
+              children: [
+                Icon(icon, color: Colors.white, size: 24),
+                if (badge != null)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        badge,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildDrawer() {
     final bool isGuest = !widget.authService.isAuthenticated;
-    final String userName = _getUserName();
-
     return Drawer(
       child: Container(
-        color: Colors.white,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [primaryBlue, Colors.white, Colors.white],
+            stops: [0.0, 0.3, 1.0],
+          ),
+        ),
         child: Column(
           children: [
-            // Drawer Header
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFF4CAF50),
-                    const Color(0xFF1B5E20),
-                  ],
-                ),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 20,
+                bottom: 30,
+                left: 20,
+                right: 20,
               ),
               child: Column(
                 children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 10,
+                  TweenAnimationBuilder(
+                    tween: Tween<double>(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 800),
+                    builder: (context, double value, child) =>
+                        Transform.scale(scale: value, child: child),
+                    child: Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Colors.white, Color(0xFFE0E7FF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 40,
-                      color: Color(0xFF4CAF50),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                        border: Border.all(color: Colors.white, width: 3),
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/app_icon.png',
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.person_rounded,
+                                  size: 50, color: primaryBlue),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 15),
                   Text(
-                    userName,
+                    _getUserName(),
                     style: GoogleFonts.cairo(
-                      fontSize: 18,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.authService.isAuthenticated ? 'عميل مسجل' : 'زائر',
-                    style: GoogleFonts.cairo(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.8),
+                  const SizedBox(height: 5),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      widget.authService.isAuthenticated ? 'عميل مسجل' : 'زائر',
+                      style:
+                          GoogleFonts.cairo(fontSize: 12, color: Colors.white),
                     ),
                   ),
                   if (isGuest) ...[
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: _navigateToLogin,
-                      icon: const Icon(Icons.login, size: 16),
-                      label: Text(
-                        'تسجيل الدخول',
-                        style: GoogleFonts.cairo(fontSize: 12),
+                    const SizedBox(height: 15),
+                    TweenAnimationBuilder(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 1000),
+                      builder: (context, double value, child) => Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 20 * (1 - value)),
+                          child: child,
+                        ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF4CAF50),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                      child: ElevatedButton.icon(
+                        onPressed: _navigateToLogin,
+                        icon: const Icon(Icons.login_rounded, size: 18),
+                        label: Text('تسجيل الدخول',
+                            style: GoogleFonts.cairo(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: primaryBlue,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25)),
+                          elevation: 5,
+                          shadowColor: Colors.black.withOpacity(0.3),
                         ),
                       ),
                     ),
@@ -1067,137 +1831,181 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            // Drawer Items
-            // Drawer Items
             Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  _buildDrawerItem(
-                    icon: Icons.home_outlined,
-                    title: 'الرئيسية',
-                    onTap: () {
-                      Navigator.pop(context);
-                      setState(() => _currentIndex = 0);
-                    },
+              child: Container(
+                margin: const EdgeInsets.only(top: 10),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30),
                   ),
-                  _buildDrawerItem(
-                    icon: Icons.category_outlined,
-                    title: 'التصنيفات',
-                    onTap: () {
-                      Navigator.pop(context);
-                      setState(() => _currentIndex = 1);
-                    },
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30),
                   ),
-                  _buildDrawerItem(
-                    icon: Icons.favorite_border,
-                    title: 'المفضلة',
-                    onTap: () {
-                      Navigator.pop(context);
-                      setState(() => _currentIndex = 2);
-                    },
-                  ),
-
-                  // ✅ قائمة المنتجات (قابلة للطي)
-                  ExpansionTile(
-                    leading: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF4CAF50)),
-                    title: Text(
-                      'المنتجات',
-                      style: GoogleFonts.cairo(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    children: [
+                      _buildDrawerItem(
+                        icon: Icons.home_rounded,
+                        title: 'الرئيسية',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _currentIndex = 0);
+                        },
                       ),
-                    ),
-                    trailing: Icon(
-                      _isProductsExpanded ? Icons.expand_less : Icons.expand_more,
-                      color: Colors.grey,
-                    ),
-                    onExpansionChanged: (expanded) {
-                      setState(() => _isProductsExpanded = expanded);
-                    },
-                    children: _buildProductsSubmenu(),
-                  ),
-
-                  // ✅ قائمة العروض (قابلة للطي)
-                  ExpansionTile(
-                    leading: const Icon(Icons.local_offer_outlined, color: Color(0xFF4CAF50)),
-                    title: Text(
-                      'العروض',
-                      style: GoogleFonts.cairo(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
+                      _buildDrawerItem(
+                        icon: Icons.grid_view_rounded,
+                        title: 'التصنيفات',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _currentIndex = 1);
+                        },
                       ),
-                    ),
-                    trailing: Icon(
-                      _isOffersExpanded ? Icons.expand_less : Icons.expand_more,
-                      color: Colors.grey,
-                    ),
-                    onExpansionChanged: (expanded) {
-                      setState(() => _isOffersExpanded = expanded);
-                    },
-                    children: _buildOffersSubmenu(),
+                      _buildDrawerItem(
+                        icon: Icons.design_services_rounded,
+                        title: 'تصميم منظومة',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _navigateToSystemBuilder();
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.favorite_rounded,
+                        title: 'المفضلة',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _currentIndex = 2);
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.discount_rounded,
+                        title: 'العروض',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _currentIndex = 3);
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.shopping_cart_rounded,
+                        title: 'السلة',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _currentIndex = 4);
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.person_rounded,
+                        title: 'حسابي',
+                        onTap: () {
+                          Navigator.pop(context);
+                          if (isGuest) {
+                            _showLoginRequired();
+                          } else {
+                            setState(() => _currentIndex = 5);
+                          }
+                        },
+                        requiresAuth: true,
+                        isGuest: isGuest,
+                      ),
+                      const Padding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        child: Divider(),
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.smart_toy_rounded,
+                        title: 'المساعد الذكي',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _openChatScreen();
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.solar_power_rounded,
+                        title: 'منظوماتي',
+                        onTap: () {
+                          Navigator.pop(context);
+                          if (isGuest) {
+                            _showLoginRequired();
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SolarSystemsScreen(
+                                  authService: widget.authService,
+                                  apiService: _apiService,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        requiresAuth: true,
+                        isGuest: isGuest,
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.build_rounded,
+                        title: 'صيانة',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MaintenanceScreen(
+                                authService: widget.authService,
+                                apiService: _apiService,
+                                storageService: widget.storageService,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.compare_arrows_rounded,
+                        title: 'المقارنات',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ComparisonScreen(
+                                apiService: _apiService,
+                                authService: widget.authService,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.settings_rounded,
+                        title: 'الإعدادات',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.logout_rounded,
+                        title: 'تسجيل خروج',
+                        onTap: () {
+                          Navigator.pop(context);
+                          if (!isGuest) _logout();
+                        },
+                        isDestructive: true,
+                        requiresAuth: true,
+                        isGuest: isGuest,
+                      ),
+                    ],
                   ),
-
-                  _buildDrawerItem(
-                    icon: Icons.chat_bubble_outline,
-                    title: 'المساعد الذكي',
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (isGuest) {
-                        _showLoginRequired();
-                      } else {
-                        setState(() => _currentIndex = 4);
-                      }
-                    },
-                    requiresAuth: true,
-                    isGuest: isGuest,
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.build,
-                    title: 'صيانة',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MaintenanceScreen(
-                            authService: widget.authService,
-                            apiService: _apiService,
-                            storageService: widget.storageService,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.person_outline,
-                    title: 'حسابي',
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (isGuest) {
-                        _showLoginRequired();
-                      } else {
-                        setState(() => _currentIndex = 5);
-                      }
-                    },
-                    requiresAuth: true,
-                    isGuest: isGuest,
-                  ),
-                  const Divider(height: 1, thickness: 1),
-                  _buildDrawerItem(
-                    icon: Icons.logout,
-                    title: 'تسجيل خروج',
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (!isGuest) {
-                        _logout();
-                      }
-                    },
-                    isDestructive: true,
-                    requiresAuth: true,
-                    isGuest: isGuest,
-                  ),
-                ],
+                ),
               ),
             ),
           ],
@@ -1215,100 +2023,273 @@ class _HomeScreenState extends State<HomeScreen> {
     bool isGuest = false,
   }) {
     if (requiresAuth && isGuest) {
-      return ListTile(
-        leading: Icon(icon, color: Colors.grey.shade400),
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 3),
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: Colors.grey.shade400, size: 22),
+          ),
+          title: Text(title,
+              style: GoogleFonts.cairo(color: Colors.grey.shade400)),
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Text('تسجيل دخول',
+                style: GoogleFonts.cairo(
+                    fontSize: 10, color: Colors.orange.shade700)),
+          ),
+          onTap: _navigateToLogin,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+      );
+    }
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 3),
+      child: ListTile(
+        leading: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            gradient: isDestructive
+                ? LinearGradient(
+                    colors: [Colors.red.shade400, Colors.red.shade300])
+                : LinearGradient(colors: [
+                    primaryBlue.withOpacity(0.2),
+                    secondaryBlue.withOpacity(0.1)
+                  ]),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon,
+              color: isDestructive ? Colors.white : primaryBlue, size: 22),
+        ),
         title: Text(
           title,
           style: GoogleFonts.cairo(
-            color: Colors.grey.shade400,
+            color: isDestructive ? Colors.red.shade400 : darkColor,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            'تسجيل دخول',
-            style: GoogleFonts.cairo(
-              fontSize: 10,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ),
-        onTap: _navigateToLogin,
-      );
-    }
-
-    return ListTile(
-      leading: Icon(icon, color: isDestructive ? Colors.red.shade400 : const Color(0xFF4CAF50)),
-      title: Text(
-        title,
-        style: GoogleFonts.cairo(
-          color: isDestructive ? Colors.red.shade400 : Colors.black87,
-        ),
+        trailing: const Icon(Icons.arrow_forward_ios_rounded,
+            size: 16, color: Colors.grey),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       ),
-      onTap: onTap,
     );
   }
 
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+  Widget _buildCenterHubNavBar() {
+    return SizedBox(
+      height: 90,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 75,
+              margin: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 5),
+                  ),
+                  BoxShadow(
+                    color: primaryBlue.withOpacity(0.05),
+                    blurRadius: 15,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+                border: Border.all(color: Colors.grey.shade100, width: 1),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildSideNavItem(
+                    icon: Icons.design_services_rounded,
+                    label: 'تصميم منظومة',
+                    index: -1,
+                    onTapOverride: _navigateToSystemBuilder,
+                  ),
+                  _buildSideNavItem(
+                    icon: Icons.discount_rounded,
+                    label: 'العروض',
+                    index: 3,
+                  ),
+                  _buildSideNavItem(
+                    icon: Icons.grid_view_rounded,
+                    label: 'التصنيفات',
+                    index: 1,
+                  ),
+                  const SizedBox(width: 45),
+                  _buildSideNavItem(
+                    icon: Icons.favorite_rounded,
+                    label: 'المفضلة',
+                    index: 2,
+                  ),
+                  _buildSideNavItem(
+                    icon: Icons.shopping_cart_rounded,
+                    label: 'السلة',
+                    index: 4,
+                  ),
+                  _buildSideNavItem(
+                    icon: Icons.person_rounded,
+                    label: 'حسابي',
+                    index: 5,
+                    requiresAuth: true,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 40,
+            right: MediaQuery.of(context).size.width * 0.415,
+            child: GestureDetector(
+              onTap: _onCenterTap,
+              child: AnimatedBuilder(
+                animation: _centerPulseController,
+                builder: (context, child) {
+                  final pulseScale =
+                      1.0 + (_centerPulseController.value * 0.05);
+                  return Transform.scale(scale: pulseScale, child: child);
+                },
+                child: Container(
+                  width: 55,
+                  height: 55,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryBlue.withOpacity(0.5),
+                        blurRadius: 20,
+                        spreadRadius: 4,
+                      ),
+                      BoxShadow(
+                        color: accentBlue.withOpacity(0.3),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                    border: Border.all(color: Colors.white, width: 3),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.3),
+                              Colors.transparent
+                            ],
+                            radius: 0.8,
+                          ),
+                        ),
+                      ),
+                      const Icon(Icons.home_rounded,
+                          color: Colors.white, size: 28),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 20,
+            right: MediaQuery.of(context).size.width * 0.42,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text('الرئيسية',
+                  style: GoogleFonts.cairo(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: primaryBlue)),
+            ),
           ),
         ],
       ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF4CAF50),
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: GoogleFonts.cairo(fontSize: 11),
-        unselectedLabelStyle: GoogleFonts.cairo(fontSize: 11),
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'الرئيسية',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.category_outlined),
-            activeIcon: Icon(Icons.category),
-            label: 'التصنيفات',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_border),
-            activeIcon: Icon(Icons.favorite),
-            label: 'المفضلة',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_offer_outlined),
-            activeIcon: Icon(Icons.local_offer),
-            label: 'العروض',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart_outlined),  // ✅ السلة بدلاً من المساعد
-            activeIcon: Icon(Icons.shopping_cart),
-            label: 'السلة',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'حسابي',
-          ),
-        ],
+    );
+  }
+
+  Widget _buildSideNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+    VoidCallback? onTapOverride,
+    bool requiresAuth = false,
+  }) {
+    final isSelected = _currentIndex == index && index >= 0;
+    final isGuest = !widget.authService.isAuthenticated;
+
+    return GestureDetector(
+      onTap: () {
+        if (onTapOverride != null) {
+          onTapOverride();
+        } else if (requiresAuth && isGuest) {
+          _showLoginRequired();
+        } else if (index >= 0) {
+          setState(() => _currentIndex = index);
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: EdgeInsets.all(isSelected ? 9 : 7),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.grey.shade200 : null,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? Colors.grey.shade600 : Colors.grey.shade400,
+                size: isSelected ? 24 : 20,
+              ),
+            ),
+            const SizedBox(height: 4),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 300),
+              style: GoogleFonts.cairo(
+                fontSize: 9,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.grey.shade700 : Colors.grey.shade500,
+              ),
+              child: Text(label, textAlign: TextAlign.center),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1321,52 +2302,54 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 100,
-              height: 100,
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
                 shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [Colors.grey.shade200, Colors.grey.shade300],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-              child: Icon(
-                Icons.lock_outline,
-                size: 50,
-                color: Colors.grey.shade400,
-              ),
+              child: Icon(Icons.lock_rounded,
+                  size: 60, color: Colors.grey.shade500),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 30),
             Text(
               title,
               style: GoogleFonts.cairo(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+                  fontSize: 26, fontWeight: FontWeight.bold, color: darkColor),
             ),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
               style: GoogleFonts.cairo(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-                height: 1.5,
-              ),
+                  fontSize: 16, color: mediumGray, height: 1.5),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 35),
             ElevatedButton.icon(
               onPressed: _navigateToLogin,
-              icon: const Icon(Icons.login),
-              label: Text(
-                'تسجيل الدخول',
-                style: GoogleFonts.cairo(),
-              ),
+              icon: const Icon(Icons.login_rounded),
+              label: Text('تسجيل الدخول',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4CAF50),
+                backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    borderRadius: BorderRadius.circular(15)),
+                elevation: 5,
+                shadowColor: primaryBlue.withOpacity(0.5),
               ),
             ),
           ],
@@ -1378,48 +2361,56 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildAdvertisementsCarousel() {
     return CarouselSlider(
       options: CarouselOptions(
-        height: 180,
+        height: 200,
         autoPlay: true,
         autoPlayInterval: const Duration(seconds: 5),
         enlargeCenterPage: true,
         viewportFraction: 0.9,
-        enlargeFactor: 0.3,
       ),
       items: _advertisements.map((ad) {
-        return GestureDetector(
-          onTap: () {
-            if (ad['link_url'] != null && ad['link_url'].isNotEmpty) {
-              // TODO: Open URL in browser
-            }
-          },
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(25),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: ad['image_path'],
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Shimmer.fromColors(
+                    baseColor: Colors.grey.shade300,
+                    highlightColor: Colors.grey.shade100,
+                    child: Container(color: Colors.grey.shade300),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.error, size: 50),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.3),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
                 ),
               ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: CachedNetworkImage(
-                imageUrl: ad['image_path'],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                placeholder: (context, url) => Shimmer.fromColors(
-                  baseColor: Colors.grey.shade300,
-                  highlightColor: Colors.grey.shade100,
-                  child: Container(color: Colors.grey.shade300),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.error, size: 50),
-                ),
-              ),
             ),
           ),
         );
@@ -1435,286 +2426,306 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
       child: Row(
+        textDirection: TextDirection.ltr,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 22, color: const Color(0xFF4CAF50)),
-            const SizedBox(width: 8),
-          ],
+          if (onSeeAll != null)
+            GestureDetector(
+              onTap: onSeeAll,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'عرض الكل',
+                    style: GoogleFonts.cairo(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: primaryBlue,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 16,
+                    color: primaryBlue,
+                  ),
+                ],
+              ),
+            ),
+          const Spacer(),
           Text(
             title,
             style: GoogleFonts.cairo(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: darkColor,
             ),
           ),
-          const Spacer(),
-          if (onSeeAll != null)
-            TextButton(
-              onPressed: onSeeAll,
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF4CAF50),
+          const SizedBox(width: 12),
+          Container(
+            width: 4,
+            height: 22,
+            decoration: BoxDecoration(
+              color: primaryBlue,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 12),
+          if (icon != null)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: primaryBlue.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                'عرض الكل',
-                style: GoogleFonts.cairo(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              child: Icon(icon, size: 20, color: primaryBlue),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildMainCategories() {
-    return SizedBox(
-      height: 110,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 15),
-        itemCount: _mainCategories.length,
-        itemBuilder: (context, index) {
-          final category = _mainCategories[index];
-          return CategoryCard(
-            category: category,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SubCategoriesScreen(
-                    category: category,
-                    apiService: _apiService,
-                    authService: widget.authService,
-                    storageService: widget.storageService,
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildProductsHorizontalList(List<dynamic> products) {
     return SizedBox(
-      height: 260,
+      height: 285,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 15),
         itemCount: products.length > 10 ? 10 : products.length,
-        itemBuilder: (context, index) {
-          final product = products[index];
-          return ProductCard(
-            product: product,
-            apiService: _apiService,
-            authService: widget.authService,
-          );
-        },
+        itemBuilder: (context, index) => TweenAnimationBuilder(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 400 + (index * 100)),
+          curve: Curves.easeOut,
+          builder: (context, double value, child) => Opacity(
+            opacity: value,
+            child: Transform.scale(scale: 0.8 + (0.2 * value), child: child),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: HomeProductCard(
+              product: products[index],
+              apiService: _apiService,
+              authService: widget.authService,
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildOffersHorizontalList(List<dynamic> offers) {
     return SizedBox(
-      height: 290,
+      height: 250,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 15),
         itemCount: offers.length > 10 ? 10 : offers.length,
-        itemBuilder: (context, index) {
-          final offer = offers[index];
-          return Container(
-            width: 280,
+        itemBuilder: (context, index) => TweenAnimationBuilder(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 400 + (index * 100)),
+          curve: Curves.easeOut,
+          builder: (context, double value, child) => Opacity(
+            opacity: value,
+            child: Transform.scale(scale: 0.8 + (0.2 * value), child: child),
+          ),
+          child: Container(
+            width: 290,
             margin: const EdgeInsets.symmetric(horizontal: 5),
-            child: OfferCard(
-              offer: offer,
+            child: HomeOfferCard(
+              offer: offers[index],
               apiService: _apiService,
               authService: widget.authService,
-
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildShimmerCategories() {
     return SizedBox(
-      height: 110,
+      height: 120,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 15),
         itemCount: 5,
-        itemBuilder: (context, index) {
-          return Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
-            child: Container(
-              width: 100,
-              margin: const EdgeInsets.symmetric(horizontal: 5),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
+        itemBuilder: (context, index) => Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            width: 110,
+            margin: const EdgeInsets.symmetric(horizontal: 5),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubCategoriesHorizontalList(List<dynamic> subCategories) {
+    return SizedBox(
+      height: 150,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        itemCount: subCategories.length > 10 ? 10 : subCategories.length,
+        itemBuilder: (context, index) => TweenAnimationBuilder(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 400 + (index * 100)),
+          curve: Curves.easeOut,
+          builder: (context, double value, child) => Opacity(
+            opacity: value,
+            child: Transform.scale(
+              scale: 0.8 + (0.2 * value),
+              child: child,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: _buildSubCategoryCard(subCategories[index]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubCategoryCard(dynamic subCategory) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductsListScreen(
+              title: subCategory['name_ar'] ?? 'المنتجات',
+              products: null,
+              subcategorySlug: subCategory['slug'],
+              isSubCategory: true,
+              apiService: _apiService,
+              authService: widget.authService,
+              storageService: widget.storageService,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 120,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: subCategory['image'] ?? '',
+                height: 70,
+                width: 70,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  height: 70,
+                  width: 70,
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.kitchen_rounded, color: Colors.grey),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  height: 70,
+                  width: 70,
+                  color: Colors.grey.shade200,
+                  child: Icon(
+                    Icons.kitchen_rounded,
+                    color: Colors.grey.shade400,
+                    size: 35,
+                  ),
+                ),
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
-  // بناء قائمة المنتجات الفرعية
-  List<Widget> _buildProductsSubmenu() {
-    return [
-      _buildDrawerItem(
-        icon: Icons.visibility,
-        title: 'الأكثر مشاهدة',
-        onTap: () {
-          Navigator.pop(context);
-          _navigateToProductsList('الأكثر مشاهدة', 'most-viewed');
-        },
-      ),
-      _buildDrawerItem(
-        icon: Icons.star,
-        title: 'أعلى تقييماً',
-        onTap: () {
-          Navigator.pop(context);
-          _navigateToProductsList('أعلى تقييماً', 'top-rated');
-        },
-      ),
-      _buildDrawerItem(
-        icon: Icons.fiber_new,
-        title: 'أحدث المنتجات',
-        onTap: () {
-          Navigator.pop(context);
-          _navigateToProductsList('أحدث المنتجات', 'latest');
-        },
-      ),
-      _buildDrawerItem(
-        icon: Icons.shuffle,
-        title: 'اقتراحات لك',
-        onTap: () {
-          Navigator.pop(context);
-          _navigateToProductsList('اقتراحات لك', 'random');
-        },
-      ),
-    ];
-  }
-
-// بناء قائمة العروض الفرعية
-  List<Widget> _buildOffersSubmenu() {
-    return [
-      _buildDrawerItem(
-        icon: Icons.flash_on,
-        title: 'الأكثر سعة',
-        onTap: () {
-          Navigator.pop(context);
-          _navigateToOffersList('العروض الأكثر سعة', 'highest-power');
-        },
-      ),
-      _buildDrawerItem(
-        icon: Icons.attach_money,
-        title: 'الأرخص',
-        onTap: () {
-          Navigator.pop(context);
-          _navigateToOffersList('العروض الأرخص', 'cheapest');
-        },
-      ),
-      _buildDrawerItem(
-        icon: Icons.fiber_new,
-        title: 'أحدث العروض',
-        onTap: () {
-          Navigator.pop(context);
-          _navigateToOffersList('أحدث العروض', 'latest');
-        },
-      ),
-      _buildDrawerItem(
-        icon: Icons.category,
-        title: 'عروض متنوعة',
-        onTap: () {
-          Navigator.pop(context);
-          _navigateToOffersList('عروض متنوعة', 'variety');
-        },
-      ),
-      _buildDrawerItem(
-        icon: Icons.local_offer,
-        title: 'عروض مميزة',
-        onTap: () {
-          Navigator.pop(context);
-          _navigateToOffersList('عروض مميزة', 'featured');
-        },
-      ),
-    ];
-  }
-
-// التنقل إلى شاشة المنتجات حسب النوع
-  void _navigateToProductsList(String title, String type) {
-    List<dynamic> products = [];
-
-    switch (type) {
-      case 'most-viewed':
-        products = _mostViewedProducts;
-        break;
-      case 'top-rated':
-        products = _topRatedProducts;
-        break;
-      case 'latest':
-        products = _latestProducts;
-        break;
-      case 'random':
-        products = _randomProducts;
-        break;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProductsListScreen(
-          title: title,
-          products: products,
-          apiService: _apiService,
-          authService: widget.authService,
-          storageService: widget.storageService,
-
+            const SizedBox(height: 8),
+            Text(
+              subCategory['name_ar'] ?? 'تصنيف',
+              style: GoogleFonts.cairo(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: darkColor,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (subCategory['number_products'] != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  '${subCategory['number_products']} منتج',
+                  style: GoogleFonts.cairo(
+                    fontSize: 10,
+                    color: mediumGray,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 
-// التنقل إلى شاشة العروض حسب النوع
-  void _navigateToOffersList(String title, String type) {
-    List<dynamic> offers = [];
-
-    switch (type) {
-      case 'highest-power':
-        offers = _highestPowerOffers;
-        break;
-      case 'cheapest':
-        offers = _cheapestOffers;
-        break;
-      case 'latest':
-        offers = _latestOffers;
-        break;
-      case 'variety':
-        offers = _varietyOffers;
-        break;
-      case 'featured':
-        offers = _featuredOffers;
-        break;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => OffersListScreen(
-          title: title,
-          offers: offers,
-          apiService: _apiService,
-          authService: widget.authService,
+  Widget _buildShimmerSubCategories() {
+    return SizedBox(
+      height: 150,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        itemCount: 5,
+        itemBuilder: (context, index) => Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            width: 120,
+            margin: const EdgeInsets.symmetric(horizontal: 5),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
         ),
       ),
     );
+  }
+
+  void _openChatScreen() {
+    final bool isGuest = !widget.authService.isAuthenticated;
+    final savedGovernorate = widget.storageService.getGuestGovernorate();
+    if (isGuest) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => GuestChatScreen(
+            apiService: _apiService,
+            storageService: widget.storageService,
+            initialGovernorate: savedGovernorate,
+          ),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatScreen(
+            authService: widget.authService,
+            apiService: _apiService,
+          ),
+        ),
+      );
+    }
   }
 }

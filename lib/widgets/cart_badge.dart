@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:energy_store_app/services/cart_service.dart';
+import 'package:GeniusHouse/services/cart_service.dart';
 
 class CartBadge extends StatefulWidget {
   final Widget child;

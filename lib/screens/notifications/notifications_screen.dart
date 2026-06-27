@@ -1,9 +1,13 @@
+// lib/screens/notifications/notifications_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:energy_store_app/services/api_service.dart';
-import 'package:energy_store_app/services/auth_service.dart';
-import 'package:energy_store_app/models/notification_model.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/models/notification_model.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
+import '../auth/login_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   final AuthService authService;
@@ -28,14 +32,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   String? _errorMessage;
   int _unreadCount = 0;
 
+  static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
+  static const Color accentBlue = Color(0xFF60A5FA);
+  static const Color darkColor = Color(0xFF111827);
+  static const Color mediumGray = Color(0xFF4B5563);
+  static const Color lightGray = Color(0xFFF3F4F6);
+  static const Color cardWhite = Color(0xFFFFFFFF);
+
+  
+  bool get _isGuest => !widget.authService.isAuthenticated;
+
   @override
   void initState() {
     super.initState();
-    _fetchNotifications();
-    _fetchUnreadCount();
+    _initLoad();
+  }
+
+  void _initLoad() {
+    if (_isGuest) {
+      
+      setState(() => _isLoading = false);
+    } else {
+      _fetchNotifications();
+      _fetchUnreadCount();
+    }
   }
 
   Future<void> _fetchNotifications({bool loadMore = false}) async {
+    
+    if (_isGuest) return;
+
     if (loadMore) {
       if (!_hasMore || _isLoadingMore) return;
       setState(() => _isLoadingMore = true);
@@ -59,7 +86,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         final data = response['data'];
         final List<dynamic> notificationsJson = data['notifications'] ?? [];
 
-        // ✅ عكس الترتيب: الأحدث (id أكبر) في الأعلى
         final List<NotificationModel> newNotifications = notificationsJson
             .map((json) => NotificationModel.fromJson(json))
             .toList()
@@ -103,6 +129,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _fetchUnreadCount() async {
+    
+    if (_isGuest) return;
+
     try {
       final response = await widget.apiService.getUnreadNotificationsCount();
       if (response.containsKey('data') && mounted) {
@@ -111,12 +140,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         });
       }
     } catch (e) {
-      // ignore
+      
     }
   }
 
   Future<void> _markAsRead(NotificationModel notification) async {
-    if (notification.isRead) return;
+    if (_isGuest || notification.isRead) return;
 
     try {
       await widget.apiService.markAsRead(notification.id);
@@ -135,35 +164,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _unreadCount = _unreadCount > 0 ? _unreadCount - 1 : 0;
       });
     } catch (e) {
-      // ignore
+      
     }
   }
 
   Future<void> _markAllAsRead() async {
-    if (_unreadCount == 0) return;
+    if (_isGuest || _unreadCount == 0) return;
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'تحديد الكل كمقروء',
-          style: GoogleFonts.cairo(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'هل تريد تحديد جميع الإشعارات كمقروءة؟',
-          style: GoogleFonts.cairo(),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('تحديد الكل كمقروء', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: darkColor)),
+        content: Text('هل تريد تحديد جميع الإشعارات كمقروءة؟', style: GoogleFonts.cairo(color: mediumGray)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('إلغاء', style: GoogleFonts.cairo()),
+            child: Text('إلغاء', style: GoogleFonts.cairo(color: mediumGray, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50),
+              backgroundColor: primaryBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('تأكيد', style: GoogleFonts.cairo()),
+            child: Text('تأكيد', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -187,7 +213,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           }
           _unreadCount = 0;
         });
-        _showSnackBar('تم تحديد جميع الإشعارات كمقروءة', Colors.green);
+        _showSnackBar('تم تحديد جميع الإشعارات كمقروءة', primaryBlue);
       } catch (e) {
         _showSnackBar('حدث خطأ', Colors.red);
       }
@@ -195,28 +221,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _deleteNotification(NotificationModel notification) async {
+    if (_isGuest) return;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'حذف الإشعار',
-          style: GoogleFonts.cairo(fontWeight: FontWeight.bold),
-        ),
-        content: Text(
-          'هل تريد حذف هذا الإشعار؟',
-          style: GoogleFonts.cairo(),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('حذف الإشعار', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: darkColor)),
+        content: Text('هل تريد حذف هذا الإشعار؟', style: GoogleFonts.cairo(color: mediumGray)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('إلغاء', style: GoogleFonts.cairo()),
+            child: Text('إلغاء', style: GoogleFonts.cairo(color: mediumGray, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('حذف', style: GoogleFonts.cairo()),
+            child: Text('حذف', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -231,7 +256,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             _unreadCount = _unreadCount > 0 ? _unreadCount - 1 : 0;
           }
         });
-        _showSnackBar('تم حذف الإشعار', Colors.green);
+        _showSnackBar('تم حذف الإشعار', primaryBlue);
       } catch (e) {
         _showSnackBar('حدث خطأ', Colors.red);
       }
@@ -239,30 +264,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _deleteAllNotifications() async {
-    if (_notifications.isEmpty) return;
+    if (_isGuest || _notifications.isEmpty) return;
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'حذف الكل',
-          style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: Colors.red),
-        ),
-        content: Text(
-          'هل تريد حذف جميع الإشعارات؟ هذا الإجراء لا يمكن التراجع عنه.',
-          style: GoogleFonts.cairo(),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('حذف الكل', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: Colors.red)),
+        content: Text('هل تريد حذف جميع الإشعارات؟ هذا الإجراء لا يمكن التراجع عنه.', style: GoogleFonts.cairo(color: mediumGray)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('إلغاء', style: GoogleFonts.cairo()),
+            child: Text('إلغاء', style: GoogleFonts.cairo(color: mediumGray, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('حذف الكل', style: GoogleFonts.cairo()),
+            child: Text('حذف الكل', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -275,7 +297,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           _notifications = [];
           _unreadCount = 0;
         });
-        _showSnackBar('تم حذف جميع الإشعارات', Colors.green);
+        _showSnackBar('تم حذف جميع الإشعارات', primaryBlue);
       } catch (e) {
         _showSnackBar('حدث خطأ', Colors.red);
       }
@@ -285,9 +307,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Row(
+          children: [
+            Icon(
+              color == primaryBlue ? Icons.check_circle_rounded : Icons.error_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
+          ],
+        ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -296,72 +330,103 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: lightGray,
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryBlue, secondaryBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            const Icon(Icons.notifications_rounded, color: Colors.white, size: 24),
+            const SizedBox(width: 10),
             Text(
               'الإشعارات',
-              style: GoogleFonts.cairo(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
             ),
-            if (_unreadCount > 0)
+            if (_unreadCount > 0) ...[
+              const SizedBox(width: 8),
               Container(
-                margin: const EdgeInsets.only(left: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: Colors.red,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '$_unreadCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
+            ],
           ],
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
         elevation: 0,
-        centerTitle: false,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          if (_notifications.isNotEmpty)
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'mark_all_read') {
-                  _markAllAsRead();
-                } else if (value == 'delete_all') {
-                  _deleteAllNotifications();
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'mark_all_read',
-                  child: Row(
-                    children: [
-                      Icon(Icons.done_all, size: 20, color: Color(0xFF4CAF50)),
-                      SizedBox(width: 12),
-                      Text('تحديد الكل كمقروء'),
-                    ],
+          if (!_isGuest && _notifications.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert_rounded, color: Colors.white, size: 22),
+                offset: const Offset(0, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                color: cardWhite,
+                elevation: 10,
+                onSelected: (value) {
+                  if (value == 'mark_all_read') {
+                    _markAllAsRead();
+                  } else if (value == 'delete_all') {
+                    _deleteAllNotifications();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'mark_all_read',
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: primaryBlue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.done_all_rounded, size: 18, color: primaryBlue),
+                        ),
+                        const SizedBox(width: 12),
+                        Text('تحديد الكل كمقروء', style: GoogleFonts.cairo(fontSize: 14, color: darkColor)),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete_all',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_sweep, size: 20, color: Colors.red),
-                      SizedBox(width: 12),
-                      Text('حذف الكل'),
-                    ],
+                  PopupMenuItem(
+                    value: 'delete_all',
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.delete_sweep_rounded, size: 18, color: Colors.red),
+                        ),
+                        const SizedBox(width: 12),
+                        Text('حذف الكل', style: GoogleFonts.cairo(fontSize: 14, color: darkColor)),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
         ],
       ),
@@ -396,11 +461,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: notification.isRead ? Colors.white : const Color(0xFFE8F5E9),
-          borderRadius: BorderRadius.circular(16),
+          color: cardWhite,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: notification.isRead ? Colors.grey.shade200 : primaryBlue.withOpacity(0.2),
+            width: notification.isRead ? 1 : 1.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: notification.isRead
+                  ? Colors.black.withOpacity(0.03)
+                  : primaryBlue.withOpacity(0.08),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -409,13 +480,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // النوع (أيقونة)
             Container(
-              width: 45,
-              height: 45,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
-                color: _getNotificationColor(notification.type).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [
+                    _getNotificationColor(notification.type).withOpacity(0.15),
+                    _getNotificationColor(notification.type).withOpacity(0.08),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 _getNotificationIcon(notification.type),
@@ -423,53 +498,72 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 size: 24,
               ),
             ),
-            const SizedBox(width: 12),
-            // المحتوى
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    notification.title,
-                    style: GoogleFonts.cairo(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                  Row(
+                    children: [
+                      if (!notification.isRead)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: const BoxDecoration(
+                            color: primaryBlue,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      Expanded(
+                        child: Text(
+                          notification.title,
+                          style: GoogleFonts.cairo(
+                            fontSize: 15,
+                            fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.bold,
+                            color: darkColor,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     notification.body,
                     style: GoogleFonts.cairo(
                       fontSize: 13,
-                      color: Colors.grey[600],
-                      height: 1.4,
+                      color: mediumGray,
+                      height: 1.5,
                     ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
+                      Icon(Icons.access_time_rounded, size: 14, color: Colors.grey.shade400),
                       const SizedBox(width: 4),
                       Text(
                         notification.formattedDate,
-                        style: GoogleFonts.cairo(
-                          fontSize: 11,
-                          color: Colors.grey[500],
-                        ),
+                        style: GoogleFonts.cairo(fontSize: 11, color: Colors.grey.shade500),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            // زر الحذف
-            IconButton(
-              onPressed: () => _deleteNotification(notification),
-              icon: Icon(Icons.delete_outline, size: 20, color: Colors.grey[400]),
-            ),
+            if (!_isGuest)
+              IconButton(
+                onPressed: () => _deleteNotification(notification),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                ),
+              ),
           ],
         ),
       ),
@@ -488,8 +582,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              color: cardWhite,
+              borderRadius: BorderRadius.circular(20),
             ),
             height: 100,
           ),
@@ -503,7 +597,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       padding: const EdgeInsets.all(16),
       child: Center(
         child: _isLoadingMore
-            ? const CircularProgressIndicator(color: Color(0xFF4CAF50))
+            ? const CircularProgressIndicator(color: primaryBlue)
             : const SizedBox.shrink(),
       ),
     );
@@ -514,21 +608,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 80, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text(
-            _errorMessage!,
-            style: GoogleFonts.cairo(fontSize: 16, color: Colors.grey.shade600),
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: cardWhite,
+              boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 5))],
+            ),
+            child: Icon(Icons.error_outline_rounded, size: 50, color: Colors.red.shade300),
           ),
+          const SizedBox(height: 20),
+          Text(_errorMessage!, style: GoogleFonts.cairo(fontSize: 16, color: mediumGray)),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () => _fetchNotifications(),
-            icon: const Icon(Icons.refresh),
-            label: Text('إعادة المحاولة', style: GoogleFonts.cairo()),
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text('إعادة المحاولة', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50),
+              backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
         ],
@@ -541,24 +642,74 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_none, size: 80, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
+          Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: cardWhite,
+              boxShadow: [
+                BoxShadow(
+                  color: primaryBlue.withOpacity(0.1),
+                  blurRadius: 30,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Icon(
+              _isGuest ? Icons.lock_outline_rounded : Icons.notifications_none_rounded,
+              size: 55,
+              color: Colors.grey.shade400,
+            ),
+          ),
+          const SizedBox(height: 20),
           Text(
-            'لا توجد إشعارات',
+            _isGuest ? 'سجل دخولك لعرض الإشعارات' : 'لا توجد إشعارات',
             style: GoogleFonts.cairo(
               fontSize: 18,
               fontWeight: FontWeight.w500,
-              color: Colors.grey.shade600,
+              color: darkColor,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'ستظهر الإشعارات هنا عند استلامها',
+            _isGuest
+                ? 'يجب تسجيل الدخول للاطلاع على الإشعارات الخاصة بك'
+                : 'ستظهر الإشعارات هنا عند استلامها',
             style: GoogleFonts.cairo(
               fontSize: 14,
-              color: Colors.grey.shade500,
+              color: mediumGray,
             ),
           ),
+          if (_isGuest) ...[
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LoginScreen(
+                      authService: widget.authService,
+                      storageService: widget.authService.storageService,
+                    ),
+                  ),
+                ).then((_) {
+                  _initLoad();
+                });
+              },
+              icon: const Icon(Icons.login_rounded, size: 20),
+              label: Text(
+                'تسجيل الدخول',
+                style: GoogleFonts.cairo(fontWeight: FontWeight.w600),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -567,15 +718,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   IconData _getNotificationIcon(String type) {
     switch (type) {
       case 'welcome':
-        return Icons.celebration;
+        return Icons.celebration_rounded;
       case 'tips':
-        return Icons.lightbulb;
+        return Icons.lightbulb_rounded;
       case 'order':
-        return Icons.shopping_bag;
+        return Icons.shopping_bag_rounded;
       case 'offer':
-        return Icons.local_offer;
+        return Icons.local_offer_rounded;
       default:
-        return Icons.notifications;
+        return Icons.notifications_rounded;
     }
   }
 

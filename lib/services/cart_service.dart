@@ -1,94 +1,3 @@
-// import 'dart:convert';
-// import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:energy_store_app/models/cart_item_model.dart';
-//
-// class CartService {
-//   static const String _cartKey = 'cart_items';
-//   static CartService? _instance;
-//   static CartService get instance {
-//     _instance ??= CartService._();
-//     return _instance!;
-//   }
-//
-//   CartService._();
-//
-//   List<CartItemModel> _items = [];
-//
-//   Future<void> loadCart() async {
-//     final prefs = await SharedPreferences.getInstance();
-//     final String? cartJson = prefs.getString(_cartKey);
-//     if (cartJson != null) {
-//       final List<dynamic> decoded = jsonDecode(cartJson);
-//       _items = decoded.map((e) => CartItemModel.fromJson(e)).toList();
-//     } else {
-//       _items = [];
-//     }
-//   }
-//
-//   Future<void> _saveCart() async {
-//     final prefs = await SharedPreferences.getInstance();
-//     final List<Map<String, dynamic>> jsonItems = _items.map((e) => e.toJson()).toList();
-//     await prefs.setString(_cartKey, jsonEncode(jsonItems));
-//   }
-//
-//   List<CartItemModel> get items => _items;
-//
-//   int get itemCount => _items.length;
-//
-//   int get totalQuantity => _items.fold(0, (sum, item) => sum + item.quantity);
-//
-//   double get totalPrice => _items.fold(0, (sum, item) => sum + item.totalPrice);
-//
-//   void addItem(CartItemModel item) {
-//     final existingIndex = _items.indexWhere((i) => i.id == item.id);
-//     if (existingIndex != -1) {
-//       _items[existingIndex].quantity += item.quantity;
-//     } else {
-//       _items.add(item);
-//     }
-//     _saveCart();
-//   }
-//
-//   void removeItem(int productId) {
-//     _items.removeWhere((item) => item.id == productId);
-//     _saveCart();
-//   }
-//
-//   void updateQuantity(int productId, int quantity) {
-//     final index = _items.indexWhere((item) => item.id == productId);
-//     if (index != -1) {
-//       if (quantity <= 0) {
-//         _items.removeAt(index);
-//       } else {
-//         _items[index].quantity = quantity;
-//       }
-//       _saveCart();
-//     }
-//   }
-//
-//   void clearCart() {
-//     _items.clear();
-//     _saveCart();
-//   }
-//
-//   bool isInCart(int productId) {
-//     return _items.any((item) => item.id == productId);
-//   }
-//
-//   int getQuantity(int productId) {
-//     final item = _items.firstWhere((i) => i.id == productId, orElse: () => CartItemModel(
-//       id: 0,
-//       name: '',
-//       slug: '',
-//       price: 0,
-//       finalPrice: 0,
-//       stock: 0,
-//     ));
-//     return item.quantity;
-//   }
-// }
-
-
 // lib/services/cart_service.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -156,7 +65,6 @@ class CartService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // إضافة منتج عادي
   void addItem(CartItemModel item) {
     final existingIndex = _items.indexWhere(
           (i) => i.id == item.id && i.itemType == 'product',
@@ -171,7 +79,6 @@ class CartService extends ChangeNotifier {
     _saveCart();
   }
 
-  // إضافة عرض
   void addOffer(CartItemModel offer) {
     final existingIndex = _items.indexWhere(
           (i) => i.id == offer.id && i.itemType == 'offer',
@@ -186,7 +93,6 @@ class CartService extends ChangeNotifier {
     _saveCart();
   }
 
-  // تحديث الكمية
   void updateQuantity(int id, int newQuantity, {String itemType = 'product'}) {
     final index = _items.indexWhere(
           (i) => i.id == id && i.itemType == itemType,
@@ -201,24 +107,21 @@ class CartService extends ChangeNotifier {
     }
   }
 
-  // حذف عنصر
   void removeItem(int id, {String itemType = 'product'}) {
     _items.removeWhere((i) => i.id == id && i.itemType == itemType);
     _saveCart();
   }
 
-  // تفريغ السلة بالكامل
-  void clearCart() {
+  // ✅ التعديل هنا - أضف async و Future<void>
+  Future<void> clearCart() async {
     _items.clear();
-    _saveCart();
+    await _saveCart();
   }
 
-  // التحقق من وجود عنصر في السلة
   bool isInCart(int id, {String itemType = 'product'}) {
     return _items.any((i) => i.id == id && i.itemType == itemType);
   }
 
-  // الحصول على كمية عنصر
   int getItemQuantity(int id, {String itemType = 'product'}) {
     final item = _items.firstWhere(
           (i) => i.id == id && i.itemType == itemType,
@@ -235,7 +138,6 @@ class CartService extends ChangeNotifier {
     return item.quantity;
   }
 
-  // الحصول على بيانات الطلب لإرسالها للـ API
   Map<String, dynamic> getOrderData() {
     final List<Map<String, dynamic>> products = [];
     final List<Map<String, dynamic>> offers = [];
@@ -266,12 +168,10 @@ class CartService extends ChangeNotifier {
     };
   }
 
-  // الحصول على عدد العناصر في السلة (للمنتجات فقط)
   int get productsCount {
     return _items.where((i) => i.itemType == 'product').length;
   }
 
-  // الحصول على عدد العروض في السلة
   int get offersCount {
     return _items.where((i) => i.itemType == 'offer').length;
   }

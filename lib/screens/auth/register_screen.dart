@@ -1,12 +1,17 @@
+// lib/screens/auth/register_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:energy_store_app/utils/constants.dart';
-import 'package:energy_store_app/utils/helpers.dart';
-import 'package:energy_store_app/services/auth_service.dart';
-import 'package:energy_store_app/services/storage_service.dart';
-import 'package:energy_store_app/screens/home_screen.dart';
-import 'package:energy_store_app/screens/auth/login_screen.dart';
+import 'package:GeniusHouse/utils/constants.dart';
+import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:GeniusHouse/screens/home_screen.dart';
+import 'package:GeniusHouse/screens/auth/login_screen.dart';
+import 'package:GeniusHouse/screens/legal/terms_screen.dart';
+import 'package:GeniusHouse/screens/legal/privacy_screen.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:GeniusHouse/screens/onboarding_screen.dart';
 import 'dart:ui' as ui;
 
 class RegisterScreen extends StatefulWidget {
@@ -23,7 +28,8 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStateMixin {
+class _RegisterScreenState extends State<RegisterScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -32,14 +38,24 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
   final _confirmPasswordController = TextEditingController();
   final _districtController = TextEditingController();
   final _addressController = TextEditingController();
+  final _referralCodeController = TextEditingController();
 
   String _selectedUserType = 'customer';
   String? _selectedGovernorate;
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _acceptedTerms = false;
   late AnimationController _animationController;
   int _currentStep = 0;
+
+  
+  static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
+  static const Color accentBlue = Color(0xFF60A5FA);
+  static const Color darkColor = Color(0xFF111827);
+  static const Color mediumGray = Color(0xFF4B5563);
+  static const Color lightGray = Color(0xFFF3F4F6);
 
   @override
   void initState() {
@@ -59,12 +75,18 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     _confirmPasswordController.dispose();
     _districtController.dispose();
     _addressController.dispose();
+    _referralCodeController.dispose();
     _animationController.dispose();
     super.dispose();
   }
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (!_acceptedTerms) {
+      _showModernErrorSnackBar('الرجاء الموافقة على الشروط وسياسة الخصوصية');
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -78,15 +100,14 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       district: _districtController.text.trim(),
       address: _addressController.text.trim(),
       userType: _selectedUserType,
+      referralCode: _referralCodeController.text.trim(),
     );
 
     if (mounted) {
       setState(() => _isLoading = false);
 
       if (result['success'] == true) {
-        // ✅ إرسال FCM Token بعد التسجيل الناجح
         await widget.authService.sendFcmTokenToServer();
-        print('✅ FCM Token sent after registration');
 
         Navigator.pushReplacement(
           context,
@@ -138,6 +159,20 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     );
   }
 
+  void _showTermsScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TermsScreen()),
+    );
+  }
+
+  void _showPrivacyScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+    );
+  }
+
   void _showModernErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -145,9 +180,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
           children: [
             const Icon(Icons.error_outline, color: Colors.white, size: 20),
             const SizedBox(width: 12),
-            Expanded(
-              child: Text(message, style: GoogleFonts.cairo(fontSize: 14)),
-            ),
+            Expanded(child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
           ],
         ),
         backgroundColor: const Color(0xFFEF4444),
@@ -164,13 +197,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     return Scaffold(
       body: Stack(
         children: [
-          // خلفية متدرجة
           _buildAnimatedBackground(),
-
-          // تأثير زجاجي
-          _buildGlassEffect(),
-
-          // المحتوى الرئيسي
           SafeArea(
             child: AnimationLimiter(
               child: SingleChildScrollView(
@@ -183,37 +210,19 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                       child: FadeInAnimation(child: widget),
                     ),
                     children: [
-                      // شريط علوي
                       _buildModernTopBar(),
-
-                      // شعار متحرك
+                      const SizedBox(height: 5),
                       _buildAnimatedLogo(),
-
                       const SizedBox(height: 16),
-
-                      // عنوان
                       _buildModernTitle(),
-
                       const SizedBox(height: 12),
-
-                      // وصف
                       _buildModernDescription(),
-
-                      const SizedBox(height: 30),
-
-                      // مؤشر الخطوات
+                      const SizedBox(height: 25),
                       _buildStepIndicator(),
-
                       const SizedBox(height: 20),
-
-                      // نموذج التسجيل
                       _buildModernRegisterForm(),
-
                       const SizedBox(height: 20),
-
-                      // رابط تسجيل الدخول
                       _buildLoginLink(),
-
                       const SizedBox(height: 30),
                     ],
                   ),
@@ -233,8 +242,8 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
           center: const Alignment(-0.3, -0.5),
           radius: 1.5,
           colors: [
-            const Color(0xFF10B981).withOpacity(0.15),
-            const Color(0xFF059669).withOpacity(0.08),
+            primaryBlue.withOpacity(0.08),
+            secondaryBlue.withOpacity(0.04),
             Colors.white,
           ],
           stops: const [0.0, 0.5, 1.0],
@@ -243,20 +252,13 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     );
   }
 
-  Widget _buildGlassEffect() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-        child: Container(color: Colors.white.withOpacity(0.3)),
-      ),
-    );
-  }
-
   Widget _buildModernTopBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          
           TweenAnimationBuilder(
             tween: Tween<double>(begin: 0, end: 1),
             duration: const Duration(milliseconds: 600),
@@ -267,17 +269,86 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                   elevation: 2,
                   borderRadius: BorderRadius.circular(15),
                   color: Colors.white,
+                  shadowColor: primaryBlue.withOpacity(0.1),
                   child: InkWell(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => OnboardingScreen(
+                            authService: widget.authService,
+                            storageService: widget.storageService,
+                          ),
+                          transitionsBuilder: (_, animation, __, child) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(-0.3, 0),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
+                          transitionDuration: const Duration(milliseconds: 500),
+                        ),
+                      );
+                    },
                     borderRadius: BorderRadius.circular(15),
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       child: const Icon(
                         Icons.arrow_back_rounded,
-                        color: Color(0xFF10B981),
+                        color: primaryBlue,
                         size: 22,
                       ),
                     ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          
+          TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 800),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryBlue.withOpacity(0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.bolt_rounded,
+                        color: secondaryBlue,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'GeniusHouse',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: darkColor,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -297,25 +368,44 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         return Transform.scale(
           scale: value,
           child: Container(
-            width: 80,
-            height: 80,
+            width: 90,
+            height: 90,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                colors: [primaryBlue, secondaryBlue],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF10B981).withOpacity(0.4),
+                  color: primaryBlue.withOpacity(0.35),
                   blurRadius: 30,
                   spreadRadius: 5,
                 ),
+                BoxShadow(
+                  color: secondaryBlue.withOpacity(0.15),
+                  blurRadius: 50,
+                  spreadRadius: 8,
+                ),
               ],
             ),
-            child: const Center(
-              child: Icon(Icons.person_add_rounded, color: Colors.white, size: 40),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/app_icon.png',
+                width: 90,
+                height: 90,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Center(
+                    child: Icon(
+                      Icons.person_add_rounded,
+                      color: Colors.white,
+                      size: 45,
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         );
@@ -331,17 +421,17 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
           style: GoogleFonts.cairo(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF1A1A1A),
+            color: darkColor,
             height: 1.2,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Container(
           width: 60,
           height: 4,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF10B981), Color(0xFF059669)],
+              colors: [primaryBlue, secondaryBlue],
             ),
             borderRadius: BorderRadius.circular(2),
           ),
@@ -355,18 +445,31 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: lightGray,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: primaryBlue.withOpacity(0.08)),
       ),
-      child: Text(
-        'قم بإنشاء حساب للاستفادة من العروض الحصرية ومتابعة طلباتك',
-        textAlign: TextAlign.center,
-        style: GoogleFonts.cairo(
-          fontSize: 14,
-          color: Colors.grey.shade600,
-          height: 1.5,
-        ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.stars_rounded,
+            color: secondaryBlue,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'قم بإنشاء حساب للاستفادة من العروض الحصرية ومتابعة طلباتك',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.cairo(
+                fontSize: 14,
+                color: mediumGray,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -380,17 +483,24 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
           Expanded(
             child: Container(
               height: 2,
-              color: _currentStep >= 1 ? const Color(0xFF10B981) : Colors.grey.shade300,
+              color: _currentStep >= 1 ? primaryBlue : Colors.grey.shade300,
             ),
           ),
           _buildStepCircle(1, 'العنوان'),
           Expanded(
             child: Container(
               height: 2,
-              color: _currentStep >= 2 ? const Color(0xFF10B981) : Colors.grey.shade300,
+              color: _currentStep >= 2 ? primaryBlue : Colors.grey.shade300,
             ),
           ),
           _buildStepCircle(2, 'كلمة المرور'),
+          Expanded(
+            child: Container(
+              height: 2,
+              color: _currentStep >= 3 ? primaryBlue : Colors.grey.shade300,
+            ),
+          ),
+          _buildStepCircle(3, 'رمز الدعوة'),
         ],
       ),
     );
@@ -407,9 +517,18 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isActive ? const Color(0xFF10B981) : Colors.grey.shade200,
+            color: isActive ? primaryBlue : Colors.grey.shade200,
             border: isCurrent
-                ? Border.all(color: const Color(0xFF10B981), width: 3)
+                ? Border.all(color: primaryBlue, width: 3)
+                : null,
+            boxShadow: isActive
+                ? [
+              BoxShadow(
+                color: primaryBlue.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ]
                 : null,
           ),
           child: Center(
@@ -422,12 +541,12 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
           label,
           style: GoogleFonts.cairo(
             fontSize: 10,
-            color: isActive ? const Color(0xFF10B981) : Colors.grey.shade500,
+            color: isActive ? primaryBlue : Colors.grey.shade500,
             fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -444,11 +563,14 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: primaryBlue.withOpacity(0.06),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
+        border: Border.all(
+          color: primaryBlue.withOpacity(0.05),
+        ),
       ),
       child: Form(
         key: _formKey,
@@ -478,19 +600,24 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
               _buildModernConfirmPasswordField(),
             ],
 
-            const SizedBox(height: 30),
+            if (_currentStep == 3) ...[
+              _buildModernReferralCodeField(),
+              const SizedBox(height: 20),
+              _buildTermsAndConditionsSection(),
+            ],
 
-            // أزرار التنقل
+            const SizedBox(height: 24),
+
+            
             Row(
               children: [
-                if (_currentStep > 0)
-                  Expanded(
-                    child: _buildBackButton(),
-                  ),
-                const SizedBox(width: 12),
+                if (_currentStep > 0) ...[
+                  Expanded(child: _buildBackButton()),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   flex: _currentStep > 0 ? 1 : 2,
-                  child: _currentStep < 2
+                  child: _currentStep < 3
                       ? _buildNextButton()
                       : _buildRegisterButton(),
                 ),
@@ -502,12 +629,132 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     );
   }
 
-  // حقول المعلومات الشخصية
+  
+  Widget _buildTermsAndConditionsSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: lightGray,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primaryBlue.withOpacity(0.1)),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _acceptedTerms = !_acceptedTerms),
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: _acceptedTerms ? primaryBlue : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: _acceptedTerms ? primaryBlue : Colors.grey.shade400,
+                        width: 2,
+                      ),
+                    ),
+                    child: _acceptedTerms
+                        ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                        : null,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        style: GoogleFonts.cairo(fontSize: 13, color: mediumGray),
+                        children: [
+                          const TextSpan(text: 'أوافق على '),
+                          TextSpan(
+                            text: 'الشروط والأحكام',
+                            style: TextStyle(
+                              color: primaryBlue,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          const TextSpan(text: ' و '),
+                          TextSpan(
+                            text: 'سياسة الخصوصية',
+                            style: TextStyle(
+                              color: primaryBlue,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildLinkButton(
+                icon: Icons.description_rounded,
+                label: 'الشروط والأحكام',
+                onTap: _showTermsScreen,
+              ),
+              _buildLinkButton(
+                icon: Icons.privacy_tip_rounded,
+                label: 'سياسة الخصوصية',
+                onTap: _showPrivacyScreen,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLinkButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: primaryBlue.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: primaryBlue),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.cairo(
+                fontSize: 11,
+                color: primaryBlue,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  
   Widget _buildModernNameField() {
     return TextFormField(
       controller: _nameController,
       textDirection: TextDirection.rtl,
-      style: GoogleFonts.cairo(fontSize: 15),
+      style: GoogleFonts.cairo(fontSize: 15, color: darkColor),
       decoration: _buildInputDecoration('الاسم الكامل', Icons.person_outline_rounded),
       validator: (value) {
         if (value == null || value.isEmpty) return 'الرجاء إدخال الاسم الكامل';
@@ -522,11 +769,12 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       controller: _emailController,
       keyboardType: TextInputType.emailAddress,
       textDirection: TextDirection.ltr,
-      style: GoogleFonts.cairo(fontSize: 15),
+      style: GoogleFonts.cairo(fontSize: 15, color: darkColor),
       decoration: _buildInputDecoration('البريد الإلكتروني', Icons.email_outlined),
       validator: (value) {
         if (value == null || value.isEmpty) return 'الرجاء إدخال البريد الإلكتروني';
-        if (!Helpers.isValidEmail(value)) return 'الرجاء إدخال بريد إلكتروني صحيح';
+        if (!value.contains('@')) return 'البريد الإلكتروني يجب أن يحتوي على @';
+        if (!Helpers.isValidEmail(value)) return 'الرجاء إدخال بريد إلكتروني صحيح (مثال: name@domain.com)';
         return null;
       },
     );
@@ -537,7 +785,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       controller: _phoneController,
       keyboardType: TextInputType.phone,
       textDirection: TextDirection.ltr,
-      style: GoogleFonts.cairo(fontSize: 15),
+      style: GoogleFonts.cairo(fontSize: 15, color: darkColor),
       decoration: _buildInputDecoration('رقم الهاتف (مثال: +963933314341)', Icons.phone_outlined),
       validator: (value) {
         if (value == null || value.isEmpty) return 'الرجاء إدخال رقم الهاتف';
@@ -559,7 +807,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     );
   }
 
-  // حقول العنوان
+  
   Widget _buildModernGovernorateField() {
     return DropdownButtonFormField<String>(
       value: _selectedGovernorate,
@@ -576,7 +824,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     return TextFormField(
       controller: _districtController,
       textDirection: TextDirection.rtl,
-      style: GoogleFonts.cairo(fontSize: 15),
+      style: GoogleFonts.cairo(fontSize: 15, color: darkColor),
       decoration: _buildInputDecoration('المنطقة', Icons.location_on_outlined),
       validator: (value) => value == null || value.isEmpty ? 'الرجاء إدخال المنطقة' : null,
     );
@@ -587,24 +835,27 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       controller: _addressController,
       textDirection: TextDirection.rtl,
       maxLines: 2,
-      style: GoogleFonts.cairo(fontSize: 15),
+      style: GoogleFonts.cairo(fontSize: 15, color: darkColor),
       decoration: _buildInputDecoration('العنوان التفصيلي', Icons.home_outlined),
       validator: (value) => value == null || value.isEmpty ? 'الرجاء إدخال العنوان' : null,
     );
   }
 
-  // حقول كلمة المرور
+  
   Widget _buildModernPasswordField() {
     return TextFormField(
       controller: _passwordController,
       obscureText: _obscurePassword,
       textDirection: TextDirection.ltr,
-      style: GoogleFonts.cairo(fontSize: 15),
+      style: GoogleFonts.cairo(fontSize: 15, color: darkColor),
       decoration: _buildInputDecoration(
         'كلمة المرور',
         Icons.lock_outline_rounded,
         suffixIcon: IconButton(
-          icon: Icon(_obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded),
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+            color: mediumGray,
+          ),
           onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
         ),
       ),
@@ -621,12 +872,15 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       controller: _confirmPasswordController,
       obscureText: _obscureConfirmPassword,
       textDirection: TextDirection.ltr,
-      style: GoogleFonts.cairo(fontSize: 15),
+      style: GoogleFonts.cairo(fontSize: 15, color: darkColor),
       decoration: _buildInputDecoration(
         'تأكيد كلمة المرور',
         Icons.lock_outline_rounded,
         suffixIcon: IconButton(
-          icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded),
+          icon: Icon(
+            _obscureConfirmPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+            color: mediumGray,
+          ),
           onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
         ),
       ),
@@ -638,18 +892,67 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     );
   }
 
-  // دالة مساعدة لإنشاء تنسيق الحقول
+  Widget _buildModernReferralCodeField() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: primaryBlue.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: primaryBlue.withOpacity(0.15)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.card_giftcard, color: primaryBlue, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'إذا كان لديك رمز دعوة من صديق، يمكنك إدخاله هنا للحصول على مكافأة!',
+                  style: GoogleFonts.cairo(
+                    fontSize: 12,
+                    color: primaryBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: _referralCodeController,
+          textDirection: TextDirection.ltr,
+          textCapitalization: TextCapitalization.characters,
+          style: GoogleFonts.cairo(fontSize: 15, color: darkColor),
+          decoration: _buildInputDecoration(
+            'رمز الدعوة (اختياري)',
+            Icons.verified_user_rounded,
+          ).copyWith(
+            hintText: 'مثال: ABC12345',
+            hintStyle: GoogleFonts.cairo(fontSize: 13, color: Colors.grey.shade400),
+          ),
+          validator: (value) {
+            if (value != null && value.isNotEmpty && value.length < 6) {
+              return 'رمز الدعوة يجب أن يكون 6 أحرف على الأقل (اختياري)';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
   InputDecoration _buildInputDecoration(String label, IconData icon, {Widget? suffixIcon}) {
     return InputDecoration(
       labelText: label,
-      labelStyle: GoogleFonts.cairo(color: Colors.grey.shade600),
+      labelStyle: GoogleFonts.cairo(color: mediumGray),
       prefixIcon: Container(
         margin: const EdgeInsets.all(12),
-        child: Icon(icon, color: const Color(0xFF10B981), size: 20),
+        child: Icon(icon, color: secondaryBlue, size: 20),
       ),
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: Colors.grey.shade50,
+      fillColor: lightGray,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide.none,
@@ -660,7 +963,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(color: Color(0xFF10B981), width: 2),
+        borderSide: const BorderSide(color: primaryBlue, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
@@ -681,14 +984,14 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             height: 55,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                colors: [primaryBlue, secondaryBlue],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF10B981).withOpacity(0.4),
+                  color: primaryBlue.withOpacity(0.4),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
                 ),
@@ -704,7 +1007,8 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('التالي', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text('التالي',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                   SizedBox(width: 8),
                   Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
                 ],
@@ -720,8 +1024,8 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     return OutlinedButton(
       onPressed: () => setState(() => _currentStep--),
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF10B981),
-        side: const BorderSide(color: Color(0xFF10B981)),
+        foregroundColor: primaryBlue,
+        side: const BorderSide(color: primaryBlue),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         minimumSize: const Size(double.infinity, 55),
       ),
@@ -747,14 +1051,14 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             height: 55,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                colors: [primaryBlue, secondaryBlue],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF10B981).withOpacity(0.4),
+                  color: primaryBlue.withOpacity(0.4),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
                 ),
@@ -768,13 +1072,17 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               ),
               child: _isLoading
-                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                  ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
                   : const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                   SizedBox(width: 10),
-                  Text('إنشاء حساب', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text('إنشاء حساب',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ],
               ),
             ),
@@ -788,18 +1096,17 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('لديك حساب بالفعل؟', style: GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade600)),
+        Text('لديك حساب بالفعل؟', style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
         TextButton(
           onPressed: _goToLogin,
-          style: TextButton.styleFrom(foregroundColor: const Color(0xFF10B981)),
-          child: Text('تسجيل دخول', style: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.bold)),
+          style: TextButton.styleFrom(foregroundColor: primaryBlue),
+          child: Text('تسجيل دخول', style: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.bold, color: primaryBlue)),
         ),
       ],
     );
   }
 }
 
-// أنيمشن Fade + Slide
 class FadeInAnimation extends StatelessWidget {
   final Widget child;
 

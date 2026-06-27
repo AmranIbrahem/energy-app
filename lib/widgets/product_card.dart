@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:energy_store_app/utils/helpers.dart';
-import 'package:energy_store_app/services/api_service.dart';
-import 'package:energy_store_app/services/auth_service.dart';
-import 'package:energy_store_app/services/favorites_service.dart';
-import 'package:energy_store_app/screens/products/product_details_screen.dart';
-import 'package:energy_store_app/services/cart_service.dart';
-import 'package:energy_store_app/models/cart_item_model.dart';
+import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/favorites_service.dart';
+import 'package:GeniusHouse/screens/products/product_details_screen.dart';
+import 'package:GeniusHouse/services/cart_service.dart';
+import 'package:GeniusHouse/models/cart_item_model.dart';
 
 class ProductCard extends StatefulWidget {
   final dynamic product;

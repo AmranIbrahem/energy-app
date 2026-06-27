@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:energy_store_app/utils/constants.dart';
-import 'package:energy_store_app/services/storage_service.dart';
+import 'package:GeniusHouse/utils/constants.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
 
 class ApiService {
   final StorageService storageService;
@@ -362,4 +362,120 @@ class ApiService {
     }
     return headers;
   }
+
+
+
+
+
+
+
+
+  /// بدء جلسة محادثة جديدة للزوار
+  Future<Map<String, dynamic>> startGuestSession() async {
+    try {
+      final response = await post(
+        '/v1/user/public/chat/start',
+        requiresAuth: false,
+        data: {},
+      );
+      return response;
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في بدء الجلسة: $e'};
+    }
+  }
+
+  /// إرسال رسالة كزائر
+  Future<Map<String, dynamic>> sendGuestMessage({
+    required String sessionId,
+    required String message,
+    required String governorate,
+  }) async {
+    try {
+      final response = await post(
+        '/v1/user/public/chat/send',
+        requiresAuth: false,
+        data: {
+          'session_id': sessionId,
+          'message': message,
+          'governorate': governorate,
+        },
+      );
+      return response;
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في إرسال الرسالة: $e'};
+    }
+  }
+
+  /// الحصول على تاريخ محادثة الزوار
+  Future<Map<String, dynamic>> getGuestChatHistory({
+    required String sessionId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    try {
+      final response = await get(
+        '/v1/user/public/chat/history?session_id=$sessionId&limit=$limit&offset=$offset',
+        requiresAuth: false,
+      );
+      return response;
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في جلب تاريخ المحادثة: $e'};
+    }
+  }
+
+  /// مسح محادثة الزوار
+  Future<Map<String, dynamic>> clearGuestChat(String sessionId) async {
+    try {
+      final response = await post(
+        '/v1/user/public/chat/clear',
+        requiresAuth: false,
+        data: {'session_id': sessionId},
+      );
+      return response;
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في مسح المحادثة: $e'};
+    }
+  }
+
+  /// تحديث محافظة الزائر
+  Future<Map<String, dynamic>> updateGuestGovernorate({
+    required String sessionId,
+    required String governorate,
+  }) async {
+    try {
+      final response = await post(
+        '/v1/user/public/chat/update-governorate',
+        requiresAuth: false,
+        data: {
+          'session_id': sessionId,
+          'governorate': governorate,
+        },
+      );
+      return response;
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في تحديث المحافظة: $e'};
+    }
+  }
+
+  /// الحصول على نتيجة حساب (للكل - مسجل أو زائر)
+  Future<Map<String, dynamic>> getCalculationResult({
+    required String calculationId,
+    String? sessionId,
+    bool isGuest = false,
+  }) async {
+    try {
+      final endpoint = isGuest
+          ? '/v1/user/public/chat/calculation-result?calculation_id=$calculationId'
+          : '/v1/user/public/chat/calculation-result?calculation_id=$calculationId';
+
+      final response = await get(
+        endpoint,
+        requiresAuth: !isGuest,
+      );
+      return response;
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في جلب نتيجة الحساب: $e'};
+    }
+  }
+
 }

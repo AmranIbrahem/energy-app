@@ -1,0 +1,298 @@
+// lib/services/order_api_service.dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:GeniusHouse/models/cart_item_model.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class OrderApiService {
+  final String baseUrl;
+  final AuthService authService;
+
+  OrderApiService({
+    required this.baseUrl,
+    required this.authService,
+  });
+
+  Future<String?> _getToken() async {
+    try {
+      await authService.refreshAuthState();
+      final token = authService.token;
+      print('🟡 OrderApiService - Token: ${token != null ? "Found ✅" : "Not Found ❌"}');
+
+      if (token == null || token.isEmpty) {
+        print('❌ No valid token found');
+        return null;
+      }
+
+      return token;
+    } catch (e) {
+      print('❌ Error getting token: $e');
+      return null;
+    }
+  }
+
+  // ✅ إنشاء طلب جديد
+  Future<Map<String, dynamic>> createOrder({
+    required String firstName,
+    required String lastName,
+    required String phone,
+    required String shippingAddress,
+    required String paymentMethod,
+    required List<CartItemModel> items,
+    String? couponCode,
+    String? userNotes,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'يرجى تسجيل الدخول أولاً'};
+      }
+
+      final itemsData = items.map((item) => {
+        'type': item.itemType,
+        'id': item.id,
+        'quantity': item.quantity,
+      }).toList();
+
+      final body = {
+        'first_name': firstName,
+        'last_name': lastName,
+        'phone': phone,
+        'shipping_address': shippingAddress,
+        'payment_method': paymentMethod,
+        'items': itemsData,
+      };
+
+      if (couponCode != null && couponCode.isNotEmpty) {
+        body['coupon_code'] = couponCode;
+      }
+      if (userNotes != null && userNotes.isNotEmpty) {
+        body['user_notes'] = userNotes;
+      }
+
+      print('Sending order: $body');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/v1/user/orders/create'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (data['success'] == true) {
+          return data;
+        }
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'حدث خطأ في إنشاء الطلب',
+        'errors': data['errors'] ?? null,
+      };
+    } catch (e) {
+      print('Error creating order: $e');
+      return {'success': false, 'message': 'حدث خطأ في الاتصال بالخادم: $e'};
+    }
+  }
+
+  // ✅ الحصول على طلبات المستخدم
+  Future<Map<String, dynamic>> getUserOrders({int page = 1, String? status}) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'يرجى تسجيل الدخول أولاً'};
+      }
+
+      String url = '$baseUrl/api/v1/user/orders/my-orders?page=$page&per_page=15';
+      if (status != null && status.isNotEmpty && status != 'all') {
+        url += '&status=$status';
+      }
+
+      print('🟡 Fetching orders from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      print('🟢 Response status: ${response.statusCode}');
+      print('🟢 Response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'حدث خطأ في جلب الطلبات',
+      };
+    } catch (e) {
+      print('❌ Error fetching orders: $e');
+      return {'success': false, 'message': 'حدث خطأ في الاتصال بالخادم'};
+    }
+  }
+
+  // ✅ الحصول على تفاصيل طلب محدد
+  Future<Map<String, dynamic>> getOrderDetails(int invoiceId) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'يرجى تسجيل الدخول أولاً'};
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/v1/user/orders/$invoiceId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      print('🟢 Response status: ${response.statusCode}');
+      print('🟢 Response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'حدث خطأ في جلب تفاصيل الطلب',
+      };
+    } catch (e) {
+      print('❌ Error fetching order details: $e');
+      return {'success': false, 'message': 'حدث خطأ في الاتصال بالخادم'};
+    }
+  }
+
+  // ✅ إلغاء طلب
+  Future<Map<String, dynamic>> cancelOrder(int invoiceId) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'يرجى تسجيل الدخول أولاً'};
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/v1/user/orders/$invoiceId/cancel'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      print('🟢 Response status: ${response.statusCode}');
+      print('🟢 Response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'حدث خطأ في إلغاء الطلب',
+      };
+    } catch (e) {
+      print('❌ Error cancelling order: $e');
+      return {'success': false, 'message': 'حدث خطأ في الاتصال بالخادم'};
+    }
+  }
+
+  // ✅ التحقق من صحة الكوبون
+  Future<Map<String, dynamic>> validateCoupon(String couponCode, double subtotal) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'يرجى تسجيل الدخول أولاً'};
+      }
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/v1/user/orders/validate-coupon'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'coupon_code': couponCode,
+          'subtotal': subtotal.toString(),
+        }),
+      );
+
+      print('🟢 Response status: ${response.statusCode}');
+      print('🟢 Response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'كود الخصم غير صالح',
+      };
+    } catch (e) {
+      print('❌ Error validating coupon: $e');
+      return {'success': false, 'message': 'حدث خطأ في التحقق من الكود'};
+    }
+  }
+
+  // ✅ الحصول على إحصائيات الطلبات
+  Future<Map<String, dynamic>> getOrderStats() async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'يرجى تسجيل الدخول أولاً'};
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/v1/user/orders/stats'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      );
+
+      print('🟢 Response status: ${response.statusCode}');
+      print('🟢 Response body: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'حدث خطأ في جلب الإحصائيات',
+      };
+    } catch (e) {
+      print('❌ Error fetching order stats: $e');
+      return {'success': false, 'message': 'حدث خطأ في الاتصال بالخادم'};
+    }
+  }
+}

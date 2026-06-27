@@ -1,10 +1,12 @@
+// lib/screens/categories/subcategories_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:energy_store_app/services/api_service.dart';
-import 'package:energy_store_app/services/auth_service.dart';
-import 'package:energy_store_app/screens/products/products_list_screen.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/screens/products/products_list_screen.dart';
 
 import '../../services/storage_service.dart';
 
@@ -13,7 +15,6 @@ class SubCategoriesScreen extends StatefulWidget {
   final ApiService apiService;
   final AuthService? authService;
   final StorageService? storageService;
-
 
   const SubCategoriesScreen({
     super.key,
@@ -34,6 +35,15 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
   String _searchQuery = '';
   String? _errorMessage;
   int? _zoomedCardIndex;
+
+  
+  static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
+  static const Color accentBlue = Color(0xFF60A5FA);
+  static const Color darkColor = Color(0xFF111827);
+  static const Color mediumGray = Color(0xFF4B5563);
+  static const Color lightGray = Color(0xFFF3F4F6);
+  static const Color cardWhite = Color(0xFFFFFFFF);
 
   @override
   void initState() {
@@ -83,38 +93,72 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: lightGray, 
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryBlue, secondaryBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: Text(
           widget.category['name_ar'] ?? 'الأقسام الفرعية',
           style: GoogleFonts.cairo(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF1A1A1A),
+            color: Colors.white,
           ),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          IconButton(
-            icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
-            onPressed: () {
-              setState(() {
-                _isGridView = !_isGridView;
-                _zoomedCardIndex = null;
-              });
-            },
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Icon(
+                  _isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                  key: ValueKey(_isGridView),
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              onPressed: () {
+                setState(() {
+                  _isGridView = !_isGridView;
+                  _zoomedCardIndex = null;
+                });
+              },
+              tooltip: _isGridView ? 'عرض القائمة' : 'عرض الشبكة',
+            ),
           ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
-          child: Padding(
+          child: Container(
             padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: cardWhite,
+              boxShadow: [
+                BoxShadow(
+                  color: primaryBlue.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
+                color: lightGray,
                 borderRadius: BorderRadius.circular(15),
               ),
               child: TextField(
@@ -124,14 +168,14 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                     _zoomedCardIndex = null;
                   });
                 },
+                style: GoogleFonts.cairo(fontSize: 14, color: darkColor),
                 decoration: InputDecoration(
                   hintText: 'ابحث عن قسم...',
-                  hintStyle:
-                  GoogleFonts.cairo(fontSize: 14, color: const Color(0xFF9E9E9E)),
-                  prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF9E9E9E)),
+                  hintStyle: GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade400),
+                  prefixIcon: const Icon(Icons.search, size: 20, color: primaryBlue),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
+                    icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
                     onPressed: () {
                       setState(() {
                         _searchQuery = '';
@@ -140,7 +184,7 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                   )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 ),
               ),
             ),
@@ -198,7 +242,6 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
     );
   }
 
-  // ==================== كروت الشبكة - صورة ممتلئة مع Zoom بسيط ====================
   Widget _buildCategoryCard(dynamic subCategory, int index) {
     final int productsCount = subCategory['number_products'] ?? 0;
     final String name = subCategory['name_ar'] ?? '';
@@ -253,10 +296,11 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
         transform: Matrix4.identity()..scale(isZoomed ? 0.95 : 1.0),
         child: Container(
           decoration: BoxDecoration(
+            color: cardWhite,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isZoomed ? 0.12 : 0.08),
+                color: primaryBlue.withOpacity(isZoomed ? 0.15 : 0.08),
                 blurRadius: isZoomed ? 18 : 15,
                 offset: const Offset(0, 5),
               ),
@@ -266,46 +310,48 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
             borderRadius: BorderRadius.circular(24),
             child: Stack(
               children: [
-                // صورة ممتلئة بالكامل
+                
                 Positioned.fill(
                   child: CachedNetworkImage(
                     imageUrl: imageUrl,
-                    fit: BoxFit.cover, // صورة ممتلئة بالكامل
+                    fit: BoxFit.cover,
                     placeholder: (_, __) => Container(
-                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      color: primaryBlue.withOpacity(0.1),
                       child: const Center(
                         child: CircularProgressIndicator(
-                          color: Color(0xFF10B981),
+                          color: primaryBlue,
                           strokeWidth: 2,
                         ),
                       ),
                     ),
                     errorWidget: (_, __, ___) => Container(
-                      color: const Color(0xFF10B981).withOpacity(0.15),
-                      child: const Icon(
+                      color: primaryBlue.withOpacity(0.15),
+                      child: Icon(
                         Icons.category_rounded,
                         size: 60,
-                        color: Color(0xFF10B981),
+                        color: primaryBlue.withOpacity(0.5),
                       ),
                     ),
                   ),
                 ),
-                // تدرج داكن
+                
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: const [
-                          Color(0x33000000), // أسود شفاف 20%
-                          Color(0xBF000000), // أسود شفاف 75%
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.25),
+                          Colors.black.withOpacity(0.75),
                         ],
+                        stops: const [0.0, 0.5, 1.0],
                       ),
                     ),
                   ),
                 ),
-                // المحتوى
+                
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -319,6 +365,12 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                           height: 1.3,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 8,
+                            ),
+                          ],
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -377,7 +429,6 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
     );
   }
 
-  // ==================== كروت القائمة - صورة ممتلئة مع Zoom بسيط ====================
   Widget _buildCategoryListItem(dynamic subCategory, int index) {
     final int productsCount = subCategory['number_products'] ?? 0;
     final String name = subCategory['name_ar'] ?? '';
@@ -435,23 +486,27 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
         transform: Matrix4.identity()..scale(isZoomed ? 0.98 : 1.0),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardWhite,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isZoomed ? 0.1 : 0.05),
+                color: primaryBlue.withOpacity(isZoomed ? 0.1 : 0.05),
                 blurRadius: isZoomed ? 12 : 10,
                 offset: const Offset(0, 2),
               ),
             ],
+            border: Border.all(
+              color: Colors.grey.shade200,
+              width: 1,
+            ),
           ),
           child: Row(
             children: [
-              // صورة ممتلئة في المساحة المخصصة
+              
               ClipRRect(
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  bottomLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
                 ),
                 child: SizedBox(
                   width: 110,
@@ -460,26 +515,26 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                     imageUrl: imageUrl,
                     width: 110,
                     height: 110,
-                    fit: BoxFit.cover, // صورة ممتلئة
+                    fit: BoxFit.cover,
                     placeholder: (_, __) => Container(
-                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      color: primaryBlue.withOpacity(0.1),
                       child: const Center(
                         child: SizedBox(
                           width: 25,
                           height: 25,
                           child: CircularProgressIndicator(
-                            color: Color(0xFF10B981),
+                            color: primaryBlue,
                             strokeWidth: 2,
                           ),
                         ),
                       ),
                     ),
                     errorWidget: (_, __, ___) => Container(
-                      color: const Color(0xFF10B981).withOpacity(0.15),
-                      child: const Icon(
+                      color: primaryBlue.withOpacity(0.15),
+                      child: Icon(
                         Icons.category_rounded,
                         size: 40,
-                        color: Color(0xFF10B981),
+                        color: primaryBlue.withOpacity(0.5),
                       ),
                     ),
                   ),
@@ -496,7 +551,7 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                         style: GoogleFonts.cairo(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1A1A1A),
+                          color: darkColor,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -507,7 +562,7 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                           description,
                           style: GoogleFonts.cairo(
                             fontSize: 12,
-                            color: const Color(0xFF757575),
+                            color: mediumGray,
                             height: 1.4,
                           ),
                           maxLines: 2,
@@ -518,16 +573,20 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withOpacity(0.1),
+                          color: primaryBlue.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: primaryBlue.withOpacity(0.15),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.shopping_bag_rounded,
                               size: 12,
-                              color: Color(0xFF10B981),
+                              color: primaryBlue,
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -535,7 +594,7 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                               style: GoogleFonts.cairo(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF10B981),
+                                color: primaryBlue,
                               ),
                             ),
                           ],
@@ -549,13 +608,13 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                 margin: const EdgeInsets.only(right: 16),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(isZoomed ? 0.15 : 0.1),
+                  color: primaryBlue.withOpacity(isZoomed ? 0.15 : 0.08),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
-                  color: const Color(0xFF10B981),
+                  color: primaryBlue,
                 ),
               ),
             ],
@@ -577,11 +636,11 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
       itemCount: 6,
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
-          baseColor: const Color(0xFFE0E0E0),
-          highlightColor: const Color(0xFFF5F5F5),
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardWhite,
               borderRadius: BorderRadius.circular(24),
             ),
           ),
@@ -606,7 +665,7 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
           const SizedBox(height: 20),
           Text(
             _errorMessage!,
-            style: GoogleFonts.cairo(fontSize: 16, color: const Color(0xFF757575)),
+            style: GoogleFonts.cairo(fontSize: 16, color: mediumGray),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -614,7 +673,7 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
             icon: const Icon(Icons.refresh),
             label: Text('إعادة المحاولة', style: GoogleFonts.cairo()),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
+              backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -633,10 +692,17 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
+              color: cardWhite,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: primaryBlue.withOpacity(0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
-            child: Icon(Icons.category_outlined, size: 50, color: const Color(0xFF9E9E9E)),
+            child: Icon(Icons.category_outlined, size: 50, color: Colors.grey.shade400),
           ),
           const SizedBox(height: 20),
           Text(
@@ -644,13 +710,13 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
             style: GoogleFonts.cairo(
               fontSize: 18,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF757575),
+              color: darkColor,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'هذا القسم لا يحتوي على أقسام فرعية حالياً',
-            style: GoogleFonts.cairo(fontSize: 14, color: const Color(0xFF9E9E9E)),
+            style: GoogleFonts.cairo(fontSize: 14, color: mediumGray),
           ),
         ],
       ),
@@ -665,10 +731,17 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
+              color: cardWhite,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
-            child: Icon(Icons.search_off, size: 50, color: const Color(0xFF9E9E9E)),
+            child: Icon(Icons.search_off, size: 50, color: Colors.orange.shade300),
           ),
           const SizedBox(height: 20),
           Text(
@@ -676,13 +749,13 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
             style: GoogleFonts.cairo(
               fontSize: 18,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFF757575),
+              color: darkColor,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'لم نجد أقساماً تطابق بحثك',
-            style: GoogleFonts.cairo(fontSize: 14, color: const Color(0xFF9E9E9E)),
+            style: GoogleFonts.cairo(fontSize: 14, color: mediumGray),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -690,7 +763,7 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
             icon: const Icon(Icons.clear),
             label: Text('مسح البحث', style: GoogleFonts.cairo()),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
+              backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

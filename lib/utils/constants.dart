@@ -1,6 +1,6 @@
 class AppConstants {
   // API Base URL
-  static const String baseUrl = 'https://aa-dev.site/energy/api';
+  static const String baseUrl = 'https://aa-dev.online/energy/api';
 
   // Storage Keys
   static const String tokenKey = 'auth_token';

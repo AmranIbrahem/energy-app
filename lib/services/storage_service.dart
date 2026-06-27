@@ -85,4 +85,40 @@ class StorageService {
   String? getUserName() {
     return _preferences.getString('user_name');
   }
+
+
+  // Guest session methods
+  Future<void> saveGuestSessionId(String sessionId) async {
+    await _preferences.setString('guest_session_id', sessionId);
+  }
+
+  String? getGuestSessionId() {
+    return _preferences.getString('guest_session_id');
+  }
+
+  Future<void> saveGuestGovernorate(String governorate) async {
+    await _preferences.setString('guest_governorate', governorate);
+  }
+
+  String? getGuestGovernorate() {
+    return _preferences.getString('guest_governorate');
+  }
+
+  Future<void> saveGuestChatMessages(String messagesJson) async {
+    await _preferences.setString('guest_chat_messages', messagesJson);
+  }
+
+  String? getGuestChatMessages() {
+    return _preferences.getString('guest_chat_messages');
+  }
+
+  Future<void> clearGuestData() async {
+    await _preferences.remove('guest_session_id');
+    await _preferences.remove('guest_governorate');
+    await _preferences.remove('guest_chat_messages');
+  }
+
+
+
+  
 }

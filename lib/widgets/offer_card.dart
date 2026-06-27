@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:energy_store_app/utils/helpers.dart';
-import 'package:energy_store_app/services/api_service.dart';
-import 'package:energy_store_app/services/auth_service.dart';
-import 'package:energy_store_app/services/favorites_service.dart';
-import 'package:energy_store_app/screens/offers/offer_details_screen.dart';
+import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/favorites_service.dart';
+import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
 
 class OfferCard extends StatefulWidget {
   final dynamic offer;

@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 class Helpers {
   // Format price with currency
@@ -57,4 +58,21 @@ class Helpers {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
   }
+
+  static void shareText(String text) {
+    Share.share(text);
+  }
+
+  static double parsePrice(dynamic price) {
+    if (price == null) return 0.0;
+    if (price is double) return price;
+    if (price is int) return price.toDouble();
+    if (price is String) {
+      // إزالة الفواصل والمسافات
+      String cleanPrice = price.replaceAll(',', '').replaceAll(' ', '').trim();
+      return double.tryParse(cleanPrice) ?? 0.0;
+    }
+    return 0.0;
+  }
+
 }

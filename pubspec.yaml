@@ -1,4 +1,4 @@
-name: energy_store_app
+name: GeniusHouse
 description: A professional alternative energy store app for Syria
 version: 1.0.0+1
 
@@ -9,6 +9,8 @@ dependencies:
   flutter:
     sdk: flutter
 
+  share_plus: ^12.0.2
+
   lottie: ^2.7.0
 
   # UI & Design
@@ -16,8 +18,8 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_svg: ^2.0.9
 
-  animations: ^2.0.7          # لحركات متقدمة
-  flutter_staggered_animations: ^1.1.0  # لحركات متدرجة
+  animations: ^2.0.7
+  flutter_staggered_animations: ^1.1.0
 
 
   firebase_core: ^3.12.1
@@ -54,11 +56,13 @@ dependencies:
   intl: ^0.18.1
   connectivity_plus: ^5.0.2
   shimmer: ^3.0.0
+  rename: ^3.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -66,3 +70,7 @@ flutter:
   assets:
     - assets/images/
     - assets/animations/
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_new.png"

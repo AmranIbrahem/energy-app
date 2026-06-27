@@ -1,11 +1,14 @@
+// lib/screens/offers/offers_list_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:energy_store_app/utils/constants.dart';
-import 'package:energy_store_app/utils/helpers.dart';
-import 'package:energy_store_app/services/api_service.dart';
-import 'package:energy_store_app/services/auth_service.dart';
-import 'package:energy_store_app/widgets/offer_card.dart';
+import 'package:flutter/services.dart';
+import 'package:GeniusHouse/utils/constants.dart';
+import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/widgets/offer_card.dart';
 
 class OffersListScreen extends StatefulWidget {
   final String title;
@@ -27,7 +30,8 @@ class OffersListScreen extends StatefulWidget {
   State<OffersListScreen> createState() => _OffersListScreenState();
 }
 
-class _OffersListScreenState extends State<OffersListScreen> {
+class _OffersListScreenState extends State<OffersListScreen>
+    with TickerProviderStateMixin {
   List<dynamic> _offers = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -36,13 +40,55 @@ class _OffersListScreenState extends State<OffersListScreen> {
   String? _errorMessage;
   bool _isGridView = true;
 
+
+  static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
+  static const Color accentBlue = Color(0xFF60A5FA);
+  static const Color darkColor = Color(0xFF111827);
+  static const Color mediumGray = Color(0xFF4B5563);
+  static const Color lightGray = Color(0xFFF3F4F6);
+  static const Color cardWhite = Color(0xFFFFFFFF);
+
+  late AnimationController _pulseAnimationController;
+  late AnimationController _fadeAnimationController;
+
   final List<Map<String, dynamic>> _filterTypes = [
-    {'key': 'all', 'name': 'الكل', 'icon': Icons.apps_rounded},
-    {'key': 'cheapest', 'name': 'الأرخص', 'icon': Icons.attach_money_rounded},
-    {'key': 'highest-power', 'name': 'الأقوى', 'icon': Icons.bolt_rounded},
-    {'key': 'variety', 'name': 'متنوعة', 'icon': Icons.category_rounded},
-    {'key': 'featured', 'name': 'مميزة', 'icon': Icons.star_rounded},
-    {'key': 'latest', 'name': 'الأحدث', 'icon': Icons.fiber_new_rounded},
+    {
+      'key': 'all',
+      'name': 'الكل',
+      'icon': Icons.apps_rounded,
+      'color': primaryBlue
+    },
+    {
+      'key': 'cheapest',
+      'name': 'الأرخص',
+      'icon': Icons.savings_rounded,
+      'color': Colors.orange
+    },
+    {
+      'key': 'highest-power',
+      'name': 'الأقوى',
+      'icon': Icons.bolt_rounded,
+      'color': Colors.amber
+    },
+    {
+      'key': 'variety',
+      'name': 'متنوعة',
+      'icon': Icons.category_rounded,
+      'color': Colors.purple
+    },
+    {
+      'key': 'featured',
+      'name': 'مميزة',
+      'icon': Icons.star_rounded,
+      'color': Colors.amber.shade700
+    },
+    {
+      'key': 'latest',
+      'name': 'الأحدث',
+      'icon': Icons.fiber_new_rounded,
+      'color': Colors.teal
+    },
   ];
 
   String _selectedFilter = 'all';
@@ -50,12 +96,30 @@ class _OffersListScreenState extends State<OffersListScreen> {
   @override
   void initState() {
     super.initState();
+
+    _pulseAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _fadeAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+
     if (widget.offers != null) {
       _offers = List.from(widget.offers!);
       _isLoading = false;
     } else {
       _fetchOffers();
     }
+  }
+
+  @override
+  void dispose() {
+    _pulseAnimationController.dispose();
+    _fadeAnimationController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchOffers({bool loadMore = false}) async {
@@ -124,6 +188,7 @@ class _OffersListScreenState extends State<OffersListScreen> {
             _offers = newOffers;
             _isLoading = false;
           });
+          _fadeAnimationController.forward(from: 0.0);
         }
 
         if (pagination != null) {
@@ -157,53 +222,80 @@ class _OffersListScreenState extends State<OffersListScreen> {
 
   void _changeFilter(String filterKey) {
     if (_selectedFilter == filterKey) return;
+    HapticFeedback.lightImpact();
     setState(() => _selectedFilter = filterKey);
     _fetchOffers();
   }
 
-  void _toggleViewMode() => setState(() => _isGridView = !_isGridView);
+  void _toggleViewMode() {
+    HapticFeedback.lightImpact();
+    setState(() => _isGridView = !_isGridView);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: lightGray,
       appBar: AppBar(
-        title: Text(
-          widget.title,
-          style: GoogleFonts.cairo(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF1A1A1A),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryBlue, secondaryBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
         ),
-        backgroundColor: Colors.white,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _pulseAnimationController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: 1.0 + (_pulseAnimationController.value * 0.15),
+                  child: child,
+                );
+              },
+              child: const Icon(Icons.local_offer_rounded, color: Colors.yellow, size: 24),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                widget.title,
+                style: GoogleFonts.cairo(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.arrow_back, size: 20, color: Color(0xFF1A1A1A)),
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
         actions: [
           Container(
-            margin: const EdgeInsets.only(right: 8),
+            margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              onPressed: _toggleViewMode,
-              icon: Icon(
-                _isGridView ? Icons.view_list : Icons.grid_view,
-                size: 20,
-                color: const Color(0xFF1A1A1A),
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Icon(
+                  _isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                  key: ValueKey(_isGridView),
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
+              onPressed: _toggleViewMode,
+              tooltip: _isGridView ? 'عرض القائمة' : 'عرض الشبكة',
             ),
           ),
         ],
@@ -227,53 +319,90 @@ class _OffersListScreenState extends State<OffersListScreen> {
     );
   }
 
-  // ✅ فلترات مبسطة ومصغرة - الحل النهائي لمشكلة التجاوز
   Widget _buildFilterChips() {
     return Container(
-      height: 45,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      height: 55,
+      margin: const EdgeInsets.symmetric(vertical: 10),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         itemCount: _filterTypes.length,
         itemBuilder: (context, index) {
           final filter = _filterTypes[index];
           final isSelected = _selectedFilter == filter['key'];
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => _changeFilter(filter['key']),
-                borderRadius: BorderRadius.circular(30),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF4CAF50) : Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: isSelected ? Colors.transparent : Colors.grey.shade300,
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        filter['icon'],
-                        size: 14,
-                        color: isSelected ? Colors.white : const Color(0xFF4CAF50),
+          final color = filter['color'] as Color;
+
+          return TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: Duration(milliseconds: 400 + (index * 50)),
+            curve: Curves.easeOut,
+            builder: (context, double value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.scale(
+                  scale: 0.8 + (0.2 * value),
+                  child: child,
+                ),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 5),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _changeFilter(filter['key']),
+                  borderRadius: BorderRadius.circular(25),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: isSelected
+                          ? LinearGradient(
+                        colors: [primaryBlue, secondaryBlue],
+                      )
+                          : LinearGradient(
+                        colors: [cardWhite, Colors.grey.shade50],
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        filter['name'],
-                        style: GoogleFonts.cairo(
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                          color: isSelected ? Colors.white : const Color(0xFF4A4A4A),
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: isSelected ? Colors.transparent : Colors.grey.shade300,
+                        width: 1,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                        BoxShadow(
+                          color: primaryBlue.withOpacity(0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
                         ),
-                      ),
-                    ],
+                      ]
+                          : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          filter['icon'],
+                          size: 16,
+                          color: isSelected ? Colors.white : color,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          filter['name'],
+                          style: GoogleFonts.cairo(
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                            color: isSelected ? Colors.white : Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -295,11 +424,11 @@ class _OffersListScreenState extends State<OffersListScreen> {
       ),
       itemCount: 6,
       itemBuilder: (context, index) => Shimmer.fromColors(
-        baseColor: const Color(0xFFE0E0E0),
-        highlightColor: const Color(0xFFF5F5F5),
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardWhite,
             borderRadius: BorderRadius.circular(20),
           ),
         ),
@@ -309,112 +438,235 @@ class _OffersListScreenState extends State<OffersListScreen> {
 
   Widget _buildErrorWidget() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              shape: BoxShape.circle,
+      child: TweenAnimationBuilder(
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 800),
+        builder: (context, double value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.scale(
+              scale: 0.8 + (0.2 * value),
+              child: child,
             ),
-            child: Icon(Icons.error_outline, size: 60, color: Colors.red.shade400),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            _errorMessage!,
-            style: GoogleFonts.cairo(fontSize: 16, color: const Color(0xFF757575)),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _fetchOffers,
-            icon: const Icon(Icons.refresh),
-            label: Text('إعادة المحاولة', style: GoogleFonts.cairo()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          );
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cardWhite,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.error_outline_rounded, size: 50, color: Colors.red.shade300),
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.cairo(
+                fontSize: 16,
+                color: mediumGray,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _fetchOffers,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text('إعادة المحاولة', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                elevation: 5,
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                shadowColor: primaryBlue.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildEmptyWidget() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
-              shape: BoxShape.circle,
+      child: TweenAnimationBuilder(
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 800),
+        builder: (context, double value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.scale(
+              scale: 0.8 + (0.2 * value),
+              child: child,
             ),
-            child: Icon(Icons.local_offer_outlined, size: 60, color: const Color(0xFF9E9E9E)),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'لا توجد عروض حالياً',
-            style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF4A4A4A)),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'سيتم إضافة عروض جديدة قريباً',
-            style: GoogleFonts.cairo(fontSize: 14, color: const Color(0xFF9E9E9E)),
-          ),
-        ],
+          );
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedBuilder(
+              animation: _pulseAnimationController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: 1.0 + (_pulseAnimationController.value * 0.1),
+                  child: child,
+                );
+              },
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cardWhite,
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryBlue.withOpacity(0.1),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.local_offer_rounded,
+                  size: 60,
+                  color: primaryBlue.withOpacity(0.5),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'لا توجد عروض حالياً',
+              style: GoogleFonts.cairo(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: darkColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'سيتم إضافة عروض جديدة قريباً',
+              style: GoogleFonts.cairo(
+                fontSize: 15,
+                color: mediumGray,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildGridView() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.70,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: _offers.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _offers.length) return _buildLoadingMoreIndicator();
-        return Container(
-          constraints: const BoxConstraints(
-            minHeight: 260,
-            maxHeight: 300,
-          ),
-          child: OfferCard(
-            offer: _offers[index],
-            apiService: widget.apiService,
-            authService: widget.authService,
-            isListView: false, // ✅ شبكي
-          ),
-        );
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollInfo) {
+        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 &&
+            !_isLoadingMore &&
+            _hasMore) {
+          _fetchOffers(loadMore: true);
+        }
+        return false;
       },
+      child: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.68,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 16,
+        ),
+        itemCount: _offers.length + (_hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _offers.length) {
+            return _buildLoadingMoreIndicator();
+          }
+          return TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: Duration(milliseconds: 500 + (index * 80)),
+            curve: Curves.easeOutCubic,
+            builder: (context, double value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 30 * (1 - value)),
+                  child: Transform.scale(
+                    scale: 0.9 + (0.1 * value),
+                    child: child,
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              constraints: const BoxConstraints(
+                minHeight: 260,
+                maxHeight: 310,
+              ),
+              child: OfferCard(
+                offer: _offers[index],
+                apiService: widget.apiService,
+                authService: widget.authService,
+                isListView: false,
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildListView() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _offers.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _offers.length) return _buildLoadingMoreIndicator();
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          height: 125,
-          child: OfferCard(
-            offer: _offers[index],
-            apiService: widget.apiService,
-            authService: widget.authService,
-            isListView: true, // ✅ قائمة
-          ),
-        );
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollInfo) {
+        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 &&
+            !_isLoadingMore &&
+            _hasMore) {
+          _fetchOffers(loadMore: true);
+        }
+        return false;
       },
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _offers.length + (_hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _offers.length) {
+            return _buildLoadingMoreIndicator();
+          }
+          return TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: Duration(milliseconds: 400 + (index * 80)),
+            curve: Curves.easeOutCubic,
+            builder: (context, double value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(30 * (1 - value), 0),
+                  child: child,
+                ),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              height: 130,
+              child: OfferCard(
+                offer: _offers[index],
+                apiService: widget.apiService,
+                authService: widget.authService,
+                isListView: true,
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -423,9 +675,44 @@ class _OffersListScreenState extends State<OffersListScreen> {
       padding: const EdgeInsets.all(20),
       child: Center(
         child: _isLoadingMore
-            ? const CircularProgressIndicator(
-          color: Color(0xFF4CAF50),
-          strokeWidth: 3,
+            ? Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _pulseAnimationController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: 1.0 + (_pulseAnimationController.value * 0.2),
+                  child: child,
+                );
+              },
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      primaryBlue.withOpacity(0.15),
+                      secondaryBlue.withOpacity(0.08),
+                    ],
+                  ),
+                ),
+                child: const CircularProgressIndicator(
+                  color: primaryBlue,
+                  strokeWidth: 3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'جاري تحميل المزيد...',
+              style: GoogleFonts.cairo(
+                fontSize: 13,
+                color: mediumGray,
+              ),
+            ),
+          ],
         )
             : const SizedBox.shrink(),
       ),

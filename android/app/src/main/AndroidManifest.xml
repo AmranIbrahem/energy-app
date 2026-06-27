@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="energy_store_clean"
+        android:label="Genius House"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:energy_store_app/utils/constants.dart';
-import 'package:energy_store_app/utils/helpers.dart';
-import 'package:energy_store_app/services/auth_service.dart';
-import 'package:energy_store_app/services/storage_service.dart';
-import 'package:energy_store_app/screens/home_screen.dart' hide FadeInAnimation;
+import 'package:GeniusHouse/utils/constants.dart';
+import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:GeniusHouse/screens/home_screen.dart' hide FadeInAnimation;
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart' hide FadeInAnimation;
 import 'package:lottie/lottie.dart';
 import 'dart:ui' as ui;
@@ -35,6 +35,14 @@ class _GovernorateSelectionScreenState
   bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+
+
+  static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
+  static const Color accentBlue = Color(0xFF60A5FA);
+  static const Color darkColor = Color(0xFF111827);
+  static const Color mediumGray = Color(0xFF4B5563);
+  static const Color lightGray = Color(0xFFF3F4F6);
 
   @override
   void initState() {
@@ -80,7 +88,6 @@ class _GovernorateSelectionScreenState
             pageBuilder: (_, __, ___) => HomeScreen(
               authService: widget.authService,
               storageService: widget.storageService,
-
             ),
             transitionsBuilder: (_, animation, __, child) {
               return FadeTransition(
@@ -156,20 +163,17 @@ class _GovernorateSelectionScreenState
     return Scaffold(
       body: Stack(
         children: [
-          // خلفية متدرجة متحركة
+
           _buildAnimatedBackground(),
 
-          // تأثير زجاجي
-          _buildGlassEffect(),
 
-          // المحتوى الرئيسي
           SafeArea(
             child: Column(
               children: [
-                // شريط علوي متطور
+
                 _buildModernTopBar(),
 
-                // المحتوى الرئيسي مع أنيمشن
+
                 Expanded(
                   child: AnimationLimiter(
                     child: SingleChildScrollView(
@@ -185,22 +189,22 @@ class _GovernorateSelectionScreenState
                           children: [
                             const SizedBox(height: 20),
 
-                            // أيقونة متحركة
+
                             _buildAnimatedIcon(),
 
                             const SizedBox(height: 30),
 
-                            // العنوان
+
                             _buildModernTitle(),
 
                             const SizedBox(height: 12),
 
-                            // الوصف
+
                             _buildModernDescription(),
 
                             const SizedBox(height: 40),
 
-                            // بطاقة اختيار المحافظة
+
                             _buildGovernorateCard(),
 
                             const SizedBox(height: 30),
@@ -211,7 +215,7 @@ class _GovernorateSelectionScreenState
                   ),
                 ),
 
-                // الأزرار السفلية
+
                 _buildModernBottomButtons(),
               ],
             ),
@@ -221,17 +225,16 @@ class _GovernorateSelectionScreenState
     );
   }
 
-  // خلفية متدرجة متحركة
+
   Widget _buildAnimatedBackground() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 500),
+    return Container(
       decoration: BoxDecoration(
         gradient: RadialGradient(
           center: const Alignment(-0.3, -0.5),
           radius: 1.5,
           colors: [
-            const Color(0xFF10B981).withOpacity(0.15),
-            const Color(0xFF059669).withOpacity(0.08),
+            primaryBlue.withOpacity(0.08),
+            secondaryBlue.withOpacity(0.04),
             Colors.white,
           ],
           stops: const [0.0, 0.5, 1.0],
@@ -240,24 +243,14 @@ class _GovernorateSelectionScreenState
     );
   }
 
-  // تأثير زجاجي
-  Widget _buildGlassEffect() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-        child: Container(
-          color: Colors.white.withOpacity(0.3),
-        ),
-      ),
-    );
-  }
 
-  // شريط علوي متطور
   Widget _buildModernTopBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+
           if (!widget.isFromOnboarding)
             TweenAnimationBuilder(
               tween: Tween<double>(begin: 0, end: 1),
@@ -269,6 +262,7 @@ class _GovernorateSelectionScreenState
                     elevation: 2,
                     borderRadius: BorderRadius.circular(15),
                     color: Colors.white,
+                    shadowColor: primaryBlue.withOpacity(0.1),
                     child: InkWell(
                       onTap: () => Navigator.pop(context),
                       borderRadius: BorderRadius.circular(15),
@@ -276,7 +270,7 @@ class _GovernorateSelectionScreenState
                         padding: const EdgeInsets.all(10),
                         child: const Icon(
                           Icons.arrow_back_rounded,
-                          color: Color(0xFF10B981),
+                          color: primaryBlue,
                           size: 22,
                         ),
                       ),
@@ -285,12 +279,57 @@ class _GovernorateSelectionScreenState
                 );
               },
             ),
+
+
+          TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 800),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryBlue.withOpacity(0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.bolt_rounded,
+                        color: secondaryBlue,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'GeniusHouse',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: darkColor,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  // أيقونة متحركة مع Lottie
+
   Widget _buildAnimatedIcon() {
     return TweenAnimationBuilder(
       tween: Tween<double>(begin: 0, end: 1),
@@ -304,24 +343,39 @@ class _GovernorateSelectionScreenState
             height: 120,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                colors: [primaryBlue, secondaryBlue],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF10B981).withOpacity(0.4),
+                  color: primaryBlue.withOpacity(0.35),
                   blurRadius: 30,
                   spreadRadius: 5,
                 ),
+                BoxShadow(
+                  color: secondaryBlue.withOpacity(0.15),
+                  blurRadius: 50,
+                  spreadRadius: 8,
+                ),
               ],
             ),
-            child: const Center(
-              child: Icon(
-                Icons.location_on_rounded,
-                color: Colors.white,
-                size: 50,
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/app_icon.png',
+                width: 120,
+                height: 120,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Center(
+                    child: Icon(
+                      Icons.location_on_rounded,
+                      color: Colors.white,
+                      size: 55,
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -330,7 +384,7 @@ class _GovernorateSelectionScreenState
     );
   }
 
-  // عنوان متطور
+
   Widget _buildModernTitle() {
     return Column(
       children: [
@@ -339,17 +393,17 @@ class _GovernorateSelectionScreenState
           style: GoogleFonts.cairo(
             fontSize: 32,
             fontWeight: FontWeight.bold,
-            color: const Color(0xFF1A1A1A),
+            color: darkColor,
             height: 1.2,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Container(
           width: 60,
           height: 4,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF10B981), Color(0xFF059669)],
+              colors: [primaryBlue, secondaryBlue],
             ),
             borderRadius: BorderRadius.circular(2),
           ),
@@ -358,29 +412,42 @@ class _GovernorateSelectionScreenState
     );
   }
 
-  // وصف متطور
+
   Widget _buildModernDescription() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: lightGray,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: primaryBlue.withOpacity(0.08)),
       ),
-      child: Text(
-        'لتخصيص العروض والمنتجات حسب منطقتك',
-        textAlign: TextAlign.center,
-        style: GoogleFonts.cairo(
-          fontSize: 15,
-          color: Colors.grey.shade600,
-          height: 1.5,
-        ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.explore_rounded,
+            color: secondaryBlue,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'لتخصيص العروض والمنتجات حسب منطقتك',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.cairo(
+                fontSize: 14,
+                color: mediumGray,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // بطاقة اختيار المحافظة المتطورة
+
   Widget _buildGovernorateCard() {
     return Container(
       decoration: BoxDecoration(
@@ -388,11 +455,14 @@ class _GovernorateSelectionScreenState
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: primaryBlue.withOpacity(0.06),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
+        border: Border.all(
+          color: primaryBlue.withOpacity(0.05),
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(30),
@@ -418,7 +488,6 @@ class _GovernorateSelectionScreenState
                 isSelected: isSelected,
                 onTap: () {
                   setState(() => _selectedGovernorate = governorate);
-                  // إضافة تأثير اهتزاز خفيف
                   HapticFeedback.lightImpact();
                 },
               ),
@@ -429,7 +498,7 @@ class _GovernorateSelectionScreenState
     );
   }
 
-  // بطاقة محافظة متطورة
+
   Widget _buildModernGovernorateCard({
     required String governorate,
     required bool isSelected,
@@ -445,24 +514,22 @@ class _GovernorateSelectionScreenState
               ? const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF10B981), Color(0xFF059669)],
+            colors: [primaryBlue, secondaryBlue],
           )
               : LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Colors.grey.shade50, Colors.grey.shade100],
+            colors: [lightGray, Colors.grey.shade100],
           ),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF10B981)
-                : Colors.grey.shade200,
+            color: isSelected ? primaryBlue : Colors.grey.shade200,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
             BoxShadow(
-              color: const Color(0xFF10B981).withOpacity(0.3),
+              color: primaryBlue.withOpacity(0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -477,7 +544,7 @@ class _GovernorateSelectionScreenState
               child: Icon(
                 Icons.location_city_rounded,
                 size: 20,
-                color: isSelected ? Colors.white : Colors.grey.shade600,
+                color: isSelected ? Colors.white : mediumGray,
               ),
             ),
             const SizedBox(width: 10),
@@ -488,7 +555,7 @@ class _GovernorateSelectionScreenState
                 style: GoogleFonts.cairo(
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  color: isSelected ? Colors.white : mediumGray,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -507,7 +574,7 @@ class _GovernorateSelectionScreenState
     );
   }
 
-  // أزرار سفلية متطورة
+
   Widget _buildModernBottomButtons() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -519,7 +586,7 @@ class _GovernorateSelectionScreenState
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: primaryBlue.withOpacity(0.06),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
@@ -534,11 +601,11 @@ class _GovernorateSelectionScreenState
               child: FadeInAnimation(child: widget),
             ),
             children: [
-              // زر التصفح كزائر
+
               _buildPremiumGuestButton(),
               const SizedBox(height: 12),
 
-              // زر تسجيل الدخول
+
               _buildPremiumLoginButton(),
             ],
           ),
@@ -547,7 +614,7 @@ class _GovernorateSelectionScreenState
     );
   }
 
-  // زر التصفح كزائر المتطور
+
   Widget _buildPremiumGuestButton() {
     return TweenAnimationBuilder(
       tween: Tween<double>(begin: 0, end: 1),
@@ -560,14 +627,14 @@ class _GovernorateSelectionScreenState
             height: 58,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                colors: [primaryBlue, secondaryBlue],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF10B981).withOpacity(0.4),
+                  color: primaryBlue.withOpacity(0.4),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -591,9 +658,9 @@ class _GovernorateSelectionScreenState
                   strokeWidth: 2.5,
                 ),
               )
-                  : Row(
+                  : const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   Icon(
                     Icons.visibility_rounded,
                     color: Colors.white,
@@ -618,7 +685,7 @@ class _GovernorateSelectionScreenState
     );
   }
 
-  // زر تسجيل الدخول المتطور
+
   Widget _buildPremiumLoginButton() {
     return TweenAnimationBuilder(
       tween: Tween<double>(begin: 0, end: 1),
@@ -632,7 +699,7 @@ class _GovernorateSelectionScreenState
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: const Color(0xFF10B981),
+                color: primaryBlue,
                 width: 2,
               ),
               color: Colors.white,
@@ -646,19 +713,19 @@ class _GovernorateSelectionScreenState
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   Icon(
                     Icons.login_rounded,
                     size: 20,
-                    color: Color(0xFF10B981),
+                    color: primaryBlue,
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Text(
                     'تسجيل الدخول إلى حسابي',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF10B981),
+                      color: primaryBlue,
                     ),
                   ),
                 ],
@@ -671,7 +738,7 @@ class _GovernorateSelectionScreenState
   }
 }
 
-// أنيمشن Fade + Slide مخصص
+
 class FadeInSlideAnimation extends StatelessWidget {
   final Widget child;
   final Duration delay;

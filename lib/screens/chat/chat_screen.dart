@@ -1,12 +1,15 @@
+// lib/screens/chat/chat_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
-import 'package:energy_store_app/services/api_service.dart';
-import 'package:energy_store_app/services/auth_service.dart';
-import 'package:energy_store_app/screens/chat/message_bubble.dart';
-import 'package:energy_store_app/screens/offers/offer_details_screen.dart';
-import 'package:energy_store_app/screens/products/product_details_screen.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/screens/chat/message_bubble.dart';
+import 'package:GeniusHouse/screens/chat/system_builder_sheet.dart'; 
+import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
+import 'package:GeniusHouse/screens/products/product_details_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final AuthService authService;
@@ -22,7 +25,8 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
@@ -32,17 +36,75 @@ class _ChatScreenState extends State<ChatScreen> {
 
   bool _isLoading = true;
   bool _isSending = false;
+  bool _isAiTyping = false;
   bool _hasMore = false;
+  bool _isLoadingMore = false;
   int _currentOffset = 0;
-  final int _limit = 20;
+  final int _limit = 1;
+  final int _loadMoreLimit = 3;
   String? _errorMessage;
 
   String? _processingCalculationId;
 
+  double _fontScale = 1.0;
+  static const double _minFontScale = 0.7;
+  static const double _maxFontScale = 2.0;
+
+  
+  static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
+  static const Color accentBlue = Color(0xFF60A5FA);
+  static const Color darkColor = Color(0xFF111827);
+  static const Color mediumGray = Color(0xFF4B5563);
+  static const Color lightGray = Color(0xFFF3F4F6);
+  static const Color cardWhite = Color(0xFFFFFFFF);
+
+  late AnimationController _typingAnimationController;
+  late AnimationController _pulseAnimationController;
+  late Animation<double> _typingAnimation1;
+  late Animation<double> _typingAnimation2;
+  late Animation<double> _typingAnimation3;
+
   @override
   void initState() {
     super.initState();
-    _fetchChatHistory();
+    _initAnimations();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchChatHistory();
+    });
+  }
+
+  void _initAnimations() {
+    _typingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    )..repeat();
+
+    _pulseAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _typingAnimation1 = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _typingAnimationController,
+        curve: const Interval(0.0, 0.33, curve: Curves.easeInOut),
+      ),
+    );
+
+    _typingAnimation2 = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _typingAnimationController,
+        curve: const Interval(0.33, 0.66, curve: Curves.easeInOut),
+      ),
+    );
+
+    _typingAnimation3 = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _typingAnimationController,
+        curve: const Interval(0.66, 1.0, curve: Curves.easeInOut),
+      ),
+    );
   }
 
   @override
@@ -50,20 +112,64 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
+    _typingAnimationController.dispose();
+    _pulseAnimationController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchChatHistory({bool loadMore = false}) async {
-    if (loadMore && !_hasMore) return;
+  void _resetFontScale() {
+    HapticFeedback.lightImpact();
+    setState(() => _fontScale = 1.0);
+    _showFontScaleSnackBar();
+  }
 
-    setState(() {
-      _isLoading = !loadMore;
-      _errorMessage = null;
-    });
+  void _showFontScaleSnackBar() {
+    final percentage = (_fontScale * 100).round();
+    String sizeLabel;
+    if (_fontScale <= 0.8) {
+      sizeLabel = 'صغير';
+    } else if (_fontScale <= 1.1) {
+      sizeLabel = 'عادي';
+    } else if (_fontScale <= 1.5) {
+      sizeLabel = 'كبير';
+    } else {
+      sizeLabel = 'كبير جداً';
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.text_fields_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text('حجم الخط: $sizeLabel ($percentage%)', style: GoogleFonts.cairo(fontSize: 13)),
+          ],
+        ),
+        backgroundColor: primaryBlue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 1),
+      ));
+  }
+
+  Future<void> _fetchChatHistory({bool loadMore = false}) async {
+    if (loadMore) {
+      if (!_hasMore || _isLoadingMore) return;
+      setState(() => _isLoadingMore = true);
+    } else {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
+      final int currentLimit = loadMore ? _loadMoreLimit : _limit;
+
       final response = await widget.apiService.get(
-        '/v1/user/chat/history?limit=$_limit&offset=${loadMore ? _currentOffset : 0}',
+        '/v1/user/chat/history?limit=$currentLimit&offset=${loadMore ? _currentOffset : 0}',
         requiresAuth: true,
       );
 
@@ -72,23 +178,27 @@ class _ChatScreenState extends State<ChatScreen> {
         final List<dynamic> messages = data['messages'] ?? [];
         final pagination = data['pagination'];
 
+        final processedMessages = messages.reversed
+            .map<Map<String, dynamic>>((msg) => Map<String, dynamic>.from(msg))
+            .toList();
+
         setState(() {
           if (loadMore) {
-            final olderMessages = List<Map<String, dynamic>>.from(messages.reversed);
-            _messages.insertAll(0, olderMessages);
+            _messages.insertAll(0, processedMessages);
+            _isLoadingMore = false;
           } else {
-            _messages = List<Map<String, dynamic>>.from(messages.reversed);
+            _messages = processedMessages;
+            _isLoading = false;
           }
 
-          _hasMore = pagination['has_more'] ?? false;
-          _currentOffset = pagination['next_offset'] ?? _currentOffset + _limit;
-          _isLoading = false;
+          _hasMore = pagination?['has_more'] ?? false;
+          _currentOffset = pagination?['next_offset'] ?? _currentOffset + currentLimit;
 
-          if (_messages.isNotEmpty) {
+          if (_messages.isNotEmpty && !loadMore) {
             final lastMessage = _messages.last;
-            if (!lastMessage['me'] && lastMessage.containsKey('data')) {
+            if (!(lastMessage['me'] ?? false) && lastMessage.containsKey('data')) {
               _suggestedQuestions = List<String>.from(
-                  lastMessage['data']?['suggested_questions'] ?? []
+                lastMessage['data']?['suggested_questions'] ?? [],
               );
             }
           }
@@ -100,12 +210,14 @@ class _ChatScreenState extends State<ChatScreen> {
       } else {
         setState(() {
           _isLoading = false;
+          _isLoadingMore = false;
           _errorMessage = response['message'] ?? 'حدث خطأ في تحميل المحادثة';
         });
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
+        _isLoadingMore = false;
         _errorMessage = 'حدث خطأ في الاتصال';
       });
     }
@@ -113,7 +225,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (_scrollController.hasClients && _messages.isNotEmpty) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
@@ -123,9 +235,11 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  Future<void> _sendMessage() async {
-    final message = _messageController.text.trim();
+  Future<void> _sendMessage({String? customMessage}) async {
+    final message = customMessage ?? _messageController.text.trim();
     if (message.isEmpty || _isSending) return;
+
+    HapticFeedback.mediumImpact();
 
     final userMessage = {
       'me': true,
@@ -139,10 +253,12 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add(userMessage);
       _messageController.clear();
       _isSending = true;
+      _isAiTyping = true;
       _suggestedQuestions = [];
     });
 
     _scrollToBottom();
+    _focusNode.unfocus();
 
     try {
       final response = await widget.apiService.post(
@@ -150,6 +266,8 @@ class _ChatScreenState extends State<ChatScreen> {
         requiresAuth: true,
         data: {'message': message},
       );
+
+      setState(() => _isAiTyping = false);
 
       if (response['status'] == 'success' && mounted) {
         final assistantMessage = {
@@ -165,26 +283,23 @@ class _ChatScreenState extends State<ChatScreen> {
           _messages.add(assistantMessage);
           _isSending = false;
           _suggestedQuestions = List<String>.from(
-              response['data']['suggested_questions'] ?? []
+            response['data']['suggested_questions'] ?? [],
           );
         });
 
         _scrollToBottom();
-      }
-      else if (response['status'] == 'processing' && mounted) {
+      } else if (response['status'] == 'processing' && mounted) {
         _processingCalculationId = response['calculation_id'];
         _showProcessingSnackBar();
         _pollCalculationResult();
-      }
-      else {
-        setState(() {
-          _isSending = false;
-        });
+      } else {
+        setState(() => _isSending = false);
         _showErrorSnackBar(response['message'] ?? 'حدث خطأ في إرسال الرسالة');
       }
     } catch (e) {
       setState(() {
         _isSending = false;
+        _isAiTyping = false;
       });
       _showErrorSnackBar('حدث خطأ في الاتصال');
     }
@@ -216,24 +331,24 @@ class _ChatScreenState extends State<ChatScreen> {
           setState(() {
             _messages.add(assistantMessage);
             _isSending = false;
+            _isAiTyping = false;
             _processingCalculationId = null;
             _suggestedQuestions = List<String>.from(
-                response['data']['suggested_questions'] ?? []
+              response['data']['suggested_questions'] ?? [],
             );
           });
 
           _scrollToBottom();
           return;
-        }
-        else if (response['status'] == 'error' && mounted) {
+        } else if (response['status'] == 'error' && mounted) {
           setState(() {
             _isSending = false;
+            _isAiTyping = false;
             _processingCalculationId = null;
           });
           _showErrorSnackBar(response['message'] ?? 'حدث خطأ في الحساب');
           return;
         }
-
         attempts++;
       } catch (e) {
         attempts++;
@@ -243,27 +358,61 @@ class _ChatScreenState extends State<ChatScreen> {
     if (mounted && _processingCalculationId != null) {
       setState(() {
         _isSending = false;
+        _isAiTyping = false;
         _processingCalculationId = null;
       });
       _showErrorSnackBar('انتهت مهلة الانتظار، يرجى المحاولة مرة أخرى');
     }
   }
 
+  void _openSystemBuilder() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SystemBuilderSheet(
+        onSend: (message) {
+          Navigator.pop(context);
+          _sendMessage(customMessage: message);
+        },
+      ),
+    );
+  }
+
   Future<void> _clearChat() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('مسح المحادثة', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
-        content: Text('هل أنت متأكد من مسح جميع رسائل المحادثة؟', style: GoogleFonts.cairo()),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.delete_rounded, color: Colors.red.shade700, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Text('مسح المحادثة', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: darkColor)),
+          ],
+        ),
+        content: Text('هل أنت متأكد من مسح جميع رسائل المحادثة؟', style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('إلغاء', style: GoogleFonts.cairo()),
+            child: Text('إلغاء', style: GoogleFonts.cairo(fontWeight: FontWeight.w600, color: mediumGray)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('مسح', style: GoogleFonts.cairo()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('مسح', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -271,10 +420,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (confirm == true) {
       setState(() => _isLoading = true);
-
       try {
         final response = await widget.apiService.delete('/v1/user/chat/clear', requiresAuth: true);
-
         if (response['status'] == 'success' && mounted) {
           setState(() {
             _messages = [];
@@ -282,6 +429,7 @@ class _ChatScreenState extends State<ChatScreen> {
             _currentOffset = 0;
             _hasMore = false;
             _isLoading = false;
+            _isAiTyping = false;
           });
           _showSuccessSnackBar('تم مسح المحادثة بنجاح');
         } else {
@@ -301,24 +449,82 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
-    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message, style: GoogleFonts.cairo())),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ));
   }
 
   void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating),
-    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message, style: GoogleFonts.cairo())),
+          ],
+        ),
+        backgroundColor: primaryBlue,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ));
   }
 
   void _showProcessingSnackBar() {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('جاري حساب احتياجاتك... سيتم عرض النتيجة قريباً'),
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
+            const SizedBox(width: 10),
+            Text('جاري حساب احتياجاتك...', style: GoogleFonts.cairo()),
+          ],
+        ),
         backgroundColor: Colors.orange,
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _copyToClipboard(String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.green.shade400, size: 20),
+            const SizedBox(width: 8),
+            Text('تم نسخ النص', style: GoogleFonts.cairo()),
+          ],
+        ),
+        backgroundColor: Colors.black87,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 1),
       ),
     );
   }
@@ -328,7 +534,6 @@ class _ChatScreenState extends State<ChatScreen> {
       final dateTime = DateTime.parse(timestamp);
       final now = DateTime.now();
       final difference = now.difference(dateTime);
-
       if (difference.inDays > 0) {
         return DateFormat('MMM dd, hh:mm a').format(dateTime);
       } else if (difference.inHours > 0) {
@@ -371,50 +576,87 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: lightGray,
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryBlue, secondaryBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: Row(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [Colors.green.shade400, Colors.green.shade700]),
-                borderRadius: BorderRadius.circular(12),
+            AnimatedBuilder(
+              animation: _pulseAnimationController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: 1.0 + (_pulseAnimationController.value * 0.1),
+                  child: child,
+                );
+              },
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 24),
               ),
-              child: const Icon(Icons.auto_awesome, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('المساعد الذكي', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold)),
-                Text('نظام الطاقة الشمسية', style: GoogleFonts.cairo(fontSize: 11, color: Colors.grey.shade600)),
+                Text('المساعد الذكي', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text('نظام الطاقة الشمسية', style: GoogleFonts.cairo(fontSize: 11, color: Colors.white.withOpacity(0.85))),
               ],
             ),
           ],
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
         elevation: 0,
-        centerTitle: false,
         actions: [
+          if (_fontScale != 1.0)
+            Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.text_fields_rounded, color: Colors.white, size: 20),
+                onPressed: _resetFontScale,
+                tooltip: 'إعادة تعيين حجم الخط',
+              ),
+            ),
           if (_messages.isNotEmpty)
-            IconButton(icon: const Icon(Icons.delete_outline), onPressed: _clearChat),
+            Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 22),
+                onPressed: _clearChat,
+              ),
+            ),
         ],
       ),
-      body: Column(
+      body: _isLoading
+          ? _buildLoadingState()
+          : _errorMessage != null
+          ? _buildErrorState()
+          : Column(
         children: [
           Expanded(
-            child: _isLoading
-                ? _buildLoadingState()
-                : _errorMessage != null
-                ? _buildErrorState()
-                : _messages.isEmpty
-                ? _buildEmptyState()
-                : _buildMessagesList(),
+            child: _messages.isEmpty ? _buildEmptyState() : _buildMessagesList(),
           ),
-          if (_suggestedQuestions.isNotEmpty && !_isSending) _buildSuggestedQuestions(),
+          if (_suggestedQuestions.isNotEmpty && !_isSending)
+            _buildSuggestedQuestions(),
           _buildInputBar(),
         ],
       ),
@@ -422,70 +664,184 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildMessagesList() {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      reverse: false,
-      itemCount: _messages.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _messages.length && _hasMore) {
-          return _buildLoadMoreIndicator();
-        }
+    return GestureDetector(
+      onScaleUpdate: (details) {
+        setState(() {
+          _fontScale = (_fontScale * details.scale).clamp(_minFontScale, _maxFontScale);
+        });
+      },
+      onScaleEnd: (_) {
+        _showFontScaleSnackBar();
+      },
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        cacheExtent: 300,
+        itemCount: _messages.length + (_hasMore ? 1 : 0) + (_isAiTyping ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (_hasMore && index == 0) {
+            return _buildLoadMoreButton();
+          }
 
-        final message = _messages[index];
+          final messageIndex = _hasMore ? index - 1 : index;
 
-        final bool isUser = message['me'];
-        final String content = message['content'];
-        final String timestamp = _formatTimestamp(message['timestamp'] ?? '');
-        final dynamic data = message['data'];
-        final String type = message['type'] ?? 'text';
+          if (_isAiTyping && messageIndex >= _messages.length) {
+            return _buildTypingIndicator();
+          }
 
-        return MessageBubble(
-          isUser: isUser,
-          content: content,
-          timestamp: timestamp,
-          data: data,
-          type: type,
-          apiService: widget.apiService,
-          authService: widget.authService,
-          onProductTap: _navigateToProduct,
-          onOfferTap: _navigateToOffer,
+          if (messageIndex < _messages.length) {
+            final message = _messages[messageIndex];
+            return MessageBubble(
+              isUser: message['me'] ?? false,
+              content: message['content'] ?? '',
+              timestamp: _formatTimestamp(message['timestamp'] ?? ''),
+              data: message['data'],
+              type: message['type'] ?? 'text',
+              fontScale: _fontScale,
+              apiService: widget.apiService,
+              authService: widget.authService,
+              onProductTap: _navigateToProduct,
+              onOfferTap: _navigateToOffer,
+              onCopyTap: () => _copyToClipboard(message['content'] ?? ''),
+            );
+          }
+
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+  }
+
+  Widget _buildLoadMoreButton() {
+    return GestureDetector(
+      onTap: _isLoadingMore ? null : () => _fetchChatHistory(loadMore: true),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Center(
+          child: _isLoadingMore
+              ? SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(color: primaryBlue, strokeWidth: 2),
+          )
+              : Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryBlue.withOpacity(0.08), secondaryBlue.withOpacity(0.04)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: primaryBlue.withOpacity(0.15)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.arrow_upward_rounded, size: 14, color: primaryBlue),
+                const SizedBox(width: 6),
+                Text(
+                  'تحميل الرسائل السابقة',
+                  style: GoogleFonts.cairo(
+                    fontSize: 12 * _fontScale,
+                    color: primaryBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)],
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.auto_awesome_rounded, color: primaryBlue, size: 18),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: cardWhite,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.04), blurRadius: 5)],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDot(_typingAnimation1),
+                const SizedBox(width: 5),
+                _buildDot(_typingAnimation2),
+                const SizedBox(width: 5),
+                _buildDot(_typingAnimation3),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDot(Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: animation.value,
+          child: Container(
+            width: 7,
+            height: 7,
+            decoration: const BoxDecoration(
+              color: primaryBlue,
+              shape: BoxShape.circle,
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildLoadMoreIndicator() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Center(child: CircularProgressIndicator(color: Colors.green.shade400, strokeWidth: 2)),
-    );
-  }
-
   Widget _buildInputBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))],
+        color: cardWhite,
+        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.06), blurRadius: 10)],
       ),
       child: SafeArea(
         child: Row(
           children: [
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(25)),
+                decoration: BoxDecoration(
+                  color: lightGray,
+                  borderRadius: BorderRadius.circular(25),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
                 child: TextField(
                   controller: _messageController,
                   focusNode: _focusNode,
-                  style: GoogleFonts.cairo(fontSize: 14),
-                  maxLines: null,
+                  style: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: darkColor),
+                  maxLines: 3,
+                  minLines: 1,
                   decoration: InputDecoration(
-                    hintText: 'اكتب استفسارك عن الطاقة الشمسية...',
-                    hintStyle: GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade500),
+                    hintText: 'اكتب استفسارك...',
+                    hintStyle: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: Colors.grey.shade400),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   onSubmitted: (_) => _sendMessage(),
                 ),
@@ -494,21 +850,43 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [Colors.green.shade400, Colors.green.shade700]),
+                gradient: const LinearGradient(colors: [Color(0xFFFF9800), Color(0xFFF57C00)]),
                 shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: const Color(0xFFFF9800).withOpacity(0.3), blurRadius: 8)],
               ),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: _isSending ? null : _sendMessage,
+                  onTap: _openSystemBuilder,
                   borderRadius: BorderRadius.circular(30),
                   child: Container(
-                    width: 48,
-                    height: 48,
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(shape: BoxShape.circle),
+                    child: const Icon(Icons.solar_power_rounded, color: Colors.white, size: 22),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [primaryBlue, secondaryBlue]),
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.3), blurRadius: 8)],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _isSending ? null : () => _sendMessage(),
+                  borderRadius: BorderRadius.circular(30),
+                  child: Container(
+                    width: 44,
+                    height: 44,
                     decoration: const BoxDecoration(shape: BoxShape.circle),
                     child: _isSending
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Icon(Icons.send_rounded, color: Colors.white, size: 22),
+                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
                   ),
                 ),
               ),
@@ -521,27 +899,40 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildSuggestedQuestions() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardWhite,
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: _suggestedQuestions.map((question) {
+      child: SizedBox(
+        height: 40 * _fontScale,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: _suggestedQuestions.length,
+          itemBuilder: (context, index) {
+            final question = _suggestedQuestions[index];
             return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                label: Text(question, style: GoogleFonts.cairo(fontSize: 12), maxLines: 1),
-                onSelected: (_) => _sendSuggestedQuestion(question),
-                backgroundColor: Colors.grey.shade100,
-                selectedColor: Colors.green.shade100,
-                labelStyle: GoogleFonts.cairo(),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onTap: () => _sendSuggestedQuestion(question),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue.withOpacity(0.06), secondaryBlue.withOpacity(0.03)],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: primaryBlue.withOpacity(0.12)),
+                  ),
+                  child: Text(
+                    question,
+                    style: GoogleFonts.cairo(fontSize: 11 * _fontScale, color: primaryBlue, fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                  ),
+                ),
               ),
             );
-          }).toList(),
+          },
         ),
       ),
     );
@@ -552,17 +943,28 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [Colors.green.shade400, Colors.green.shade700]),
-              shape: BoxShape.circle,
+          AnimatedBuilder(
+            animation: _pulseAnimationController,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: 1.0 + (_pulseAnimationController.value * 0.1),
+                child: child,
+              );
+            },
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [primaryBlue.withOpacity(0.1), secondaryBlue.withOpacity(0.05)],
+                ),
+              ),
+              child: const CircularProgressIndicator(color: primaryBlue, strokeWidth: 2.5),
             ),
-            child: const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
           ),
           const SizedBox(height: 16),
-          Text('جاري تحميل المحادثة...', style: GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade600)),
+          Text('جاري تحميل المحادثة...', style: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: mediumGray)),
         ],
       ),
     );
@@ -573,17 +975,26 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.red.shade50,
+            ),
+            child: Icon(Icons.error_outline_rounded, size: 35, color: Colors.red.shade300),
+          ),
           const SizedBox(height: 16),
-          Text(_errorMessage!, style: GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade600)),
+          Text(_errorMessage!, style: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: mediumGray)),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: _fetchChatHistory,
-            icon: const Icon(Icons.refresh),
-            label: Text('إعادة المحاولة', style: GoogleFonts.cairo()),
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: Text('إعادة المحاولة', style: GoogleFonts.cairo(fontSize: 14 * _fontScale)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              backgroundColor: primaryBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ],
@@ -592,66 +1003,79 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 40),
+          AnimatedBuilder(
+            animation: _pulseAnimationController,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: 1.0 + (_pulseAnimationController.value * 0.08),
+                child: child,
+              );
+            },
+            child: Container(
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [Colors.green.shade400, Colors.green.shade700]),
                 shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [primaryBlue.withOpacity(0.08), secondaryBlue.withOpacity(0.04)],
+                ),
               ),
-              child: const Icon(Icons.auto_awesome, size: 50, color: Colors.white),
+              child: const Icon(Icons.auto_awesome_rounded, size: 50, color: primaryBlue),
             ),
-            const SizedBox(height: 24),
-            Text('المساعد الذكي للطاقة الشمسية', style: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87)),
-            const SizedBox(height: 12),
-            Text('اسألني عن أي شيء يتعلق بالطاقة الشمسية\nوسأساعدك في اختيار النظام المناسب', textAlign: TextAlign.center, style: GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade600, height: 1.5)),
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.green.shade200),
+          ),
+          const SizedBox(height: 20),
+          Text('المساعد الذكي للطاقة الشمسية',
+              style: GoogleFonts.cairo(fontSize: 20 * _fontScale, fontWeight: FontWeight.bold, color: darkColor)),
+          const SizedBox(height: 8),
+          Text('اسألني عن أي شيء يتعلق بالطاقة الشمسية',
+              style: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: mediumGray)),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryBlue.withOpacity(0.04), secondaryBlue.withOpacity(0.02)],
               ),
-              child: Column(
-                children: [
-                  Row(children: [Icon(Icons.tips_and_updates, color: Colors.green.shade700), const SizedBox(width: 8), Text('أمثلة للأسئلة:', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: Colors.green.shade700))]),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildExampleChip('بدي شغل مكيف 1 طن لمدة 6 ساعات'),
-                      _buildExampleChip('بدي شغل لابتوب 200 واط لمدة 5 ساعات'),
-                      _buildExampleChip('كم يحتاج منزل 3 غرف من الطاقة الشمسية؟'),
-                      _buildExampleChip('ما هو أفضل نوع بطارية للطاقة الشمسية؟'),
-                    ],
-                  ),
-                ],
-              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: primaryBlue.withOpacity(0.1)),
             ),
-          ],
-        ),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildExampleChip('بدي شغل مكيف 1 طن لمدة 6 ساعات'),
+                _buildExampleChip('بدي شغل لابتوب 200 واط لمدة 5 ساعات'),
+                _buildExampleChip('كم يحتاج منزل 3 غرف من الطاقة الشمسية؟'),
+                _buildExampleChip('ما هو أفضل نوع بطارية للطاقة الشمسية؟'),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildExampleChip(String text) {
-    return ActionChip(
-      label: Text(text, style: GoogleFonts.cairo(fontSize: 12)),
-      onPressed: () {
+    return GestureDetector(
+      onTap: () {
         _messageController.text = text;
         _sendMessage();
       },
-      backgroundColor: Colors.white,
-      side: BorderSide(color: Colors.green.shade200),
-      labelStyle: GoogleFonts.cairo(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: cardWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Text(text, style: GoogleFonts.cairo(fontSize: 12 * _fontScale, color: darkColor)),
+      ),
     );
   }
 }
