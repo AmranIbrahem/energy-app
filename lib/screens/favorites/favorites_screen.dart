@@ -38,7 +38,6 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   bool _isRefreshing = false;
   String _selectedSection = 'all';
 
-
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -159,7 +158,9 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         content: Row(
           children: [
             Icon(
-              color == primaryBlue ? Icons.check_circle_rounded : Icons.info_rounded,
+              color == primaryBlue
+                  ? Icons.check_circle_rounded
+                  : Icons.info_rounded,
               color: Colors.white,
               size: 20,
             ),
@@ -232,8 +233,10 @@ class _FavoritesScreenState extends State<FavoritesScreen>
 
   @override
   Widget build(BuildContext context) {
-    final bool showProducts = _selectedSection == 'all' || _selectedSection == 'products';
-    final bool showOffers = _selectedSection == 'all' || _selectedSection == 'offers';
+    final bool showProducts =
+        _selectedSection == 'all' || _selectedSection == 'products';
+    final bool showOffers =
+        _selectedSection == 'all' || _selectedSection == 'offers';
 
     final bool hasProducts = _favoriteProducts.isNotEmpty;
     final bool hasOffers = _favoriteOffers.isNotEmpty;
@@ -263,7 +266,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                   child: child,
                 );
               },
-              child: const Icon(Icons.favorite_rounded, color: Colors.red, size: 24),
+              child: const Icon(Icons.favorite_rounded,
+                  color: Colors.red, size: 24),
             ),
             const SizedBox(width: 10),
             Text(
@@ -286,7 +290,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               borderRadius: BorderRadius.circular(12),
             ),
             child: PopupMenuButton<String>(
-              icon: const Icon(Icons.filter_list_rounded, color: Colors.white, size: 22),
+              icon: const Icon(Icons.filter_list_rounded,
+                  color: Colors.white, size: 22),
               offset: const Offset(0, 50),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -313,11 +318,15 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                         child: Icon(
                           Icons.grid_view_rounded,
                           size: 18,
-                          color: _selectedSection == 'all' ? primaryBlue : Colors.grey,
+                          color: _selectedSection == 'all'
+                              ? primaryBlue
+                              : Colors.grey,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text('الكل', style: GoogleFonts.cairo(fontSize: 14, color: darkColor)),
+                      Text('الكل',
+                          style: GoogleFonts.cairo(
+                              fontSize: 14, color: darkColor)),
                     ],
                   ),
                 ),
@@ -336,11 +345,15 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                         child: Icon(
                           Icons.shopping_bag_rounded,
                           size: 18,
-                          color: _selectedSection == 'products' ? primaryBlue : Colors.grey,
+                          color: _selectedSection == 'products'
+                              ? primaryBlue
+                              : Colors.grey,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text('المنتجات فقط', style: GoogleFonts.cairo(fontSize: 14, color: darkColor)),
+                      Text('المنتجات فقط',
+                          style: GoogleFonts.cairo(
+                              fontSize: 14, color: darkColor)),
                     ],
                   ),
                 ),
@@ -359,11 +372,15 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                         child: Icon(
                           Icons.local_offer_rounded,
                           size: 18,
-                          color: _selectedSection == 'offers' ? primaryBlue : Colors.grey,
+                          color: _selectedSection == 'offers'
+                              ? primaryBlue
+                              : Colors.grey,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text('العروض فقط', style: GoogleFonts.cairo(fontSize: 14, color: darkColor)),
+                      Text('العروض فقط',
+                          style: GoogleFonts.cairo(
+                              fontSize: 14, color: darkColor)),
                     ],
                   ),
                 ),
@@ -375,66 +392,63 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       body: _isLoading
           ? _buildShimmerLoading()
           : RefreshIndicator(
-        onRefresh: _onRefresh,
-        color: primaryBlue,
-        backgroundColor: cardWhite,
-        child: isEmpty
-            ? _buildEmptyState()
-            : CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-
-            SliverToBoxAdapter(
-              child: _buildStatsBanner(),
-            ),
-
-
-            if (showProducts && hasProducts) ...[
-              SliverToBoxAdapter(
-                child: _buildSectionHeader(
-                  title: 'المنتجات المفضلة',
-                  icon: Icons.shopping_bag_rounded,
-                  count: _favoriteProducts.length,
-                  color: primaryBlue,
-                ),
-              ),
-              _buildProductsGrid(),
-            ],
-
-
-            if (showProducts && showOffers && hasProducts && hasOffers)
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  height: 2,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.grey.shade200,
-                        primaryBlue.withOpacity(0.3),
-                        Colors.grey.shade200,
+              onRefresh: _onRefresh,
+              color: primaryBlue,
+              backgroundColor: cardWhite,
+              child: isEmpty
+                  ? _buildEmptyState()
+                  : CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: _buildStatsBanner(),
+                        ),
+                        if (showProducts && hasProducts) ...[
+                          SliverToBoxAdapter(
+                            child: _buildSectionHeader(
+                              title: 'المنتجات المفضلة',
+                              icon: Icons.shopping_bag_rounded,
+                              count: _favoriteProducts.length,
+                              color: primaryBlue,
+                            ),
+                          ),
+                          _buildProductsGrid(),
+                        ],
+                        if (showProducts &&
+                            showOffers &&
+                            hasProducts &&
+                            hasOffers)
+                          SliverToBoxAdapter(
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 12),
+                              height: 2,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.grey.shade200,
+                                    primaryBlue.withOpacity(0.3),
+                                    Colors.grey.shade200,
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (showOffers && hasOffers) ...[
+                          SliverToBoxAdapter(
+                            child: _buildSectionHeader(
+                              title: 'العروض المفضلة',
+                              icon: Icons.local_offer_rounded,
+                              count: _favoriteOffers.length,
+                              color: Colors.orange,
+                            ),
+                          ),
+                          _buildOffersGrid(),
+                        ],
+                        const SliverToBoxAdapter(child: SizedBox(height: 20)),
                       ],
                     ),
-                  ),
-                ),
-              ),
-
-
-            if (showOffers && hasOffers) ...[
-              SliverToBoxAdapter(
-                child: _buildSectionHeader(
-                  title: 'العروض المفضلة',
-                  icon: Icons.local_offer_rounded,
-                  count: _favoriteOffers.length,
-                  color: Colors.orange,
-                ),
-              ),
-              _buildOffersGrid(),
-            ],
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
-          ],
-        ),
-      ),
+            ),
     );
   }
 
@@ -646,7 +660,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
           mainAxisSpacing: 16,
         ),
         delegate: SliverChildBuilderDelegate(
-              (context, index) {
+          (context, index) {
             final product = _favoriteProducts[index];
             return TweenAnimationBuilder(
               tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -721,7 +735,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
           mainAxisSpacing: 16,
         ),
         delegate: SliverChildBuilderDelegate(
-              (context, index) {
+          (context, index) {
             final offer = _favoriteOffers[index];
             return TweenAnimationBuilder(
               tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -869,7 +883,6 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-
           Shimmer.fromColors(
             baseColor: Colors.grey.shade300,
             highlightColor: Colors.grey.shade100,
@@ -882,7 +895,6 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             ),
           ),
           const SizedBox(height: 20),
-
           Expanded(
             child: GridView.builder(
               shrinkWrap: true,

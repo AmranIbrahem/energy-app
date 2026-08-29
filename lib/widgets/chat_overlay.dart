@@ -24,7 +24,6 @@ class _ChatOverlayState extends State<ChatOverlay> {
     return Stack(
       children: [
         widget.child,
-        // زر المساعد العائم
         FloatingChatButton(
           authService: widget.authService,
           isGuest: widget.isGuest,

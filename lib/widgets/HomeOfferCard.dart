@@ -27,7 +27,7 @@ class HomeOfferCard extends StatefulWidget {
 }
 
 class _HomeOfferCardState extends State<HomeOfferCard>
-    with TickerProviderStateMixin  {
+    with TickerProviderStateMixin {
   final FavoritesService _favoritesService = FavoritesService.instance;
   bool _isFavorite = false;
   bool _isUpdatingFavorite = false;
@@ -102,11 +102,15 @@ class _HomeOfferCardState extends State<HomeOfferCard>
 
     _cartAnimationController.forward();
 
-    // استخدام CartItemModel.fromOffer لنفس منطق OfferDetailsScreen
+    // ✅ يستخدم CartItemModel.fromOffer التي تدعم shipping_cities تلقائياً
     final cartItem = CartItemModel.fromOffer(
       widget.offer,
       quantity: 1,
     );
+
+    // ✅ التحقق من وجود shipping_cities
+    debugPrint('📦 Offer shipping_cities: ${cartItem.shippingCities}');
+    debugPrint('📦 Offer hasShippingInfo: ${cartItem.hasShippingInfo}');
 
     cartService.addOffer(cartItem);
 
@@ -124,7 +128,8 @@ class _HomeOfferCardState extends State<HomeOfferCard>
           children: [
             const Icon(Icons.check_circle, color: Colors.white, size: 20),
             const SizedBox(width: 8),
-            Text('تمت إضافة العرض إلى السلة', style: GoogleFonts.cairo(fontSize: 13)),
+            Text('تمت إضافة العرض إلى السلة',
+                style: GoogleFonts.cairo(fontSize: 13)),
           ],
         ),
         backgroundColor: const Color(0xFF059669),
@@ -149,11 +154,13 @@ class _HomeOfferCardState extends State<HomeOfferCard>
         double.tryParse(widget.offer['price']?.toString() ?? '0') ?? 0;
     final int totalWattage = widget.offer['total_wattage'] ?? 0;
     final int totalCapacity = widget.offer['total_capacity'] ?? 0;
-    final String name =
-        widget.offer['name_ar']?.toString() ?? 'غير معروف';
+    final String name = widget.offer['name_ar']?.toString() ?? 'غير معروف';
     final String imageUrl = widget.offer['cover_image']?.toString() ?? '';
     final double rating =
         double.tryParse(widget.offer['rate']?.toString() ?? '0') ?? 0;
+    // ✅ استخراج اسم المحافظة للعرض
+    final String governorate =
+        widget.offer['governorate_offer']?.toString() ?? '';
 
     return GestureDetector(
       onTap: () {
@@ -204,7 +211,6 @@ class _HomeOfferCardState extends State<HomeOfferCard>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 📸 صورة العرض
               Stack(
                 children: [
                   ClipRRect(
@@ -247,8 +253,6 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                       ),
                     ),
                   ),
-
-                  // شارة الخصم
                   if (hasDiscount)
                     Positioned(
                       top: 10,
@@ -274,8 +278,6 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                         ),
                       ),
                     ),
-
-                  // التقييم
                   if (rating > 0)
                     Positioned(
                       top: 10,
@@ -305,8 +307,44 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                         ),
                       ),
                     ),
-
-                  // معلومات الطاقة
+                  if (governorate.isNotEmpty)
+                    Positioned(
+                      top: 10,
+                      right: hasDiscount ? 55 : 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7C3AED).withOpacity(0.85),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.location_on_rounded,
+                              color: Colors.white,
+                              size: 11,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              governorate,
+                              style: GoogleFonts.cairo(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   if (totalWattage > 0 || totalCapacity > 0)
                     Positioned(
                       bottom: 8,
@@ -347,8 +385,10 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.battery_charging_full_rounded,
-                                      color: Color(0xFF3B82F6), size: 10),
+                                  const Icon(
+                                      Icons.battery_charging_full_rounded,
+                                      color: Color(0xFF3B82F6),
+                                      size: 10),
                                   const SizedBox(width: 2),
                                   Text('$totalCapacity',
                                       style: const TextStyle(
@@ -359,8 +399,6 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                         ],
                       ),
                     ),
-
-                  // زر المفضلة
                   Positioned(
                     bottom: 8,
                     right: 8,
@@ -389,8 +427,7 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                           _isFavorite
                               ? Icons.favorite_rounded
                               : Icons.favorite_border_rounded,
-                          color:
-                          _isFavorite ? Colors.red : Colors.grey,
+                          color: _isFavorite ? Colors.red : Colors.grey,
                           size: 18,
                         ),
                       ),
@@ -398,15 +435,12 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                   ),
                 ],
               ),
-
-              // ✅ المحتوى المرن
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // اسم العرض
                       Text(
                         name,
                         maxLines: 2,
@@ -418,10 +452,7 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                           height: 1.4,
                         ),
                       ),
-
                       const Spacer(),
-
-                      // السعر
                       Row(
                         children: [
                           Text(
@@ -452,8 +483,6 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                   ),
                 ),
               ),
-
-              // 🛒 زر "أضف للسلة" - ثابت دائماً في الأسفل
               GestureDetector(
                 onTap: _isAddingToCart ? null : _addToCart,
                 child: AnimatedBuilder(

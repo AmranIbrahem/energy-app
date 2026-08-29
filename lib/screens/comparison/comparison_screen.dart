@@ -31,7 +31,6 @@ class _ComparisonScreenState extends State<ComparisonScreen>
   bool _isLoading = true;
   late AnimationController _pulseController;
 
-
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -77,7 +76,8 @@ class _ComparisonScreenState extends State<ComparisonScreen>
     });
 
     try {
-      final productIds = _comparisonService.products.map((p) => p['id']).toList();
+      final productIds =
+          _comparisonService.products.map((p) => p['id']).toList();
       final response = await widget.apiService?.post(
         '/v1/user/public/ai/products/compare-multiple',
         data: {'product_ids': productIds},
@@ -88,7 +88,8 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         if (response != null && response['success'] == true) {
           setState(() => _comparisonResult = response['data']['comparison']);
         } else {
-          _showSnackBar(response?['message'] ?? 'حدث خطأ في المقارنة', Colors.red);
+          _showSnackBar(
+              response?['message'] ?? 'حدث خطأ في المقارنة', Colors.red);
         }
       }
     } catch (e) {
@@ -121,7 +122,8 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         if (response != null && response['success'] == true) {
           setState(() => _comparisonResult = response['data']['comparison']);
         } else {
-          _showSnackBar(response?['message'] ?? 'حدث خطأ في المقارنة', Colors.red);
+          _showSnackBar(
+              response?['message'] ?? 'حدث خطأ في المقارنة', Colors.red);
         }
       }
     } catch (e) {
@@ -136,9 +138,15 @@ class _ComparisonScreenState extends State<ComparisonScreen>
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
         content: Row(children: [
-          Icon(color == primaryBlue ? Icons.check_circle_rounded : Icons.info_rounded, color: Colors.white, size: 20),
+          Icon(
+              color == primaryBlue
+                  ? Icons.check_circle_rounded
+                  : Icons.info_rounded,
+              color: Colors.white,
+              size: 20),
           const SizedBox(width: 10),
-          Expanded(child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
+          Expanded(
+              child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
         ]),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
@@ -169,7 +177,8 @@ class _ComparisonScreenState extends State<ComparisonScreen>
 
   void _clearAllItems() {
     final isProductsTab = _tabController.index == 0;
-    final items = isProductsTab ? _comparisonService.products : _comparisonService.offers;
+    final items =
+        isProductsTab ? _comparisonService.products : _comparisonService.offers;
     if (items.isEmpty) return;
 
     showDialog(
@@ -179,16 +188,22 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         title: Row(children: [
           Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
           const SizedBox(width: 8),
-          Text('تأكيد الإزالة', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: darkColor)),
+          Text('تأكيد الإزالة',
+              style: GoogleFonts.cairo(
+                  fontWeight: FontWeight.bold, color: darkColor)),
         ]),
         content: Text(
-          isProductsTab ? 'هل تريد إزالة جميع المنتجات من المقارنة؟' : 'هل تريد إزالة جميع العروض من المقارنة؟',
+          isProductsTab
+              ? 'هل تريد إزالة جميع المنتجات من المقارنة؟'
+              : 'هل تريد إزالة جميع العروض من المقارنة؟',
           style: GoogleFonts.cairo(color: mediumGray),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('إلغاء', style: GoogleFonts.cairo(color: mediumGray, fontWeight: FontWeight.w600)),
+            child: Text('إلغاء',
+                style: GoogleFonts.cairo(
+                    color: mediumGray, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -205,7 +220,8 @@ class _ComparisonScreenState extends State<ComparisonScreen>
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red.shade400,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: Text('تأكيد', style: GoogleFonts.cairo(color: Colors.white)),
           ),
@@ -238,10 +254,15 @@ class _ComparisonScreenState extends State<ComparisonScreen>
                 scale: 1.0 + (_pulseController.value * 0.15),
                 child: child,
               ),
-              child: const Icon(Icons.compare_arrows_rounded, color: Colors.yellow, size: 24),
+              child: const Icon(Icons.compare_arrows_rounded,
+                  color: Colors.yellow, size: 24),
             ),
             const SizedBox(width: 10),
-            Text('المقارنات', style: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text('المقارنات',
+                style: GoogleFonts.cairo(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
           ],
         ),
         elevation: 0,
@@ -249,10 +270,13 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         actions: [
           Container(
             margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12)),
             child: IconButton(
               onPressed: _clearAllItems,
-              icon: const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 22),
+              icon: const Icon(Icons.delete_sweep_rounded,
+                  color: Colors.white, size: 22),
               tooltip: 'إزالة الكل',
             ),
           ),
@@ -261,26 +285,40 @@ class _ComparisonScreenState extends State<ComparisonScreen>
           preferredSize: const Size.fromHeight(55),
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20)),
             child: TabBar(
               controller: _tabController,
               indicator: BoxDecoration(
-                gradient: const LinearGradient(colors: [primaryBlue, secondaryBlue]),
+                gradient:
+                    const LinearGradient(colors: [primaryBlue, secondaryBlue]),
                 borderRadius: BorderRadius.circular(18),
               ),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
-              labelStyle: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.bold),
+              labelStyle:
+                  GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.bold),
               unselectedLabelStyle: GoogleFonts.cairo(fontSize: 13),
               tabs: const [
-                Tab(child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.shopping_bag_rounded, size: 18), SizedBox(width: 8), Text('المنتجات')
-                ])),
-                Tab(child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.local_offer_rounded, size: 18), SizedBox(width: 8), Text('العروض')
-                ])),
+                Tab(
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                      Icon(Icons.shopping_bag_rounded, size: 18),
+                      SizedBox(width: 8),
+                      Text('المنتجات')
+                    ])),
+                Tab(
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                      Icon(Icons.local_offer_rounded, size: 18),
+                      SizedBox(width: 8),
+                      Text('العروض')
+                    ])),
               ],
             ),
           ),
@@ -289,17 +327,18 @@ class _ComparisonScreenState extends State<ComparisonScreen>
       body: _isLoading
           ? _buildShimmerLoading()
           : TabBarView(
-        controller: _tabController,
-        children: [
-          _buildComparisonTab(isProducts: true),
-          _buildComparisonTab(isProducts: false),
-        ],
-      ),
+              controller: _tabController,
+              children: [
+                _buildComparisonTab(isProducts: true),
+                _buildComparisonTab(isProducts: false),
+              ],
+            ),
     );
   }
 
   Widget _buildComparisonTab({required bool isProducts}) {
-    final items = isProducts ? _comparisonService.products : _comparisonService.offers;
+    final items =
+        isProducts ? _comparisonService.products : _comparisonService.offers;
     final count = items.length;
     const maxItems = 4;
 
@@ -316,7 +355,8 @@ class _ComparisonScreenState extends State<ComparisonScreen>
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: count,
-            itemBuilder: (context, index) => _buildComparisonCard(items[index], isProducts, index),
+            itemBuilder: (context, index) =>
+                _buildComparisonCard(items[index], isProducts, index),
           ),
         )
       else
@@ -350,13 +390,21 @@ class _ComparisonScreenState extends State<ComparisonScreen>
             ]),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(isProducts ? Icons.shopping_bag_rounded : Icons.local_offer_rounded, color: primaryBlue, size: 18),
+          child: Icon(
+              isProducts
+                  ? Icons.shopping_bag_rounded
+                  : Icons.local_offer_rounded,
+              color: primaryBlue,
+              size: 18),
         ),
         const SizedBox(width: 10),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('عناصر المقارنة', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w600, color: darkColor)),
+          Text('عناصر المقارنة',
+              style: GoogleFonts.cairo(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: darkColor)),
           const SizedBox(height: 1),
-          Text('$count من $maxItems عناصر', style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
+          Text('$count من $maxItems عناصر',
+              style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
         ]),
         const Spacer(),
         if (count < maxItems)
@@ -370,7 +418,11 @@ class _ComparisonScreenState extends State<ComparisonScreen>
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.add_circle_outline, size: 12, color: primaryBlue),
               const SizedBox(width: 4),
-              Text('أضف ${maxItems - count}', style: GoogleFonts.cairo(fontSize: 10, fontWeight: FontWeight.w600, color: primaryBlue)),
+              Text('أضف ${maxItems - count}',
+                  style: GoogleFonts.cairo(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: primaryBlue)),
             ]),
           ),
       ]),
@@ -381,26 +433,41 @@ class _ComparisonScreenState extends State<ComparisonScreen>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: ElevatedButton(
-        onPressed: _isComparing ? null : (isProducts ? _compareProducts : _compareOffers),
+        onPressed: _isComparing
+            ? null
+            : (isProducts ? _compareProducts : _compareOffers),
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 28),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           minimumSize: const Size(double.infinity, 50),
           elevation: 3,
           shadowColor: primaryBlue.withOpacity(0.4),
         ),
         child: _isComparing
             ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)),
-          const SizedBox(width: 10),
-          Text('جاري المقارنة...', style: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-        ])
+                const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2.5)),
+                const SizedBox(width: 10),
+                Text('جاري المقارنة...',
+                    style: GoogleFonts.cairo(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
+              ])
             : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.compare_arrows_rounded, size: 20),
-          const SizedBox(width: 8),
-          Text('قارن الآن', style: GoogleFonts.cairo(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-        ]),
+                const Icon(Icons.compare_arrows_rounded, size: 20),
+                const SizedBox(width: 8),
+                Text('قارن الآن',
+                    style: GoogleFonts.cairo(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
+              ]),
       ),
     );
   }
@@ -411,7 +478,12 @@ class _ComparisonScreenState extends State<ComparisonScreen>
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(22),
-        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 5))],
+        boxShadow: [
+          BoxShadow(
+              color: primaryBlue.withOpacity(0.06),
+              blurRadius: 20,
+              offset: const Offset(0, 5))
+        ],
         border: Border.all(color: Colors.grey.shade100),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -421,27 +493,43 @@ class _ComparisonScreenState extends State<ComparisonScreen>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [primaryBlue.withOpacity(0.06), secondaryBlue.withOpacity(0.03)],
+              colors: [
+                primaryBlue.withOpacity(0.06),
+                secondaryBlue.withOpacity(0.03)
+              ],
             ),
-            borderRadius: const BorderRadius.only(topLeft: Radius.circular(22), topRight: Radius.circular(22)),
+            borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(22), topRight: Radius.circular(22)),
             border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
           ),
           child: Row(children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.15), secondaryBlue.withOpacity(0.08)]),
+                gradient: LinearGradient(colors: [
+                  primaryBlue.withOpacity(0.15),
+                  secondaryBlue.withOpacity(0.08)
+                ]),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.auto_awesome_rounded, color: primaryBlue, size: 18),
+              child: const Icon(Icons.auto_awesome_rounded,
+                  color: primaryBlue, size: 18),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('نتيجة المقارنة', style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold, color: darkColor)),
-                const SizedBox(height: 1),
-                Text(isProducts ? 'مقارنة المنتجات' : 'مقارنة العروض', style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('نتيجة المقارنة',
+                        style: GoogleFonts.cairo(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: darkColor)),
+                    const SizedBox(height: 1),
+                    Text(isProducts ? 'مقارنة المنتجات' : 'مقارنة العروض',
+                        style:
+                            GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
+                  ]),
             ),
             Material(
               color: Colors.transparent,
@@ -453,8 +541,11 @@ class _ComparisonScreenState extends State<ComparisonScreen>
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
                   padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(color: Colors.red.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.close_rounded, color: Colors.red.shade400, size: 16),
+                  decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Icon(Icons.close_rounded,
+                      color: Colors.red.shade400, size: 16),
                 ),
               ),
             ),
@@ -488,9 +579,19 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         widgets.add(Padding(
           padding: const EdgeInsets.only(top: 14, bottom: 6),
           child: Row(children: [
-            Container(width: 3, height: 18, decoration: BoxDecoration(color: primaryBlue, borderRadius: BorderRadius.circular(2))),
+            Container(
+                width: 3,
+                height: 18,
+                decoration: BoxDecoration(
+                    color: primaryBlue,
+                    borderRadius: BorderRadius.circular(2))),
             const SizedBox(width: 8),
-            Expanded(child: Text(title, style: GoogleFonts.cairo(fontSize: 15, fontWeight: FontWeight.bold, color: darkColor))),
+            Expanded(
+                child: Text(title,
+                    style: GoogleFonts.cairo(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: darkColor))),
           ]),
         ));
         continue;
@@ -503,7 +604,11 @@ class _ComparisonScreenState extends State<ComparisonScreen>
           child: Row(children: [
             Icon(Icons.circle, size: 5, color: primaryBlue.withOpacity(0.6)),
             const SizedBox(width: 6),
-            Text(title, style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600, color: darkColor)),
+            Text(title,
+                style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: darkColor)),
           ]),
         ));
         continue;
@@ -518,10 +623,14 @@ class _ComparisonScreenState extends State<ComparisonScreen>
               margin: const EdgeInsets.only(top: 7),
               width: 5,
               height: 5,
-              decoration: BoxDecoration(color: primaryBlue.withOpacity(0.5), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                  color: primaryBlue.withOpacity(0.5), shape: BoxShape.circle),
             ),
             const SizedBox(width: 8),
-            Expanded(child: Text(text, style: GoogleFonts.cairo(fontSize: 12, height: 1.5, color: mediumGray))),
+            Expanded(
+                child: Text(text,
+                    style: GoogleFonts.cairo(
+                        fontSize: 12, height: 1.5, color: mediumGray))),
           ]),
         ));
         continue;
@@ -529,11 +638,14 @@ class _ComparisonScreenState extends State<ComparisonScreen>
 
       widgets.add(Padding(
         padding: const EdgeInsets.only(bottom: 3),
-        child: Text(line, style: GoogleFonts.cairo(fontSize: 12, height: 1.5, color: mediumGray)),
+        child: Text(line,
+            style: GoogleFonts.cairo(
+                fontSize: 12, height: 1.5, color: mediumGray)),
       ));
     }
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.start, children: widgets);
   }
 
   Widget _buildNoResultPlaceholder(bool isProducts, int count) {
@@ -542,16 +654,23 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         Container(
           width: 70,
           height: 70,
-          decoration: BoxDecoration(color: primaryBlue.withOpacity(0.05), shape: BoxShape.circle),
-          child: Icon(Icons.compare_arrows_rounded, size: 35, color: primaryBlue.withOpacity(0.4)),
+          decoration: BoxDecoration(
+              color: primaryBlue.withOpacity(0.05), shape: BoxShape.circle),
+          child: Icon(Icons.compare_arrows_rounded,
+              size: 35, color: primaryBlue.withOpacity(0.4)),
         ),
         const SizedBox(height: 14),
         Text(
-          count < 2 ? 'أضف عنصرين على الأقل للمقارنة' : 'اضغط زر المقارنة للبدء',
-          style: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w600, color: mediumGray),
+          count < 2
+              ? 'أضف عنصرين على الأقل للمقارنة'
+              : 'اضغط زر المقارنة للبدء',
+          style: GoogleFonts.cairo(
+              fontSize: 14, fontWeight: FontWeight.w600, color: mediumGray),
         ),
         const SizedBox(height: 4),
-        Text('نتيجة المقارنة ستظهر هنا', style: GoogleFonts.cairo(fontSize: 11, color: Colors.grey.shade400)),
+        Text('نتيجة المقارنة ستظهر هنا',
+            style:
+                GoogleFonts.cairo(fontSize: 11, color: Colors.grey.shade400)),
       ]),
     );
   }
@@ -563,33 +682,48 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           AnimatedBuilder(
             animation: _pulseController,
-            builder: (context, child) => Transform.scale(scale: 1.0 + (_pulseController.value * 0.08), child: child),
+            builder: (context, child) => Transform.scale(
+                scale: 1.0 + (_pulseController.value * 0.08), child: child),
             child: Container(
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.06), secondaryBlue.withOpacity(0.03)]),
+                gradient: LinearGradient(colors: [
+                  primaryBlue.withOpacity(0.06),
+                  secondaryBlue.withOpacity(0.03)
+                ]),
                 shape: BoxShape.circle,
               ),
-              child: Icon(isProducts ? Icons.shopping_bag_outlined : Icons.local_offer_outlined, size: 45, color: Colors.grey.shade400),
+              child: Icon(
+                  isProducts
+                      ? Icons.shopping_bag_outlined
+                      : Icons.local_offer_outlined,
+                  size: 45,
+                  color: Colors.grey.shade400),
             ),
           ),
           const SizedBox(height: 20),
           Text(
             isProducts ? 'لا توجد منتجات للمقارنة' : 'لا توجد عروض للمقارنة',
-            style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: darkColor),
+            style: GoogleFonts.cairo(
+                fontSize: 18, fontWeight: FontWeight.bold, color: darkColor),
           ),
           const SizedBox(height: 6),
-          Text('يمكنك إضافة ما يصل إلى 4 عناصر للمقارنة', style: GoogleFonts.cairo(fontSize: 13, color: mediumGray)),
+          Text('يمكنك إضافة ما يصل إلى 4 عناصر للمقارنة',
+              style: GoogleFonts.cairo(fontSize: 13, color: mediumGray)),
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(color: primaryBlue.withOpacity(0.05), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+                color: primaryBlue.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12)),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.info_outline_rounded, size: 14, color: primaryBlue.withOpacity(0.6)),
+              Icon(Icons.info_outline_rounded,
+                  size: 14, color: primaryBlue.withOpacity(0.6)),
               const SizedBox(width: 6),
               Text('أضف عناصر من صفحات المنتجات والعروض',
-                  style: GoogleFonts.cairo(fontSize: 11, color: primaryBlue.withOpacity(0.7))),
+                  style: GoogleFonts.cairo(
+                      fontSize: 11, color: primaryBlue.withOpacity(0.7))),
             ]),
           ),
         ]),
@@ -597,7 +731,8 @@ class _ComparisonScreenState extends State<ComparisonScreen>
     );
   }
 
-  Widget _buildComparisonCard(Map<String, dynamic> item, bool isProduct, int index) {
+  Widget _buildComparisonCard(
+      Map<String, dynamic> item, bool isProduct, int index) {
     double parsePrice(dynamic price) {
       if (price == null) return 0.0;
       if (price is double) return price;
@@ -623,13 +758,15 @@ class _ComparisonScreenState extends State<ComparisonScreen>
 
     final double originalPrice = parsePrice(item['price']);
     final double finalPrice = parsePrice(item['final_price'] ?? item['price']);
-    final bool hasDiscount = originalPrice > 0 && finalPrice > 0 && originalPrice > finalPrice;
+    final bool hasDiscount =
+        originalPrice > 0 && finalPrice > 0 && originalPrice > finalPrice;
     final double rating = parseRating(item['rate']);
     final bool hasRating = rating > 0;
 
     String discountText = '';
     if (hasDiscount) {
-      final discountPercent = ((originalPrice - finalPrice) / originalPrice * 100).round();
+      final discountPercent =
+          ((originalPrice - finalPrice) / originalPrice * 100).round();
       discountText = 'خصم $discountPercent%';
     }
 
@@ -650,7 +787,12 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         decoration: BoxDecoration(
           color: cardWhite,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 3))],
+          boxShadow: [
+            BoxShadow(
+                color: primaryBlue.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3))
+          ],
           border: Border.all(color: Colors.grey.shade100),
         ),
         child: Column(
@@ -659,7 +801,9 @@ class _ComparisonScreenState extends State<ComparisonScreen>
           children: [
             Stack(children: [
               ClipRRect(
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(18), topRight: Radius.circular(18)),
+                borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    topRight: Radius.circular(18)),
                 child: CachedNetworkImage(
                   imageUrl: item['image'] ?? '',
                   height: 110,
@@ -667,17 +811,39 @@ class _ComparisonScreenState extends State<ComparisonScreen>
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(
                     height: 110,
-                    decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.grey.shade100, Colors.grey.shade50])),
-                    child: const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: primaryBlue))),
+                    decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [
+                      Colors.grey.shade100,
+                      Colors.grey.shade50
+                    ])),
+                    child: const Center(
+                        child: SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: primaryBlue))),
                   ),
                   errorWidget: (_, __, ___) => Container(
                     height: 110,
-                    decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.grey.shade100, Colors.grey.shade50])),
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(isProduct ? Icons.shopping_bag_rounded : Icons.local_offer_rounded, size: 28, color: Colors.grey.shade400),
-                      const SizedBox(height: 2),
-                      Text('لا توجد صورة', style: GoogleFonts.cairo(fontSize: 9, color: Colors.grey.shade500)),
-                    ]),
+                    decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [
+                      Colors.grey.shade100,
+                      Colors.grey.shade50
+                    ])),
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                              isProduct
+                                  ? Icons.shopping_bag_rounded
+                                  : Icons.local_offer_rounded,
+                              size: 28,
+                              color: Colors.grey.shade400),
+                          const SizedBox(height: 2),
+                          Text('لا توجد صورة',
+                              style: GoogleFonts.cairo(
+                                  fontSize: 9, color: Colors.grey.shade500)),
+                        ]),
                   ),
                 ),
               ),
@@ -687,12 +853,17 @@ class _ComparisonScreenState extends State<ComparisonScreen>
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => isProduct ? _removeProduct(item['id']) : _removeOffer(item['id']),
+                    onTap: () => isProduct
+                        ? _removeProduct(item['id'])
+                        : _removeOffer(item['id']),
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), shape: BoxShape.circle),
-                      child: const Icon(Icons.close_rounded, size: 11, color: Colors.white),
+                      decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          shape: BoxShape.circle),
+                      child: const Icon(Icons.close_rounded,
+                          size: 11, color: Colors.white),
                     ),
                   ),
                 ),
@@ -702,15 +873,22 @@ class _ComparisonScreenState extends State<ComparisonScreen>
                   top: 5,
                   left: 5,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFFFF5252), Color(0xFFFF1744)]),
+                      gradient: const LinearGradient(
+                          colors: [Color(0xFFFF5252), Color(0xFFFF1744)]),
                       borderRadius: BorderRadius.circular(7),
                     ),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.local_offer_rounded, size: 8, color: Colors.white),
+                      const Icon(Icons.local_offer_rounded,
+                          size: 8, color: Colors.white),
                       const SizedBox(width: 2),
-                      Text(discountText, style: GoogleFonts.cairo(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text(discountText,
+                          style: GoogleFonts.cairo(
+                              fontSize: 8,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ]),
                   ),
                 ),
@@ -718,73 +896,134 @@ class _ComparisonScreenState extends State<ComparisonScreen>
                 bottom: 5,
                 right: 5,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
-                    color: isProduct ? primaryBlue.withOpacity(0.9) : const Color(0xFFFF9800).withOpacity(0.9),
+                    color: isProduct
+                        ? primaryBlue.withOpacity(0.9)
+                        : const Color(0xFFFF9800).withOpacity(0.9),
                     borderRadius: BorderRadius.circular(7),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(isProduct ? Icons.shopping_bag_rounded : Icons.local_offer_rounded, size: 8, color: Colors.white),
+                    Icon(
+                        isProduct
+                            ? Icons.shopping_bag_rounded
+                            : Icons.local_offer_rounded,
+                        size: 8,
+                        color: Colors.white),
                     const SizedBox(width: 2),
-                    Text(isProduct ? 'منتج' : 'عرض', style: GoogleFonts.cairo(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(isProduct ? 'منتج' : 'عرض',
+                        style: GoogleFonts.cairo(
+                            fontSize: 8,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold)),
                   ]),
                 ),
               ),
             ]),
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Text(item['name'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.bold, color: darkColor)),
-                const SizedBox(height: 2),
-                Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text(_formatPrice(finalPrice), style: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.bold, color: primaryBlue)),
-                  const SizedBox(width: 2),
-                  Text(r'$', style: GoogleFonts.cairo(fontSize: 9, color: Colors.grey.shade500)),
-                  const Spacer(),
-                  if (hasDiscount)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                      decoration: BoxDecoration(color: Colors.red.withOpacity(0.06), borderRadius: BorderRadius.circular(5)),
-                      child: Text('وفر ${_formatPrice(originalPrice - finalPrice)}',
-                          style: GoogleFonts.cairo(fontSize: 7, color: Colors.red.shade600, fontWeight: FontWeight.w600)),
-                    ),
-                ]),
-                if (hasDiscount)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Text('${_formatPrice(originalPrice)} \$',
-                        style: GoogleFonts.cairo(fontSize: 9, decoration: TextDecoration.lineThrough, color: Colors.grey.shade400)),
-                  ),
-                const SizedBox(height: 6),
-                if (isProduct && item['brand'] != null && item['brand'].toString().isNotEmpty)
-                  _buildInfoRow(icon: Icons.business_rounded, label: 'العلامة', value: item['brand'].toString(), iconColor: Colors.blue.shade600),
-                if (!isProduct && item['total_wattage'] != null)
-                  _buildInfoRow(icon: Icons.flash_on_rounded, label: 'الطاقة', value: '${item['total_wattage']} واط', iconColor: Colors.orange.shade600),
-                if (!isProduct && item['total_capacity'] != null)
-                  _buildInfoRow(icon: Icons.battery_std_rounded, label: 'السعة', value: '${item['total_capacity']} واط/ساعة', iconColor: Colors.purple.shade600),
-                if (hasRating)
-                  _buildInfoRow(icon: Icons.star_rounded, label: 'التقييم', value: rating.toStringAsFixed(1), iconColor: Colors.amber.shade600),
-                const SizedBox(height: 6),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => isProduct ? _removeProduct(item['id']) : _removeOffer(item['id']),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.red.withOpacity(0.2)),
-                      foregroundColor: Colors.red.shade600,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      minimumSize: const Size(0, 26),
-                    ),
-                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      const Icon(Icons.delete_outline_rounded, size: 11),
-                      const SizedBox(width: 3),
-                      Text('إزالة', style: GoogleFonts.cairo(fontSize: 9)),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(item['name'] ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.cairo(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: darkColor)),
+                    const SizedBox(height: 2),
+                    Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                      Text(_formatPrice(finalPrice),
+                          style: GoogleFonts.cairo(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: primaryBlue)),
+                      const SizedBox(width: 2),
+                      Text(r'$',
+                          style: GoogleFonts.cairo(
+                              fontSize: 9, color: Colors.grey.shade500)),
+                      const Spacer(),
+                      if (hasDiscount)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(5)),
+                          child: Text(
+                              'وفر ${_formatPrice(originalPrice - finalPrice)}',
+                              style: GoogleFonts.cairo(
+                                  fontSize: 7,
+                                  color: Colors.red.shade600,
+                                  fontWeight: FontWeight.w600)),
+                        ),
                     ]),
-                  ),
-                ),
-              ]),
+                    if (hasDiscount)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Text('${_formatPrice(originalPrice)} \$',
+                            style: GoogleFonts.cairo(
+                                fontSize: 9,
+                                decoration: TextDecoration.lineThrough,
+                                color: Colors.grey.shade400)),
+                      ),
+                    const SizedBox(height: 6),
+                    if (isProduct &&
+                        item['brand'] != null &&
+                        item['brand'].toString().isNotEmpty)
+                      _buildInfoRow(
+                          icon: Icons.business_rounded,
+                          label: 'العلامة',
+                          value: item['brand'].toString(),
+                          iconColor: Colors.blue.shade600),
+                    if (!isProduct && item['total_wattage'] != null)
+                      _buildInfoRow(
+                          icon: Icons.flash_on_rounded,
+                          label: 'الطاقة',
+                          value: '${item['total_wattage']} واط',
+                          iconColor: Colors.orange.shade600),
+                    if (!isProduct && item['total_capacity'] != null)
+                      _buildInfoRow(
+                          icon: Icons.battery_std_rounded,
+                          label: 'السعة',
+                          value: '${item['total_capacity']} واط/ساعة',
+                          iconColor: Colors.purple.shade600),
+                    if (hasRating)
+                      _buildInfoRow(
+                          icon: Icons.star_rounded,
+                          label: 'التقييم',
+                          value: rating.toStringAsFixed(1),
+                          iconColor: Colors.amber.shade600),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => isProduct
+                            ? _removeProduct(item['id'])
+                            : _removeOffer(item['id']),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.red.withOpacity(0.2)),
+                          foregroundColor: Colors.red.shade600,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(7)),
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          minimumSize: const Size(0, 26),
+                        ),
+                        child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.delete_outline_rounded,
+                                  size: 11),
+                              const SizedBox(width: 3),
+                              Text('إزالة',
+                                  style: GoogleFonts.cairo(fontSize: 9)),
+                            ]),
+                      ),
+                    ),
+                  ]),
             ),
           ],
         ),
@@ -792,14 +1031,23 @@ class _ComparisonScreenState extends State<ComparisonScreen>
     );
   }
 
-  Widget _buildInfoRow({required IconData icon, required String label, required String value, required Color iconColor}) {
+  Widget _buildInfoRow(
+      {required IconData icon,
+      required String label,
+      required String value,
+      required Color iconColor}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Row(children: [
         Icon(icon, size: 10, color: iconColor),
         const SizedBox(width: 3),
-        Text('$label: ', style: GoogleFonts.cairo(fontSize: 8, color: mediumGray)),
-        Expanded(child: Text(value, style: GoogleFonts.cairo(fontSize: 8, color: darkColor), maxLines: 1, overflow: TextOverflow.ellipsis)),
+        Text('$label: ',
+            style: GoogleFonts.cairo(fontSize: 8, color: mediumGray)),
+        Expanded(
+            child: Text(value,
+                style: GoogleFonts.cairo(fontSize: 8, color: darkColor),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis)),
       ]),
     );
   }
@@ -817,7 +1065,10 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         Shimmer.fromColors(
           baseColor: Colors.grey.shade300,
           highlightColor: Colors.grey.shade100,
-          child: Container(height: 50, decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(18))),
+          child: Container(
+              height: 50,
+              decoration: BoxDecoration(
+                  color: cardWhite, borderRadius: BorderRadius.circular(18))),
         ),
         const SizedBox(height: 16),
         Expanded(
@@ -830,13 +1081,30 @@ class _ComparisonScreenState extends State<ComparisonScreen>
               child: Shimmer.fromColors(
                 baseColor: Colors.grey.shade300,
                 highlightColor: Colors.grey.shade100,
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Container(height: 110, decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(18))),
-                  const SizedBox(height: 8),
-                  Container(height: 12, margin: const EdgeInsets.symmetric(horizontal: 8), decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(5))),
-                  const SizedBox(height: 4),
-                  Container(height: 10, width: 60, margin: const EdgeInsets.symmetric(horizontal: 8), decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(5))),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                          height: 110,
+                          decoration: BoxDecoration(
+                              color: cardWhite,
+                              borderRadius: BorderRadius.circular(18))),
+                      const SizedBox(height: 8),
+                      Container(
+                          height: 12,
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                              color: cardWhite,
+                              borderRadius: BorderRadius.circular(5))),
+                      const SizedBox(height: 4),
+                      Container(
+                          height: 10,
+                          width: 60,
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                              color: cardWhite,
+                              borderRadius: BorderRadius.circular(5))),
+                    ]),
               ),
             ),
           ),

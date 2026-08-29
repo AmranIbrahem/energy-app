@@ -66,7 +66,7 @@ class _TextAdsCarouselState extends State<TextAdsCarousel>
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       height: 50,
       decoration: BoxDecoration(
-        color: Colors.grey.shade200, // ✅ لون رمادي فاتح
+        color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -96,7 +96,7 @@ class _TextAdsCarouselState extends State<TextAdsCarousel>
                   style: GoogleFonts.cairo(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black87, // ✅ لون النص أسود
+                    color: Colors.black87,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

@@ -24,7 +24,6 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -42,7 +41,6 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _rotationAnimation;
   late Animation<double> _particlesOpacity;
 
-
   final List<_Particle> _particles = [];
   final int _numberOfParticles = 25;
 
@@ -50,33 +48,27 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-
     _initializeParticles();
-
 
     _mainController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     );
 
-
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-
 
     _rotationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 25000),
     )..repeat();
 
-
     _particlesController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
     )..repeat();
-
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -85,14 +77,12 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-
     _scaleAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(
         parent: _mainController,
         curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
       ),
     );
-
 
     _slideAnimation = Tween<double>(begin: 50.0, end: 0.0).animate(
       CurvedAnimation(
@@ -101,14 +91,12 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-
     _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(
         parent: _pulseController,
         curve: Curves.easeInOut,
       ),
     );
-
 
     _rotationAnimation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
       CurvedAnimation(
@@ -117,7 +105,6 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-
     _particlesOpacity = Tween<double>(begin: 0.2, end: 0.7).animate(
       CurvedAnimation(
         parent: _particlesController,
@@ -125,9 +112,7 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-
     _mainController.forward();
-
 
     Timer(const Duration(milliseconds: 2800), _navigateToNext);
   }
@@ -160,6 +145,16 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateToNext() async {
     if (!mounted) return;
 
+    // ✅ تأكد من تحميل حالة المصادقة
+    await widget.authService.refreshAuthState();
+
+    if (widget.authService.isAuthenticated) {
+      final tokenValid = await widget.authService.handleTokenExpiry();
+      if (!tokenValid) {
+        print('⚠️ Could not refresh token, continuing as guest');
+      }
+    }
+
     final isOnboardingSeen = widget.storageService.isOnboardingSeen();
     final isAuthenticated = widget.authService.isAuthenticated;
     final isGuest = widget.authService.isGuest;
@@ -168,21 +163,25 @@ class _SplashScreenState extends State<SplashScreen>
     Widget destination;
 
     if (!isOnboardingSeen) {
+      // أول مرة - onboarding
       destination = OnboardingScreen(
         authService: widget.authService,
         storageService: widget.storageService,
       );
     } else if (isAuthenticated) {
+      // ✅ مسجل دخول - اذهب مباشرة للرئيسية
       destination = HomeScreen(
         authService: widget.authService,
         storageService: widget.storageService,
       );
     } else if (isGuest && governorate != null && governorate.isNotEmpty) {
+      // زائر مع محافظة
       destination = HomeScreen(
         authService: widget.authService,
         storageService: widget.storageService,
       );
     } else {
+      // زائر بدون محافظة
       destination = GovernorateSelectionScreen(
         authService: widget.authService,
         storageService: widget.storageService,
@@ -190,27 +189,15 @@ class _SplashScreenState extends State<SplashScreen>
       );
     }
 
-
     if (mounted) {
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
           pageBuilder: (_, __, ___) => destination,
           transitionsBuilder: (_, animation, __, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 1.05, end: 1.0).animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  ),
-                ),
-                child: child,
-              ),
-            );
+            return FadeTransition(opacity: animation, child: child);
           },
-          transitionDuration: const Duration(milliseconds: 800),
+          transitionDuration: const Duration(milliseconds: 500),
         ),
       );
     }
@@ -235,13 +222,8 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: Stack(
           children: [
-
             ..._buildAnimatedParticles(),
-
-
             _buildDecorativeCircles(),
-
-
             Center(
               child: AnimatedBuilder(
                 animation: _mainController,
@@ -257,26 +239,14 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-
                     _buildAnimatedLogo(),
-
                     const SizedBox(height: 35),
-
-
                     _buildAppTitle(),
-
                     const SizedBox(height: 8),
-
-
                     _buildTagline(),
-
                     const SizedBox(height: 50),
-
-
                     _buildLoadingIndicator(),
-
                     const SizedBox(height: 20),
-
                   ],
                 ),
               ),
@@ -287,13 +257,13 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-
   List<Widget> _buildAnimatedParticles() {
     return _particles.map((particle) {
       return AnimatedBuilder(
         animation: _particlesController,
         builder: (context, child) {
-          final angle = particle.angle + (_particlesController.value * 2 * math.pi * particle.speed);
+          final angle = particle.angle +
+              (_particlesController.value * 2 * math.pi * particle.speed);
           final x = math.cos(angle) * particle.distance;
           final y = math.sin(angle) * particle.distance;
 
@@ -324,14 +294,12 @@ class _SplashScreenState extends State<SplashScreen>
     }).toList();
   }
 
-
   Widget _buildDecorativeCircles() {
     return AnimatedBuilder(
       animation: _rotationController,
       builder: (context, child) {
         return Stack(
           children: [
-
             Positioned(
               top: -120,
               right: -120,
@@ -356,7 +324,6 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
             ),
-
             Positioned(
               bottom: -60,
               left: -60,
@@ -381,7 +348,6 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
             ),
-
             Positioned(
               top: MediaQuery.of(context).size.height * 0.5,
               right: -80,
@@ -400,7 +366,6 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
             ),
-
             Positioned(
               top: MediaQuery.of(context).size.height * 0.25,
               left: -30,
@@ -429,10 +394,10 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-
   Widget _buildAnimatedLogo() {
     return AnimatedBuilder(
-      animation: Listenable.merge([_scaleAnimation, _pulseController, _rotationController]),
+      animation: Listenable.merge(
+          [_scaleAnimation, _pulseController, _rotationController]),
       builder: (context, child) {
         return Transform.scale(
           scale: _scaleAnimation.value * _pulseAnimation.value,
@@ -467,7 +432,7 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: ClipOval(
           child: Image.asset(
-            'assets/images/app_icon.png',
+            'assets/images/app_nex_icon.jpg',
             width: 120,
             height: 120,
             fit: BoxFit.cover,
@@ -484,12 +449,11 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-
   Widget _buildAppTitle() {
     return Column(
       children: [
         Text(
-          'Genius',
+          'New Energy',
           style: GoogleFonts.poppins(
             fontSize: 36,
             fontWeight: FontWeight.bold,
@@ -506,7 +470,7 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         const SizedBox(height: 2),
         Text(
-          'House',
+          'Experience',
           style: GoogleFonts.poppins(
             fontSize: 36,
             fontWeight: FontWeight.w300,
@@ -524,7 +488,6 @@ class _SplashScreenState extends State<SplashScreen>
       ],
     );
   }
-
 
   Widget _buildTagline() {
     return Container(
@@ -557,7 +520,6 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
   }
-
 
   Widget _buildLoadingIndicator() {
     return AnimatedBuilder(
@@ -600,7 +562,6 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-
 class _Particle {
   final Offset position;
   final double size;
@@ -616,7 +577,6 @@ class _Particle {
     required this.distance,
   });
 }
-
 
 class _CurvedLinePainter extends CustomPainter {
   @override
@@ -642,7 +602,6 @@ class _CurvedLinePainter extends CustomPainter {
       );
 
     canvas.drawPath(path, paint);
-
 
     final paint2 = Paint()
       ..color = Colors.white.withOpacity(0.04)

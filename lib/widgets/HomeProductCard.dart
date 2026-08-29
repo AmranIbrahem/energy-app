@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
@@ -9,6 +10,8 @@ import 'package:GeniusHouse/services/favorites_service.dart';
 import 'package:GeniusHouse/screens/products/product_details_screen.dart';
 import 'package:GeniusHouse/services/cart_service.dart';
 import 'package:GeniusHouse/models/cart_item_model.dart';
+
+import '../screens/cart/cart_screen.dart';
 
 class HomeProductCard extends StatefulWidget {
   final dynamic product;
@@ -86,21 +89,59 @@ class _HomeProductCardState extends State<HomeProductCard>
   void _addToCart() {
     final cartService = CartService.instance;
 
+    final existingItem = cartService.items.firstWhere(
+          (item) => item.id == widget.product['id'],
+      orElse: () => CartItemModel(
+        id: 0,
+        name: '',
+        slug: '',
+        price: 0,
+        finalPrice: 0,
+        stock: 0,
+      ),
+    );
+
+    final bool isExisting = existingItem.id != 0;
+    final int oldQuantity = isExisting ? existingItem.quantity : 0;
+
+    // ✅ استخراج shipping_cities من المنتج
+    List<Map<String, dynamic>>? shippingCities;
+    if (widget.product['shipping_cities'] != null) {
+      shippingCities = List<Map<String, dynamic>>.from(
+        (widget.product['shipping_cities'] as List).map((cityData) {
+          if (cityData is String) {
+            return {'city': cityData, 'cost': null};
+          }
+          if (cityData is Map) {
+            return {
+              'city': cityData['city']?.toString() ?? '',
+              'cost': cityData['cost']?.toString(),
+            };
+          }
+          return {'city': '', 'cost': null};
+        }),
+      );
+    }
+
     final cartItem = CartItemModel(
       id: widget.product['id'],
       name: widget.product['name_ar']?.toString() ?? 'غير معروف',
       slug: widget.product['slug']?.toString() ?? '',
       price: double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0,
       finalPrice:
-      double.tryParse(widget.product['final_price']?.toString() ?? '0') ?? 0,
+      double.tryParse(widget.product['final_price']?.toString() ?? '0') ??
+          0,
       image: widget.product['main_image']?.toString(),
       stock: widget.product['stock'] ?? 0,
+      quantity: isExisting ? oldQuantity + 1 : 1,
       discountPercentage: widget.product['discount_percentage']?.toDouble(),
+      shippingCities: shippingCities, // ✅ إضافة shipping_cities
     );
 
     cartService.addItem(cartItem);
 
     setState(() => _isAddedToCart = true);
+    HapticFeedback.mediumImpact();
 
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -109,17 +150,38 @@ class _HomeProductCardState extends State<HomeProductCard>
           children: [
             const Icon(Icons.check_circle, color: Colors.white, size: 20),
             const SizedBox(width: 8),
-            Text('تمت الإضافة إلى السلة', style: GoogleFonts.cairo(fontSize: 13)),
+            Expanded(
+              child: Text(
+                isExisting
+                    ? 'تم تحديث الكمية: ${widget.product['name_ar']}\nالكمية: $oldQuantity → ${oldQuantity + 1}'
+                    : 'تم إضافة ${widget.product['name_ar']} إلى السلة',
+                style: GoogleFonts.cairo(fontSize: 13),
+              ),
+            ),
           ],
         ),
-        backgroundColor: const Color(0xFF059669),
+        backgroundColor:
+        isExisting ? const Color(0xFF1E3A8A) : const Color(0xFF059669),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
+        action: SnackBarAction(
+          label: 'السلة',
+          textColor: Colors.white,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CartScreen(),
+              ),
+            ).then((_) {
+              if (mounted) setState(() => _isAddedToCart = false);
+            });
+          },
+        ),
       ),
     );
-
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _isAddedToCart = false);
     });
@@ -132,12 +194,14 @@ class _HomeProductCardState extends State<HomeProductCard>
         double.tryParse(widget.product['final_price']?.toString() ?? '0') ?? 0;
     final double originalPrice =
         double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0;
-    final String name =
-        widget.product['name_ar']?.toString() ?? 'غير معروف';
+    final String name = widget.product['name_ar']?.toString() ?? 'غير معروف';
     final String imageUrl = widget.product['main_image']?.toString() ?? '';
     final String brand = widget.product['brand']?.toString() ?? '';
     final double rating =
         double.tryParse(widget.product['rate']?.toString() ?? '0') ?? 0;
+    // ✅ استخراج اسم المحافظة
+    final String governorate =
+        widget.product['governorate_product']?.toString() ?? '';
 
     return GestureDetector(
       onTap: () {
@@ -188,7 +252,6 @@ class _HomeProductCardState extends State<HomeProductCard>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 📸 صورة المنتج
               Stack(
                 children: [
                   ClipRRect(
@@ -218,15 +281,14 @@ class _HomeProductCardState extends State<HomeProductCard>
                                 highlightColor: Colors.grey.shade100,
                                 child: Container(color: Colors.grey.shade200),
                               ),
-                          errorWidget: (context, url, error) =>
-                              Container(
-                                color: Colors.grey.shade100,
-                                child: Icon(
-                                  Icons.image_not_supported_rounded,
-                                  size: 40,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey.shade100,
+                            child: Icon(
+                              Icons.image_not_supported_rounded,
+                              size: 40,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
                         ),
                       )
                           : Container(
@@ -239,8 +301,6 @@ class _HomeProductCardState extends State<HomeProductCard>
                       ),
                     ),
                   ),
-
-                  // شارة الخصم
                   if (hasDiscount)
                     Positioned(
                       top: 10,
@@ -266,8 +326,6 @@ class _HomeProductCardState extends State<HomeProductCard>
                         ),
                       ),
                     ),
-
-                  // التقييم
                   if (rating > 0)
                     Positioned(
                       top: 10,
@@ -297,8 +355,46 @@ class _HomeProductCardState extends State<HomeProductCard>
                         ),
                       ),
                     ),
-
-                  // زر المفضلة
+                  // ✅ المحافظة في الزاوية السفلى اليمنى
+                  if (governorate.isNotEmpty)
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withOpacity(0.85),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.location_on_rounded,
+                              color: Colors.white,
+                              size: 11,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              governorate,
+                              style: GoogleFonts.cairo(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  // أيقونة المفضلة في الزاوية السفلى اليسرى
                   Positioned(
                     bottom: 8,
                     left: 8,
@@ -327,8 +423,7 @@ class _HomeProductCardState extends State<HomeProductCard>
                           _isFavorite
                               ? Icons.favorite_rounded
                               : Icons.favorite_border_rounded,
-                          color:
-                          _isFavorite ? Colors.red : Colors.grey,
+                          color: _isFavorite ? Colors.red : Colors.grey,
                           size: 18,
                         ),
                       ),
@@ -336,15 +431,12 @@ class _HomeProductCardState extends State<HomeProductCard>
                   ),
                 ],
               ),
-
-              // ✅ المحتوى المرن (يتمدد ليملأ المساحة)
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // العلامة التجارية
                       if (brand.isNotEmpty)
                         Container(
                           margin: const EdgeInsets.only(bottom: 4),
@@ -363,8 +455,6 @@ class _HomeProductCardState extends State<HomeProductCard>
                             ),
                           ),
                         ),
-
-                      // اسم المنتج (يأخذ المساحة المتبقية)
                       Text(
                         name,
                         maxLines: 2,
@@ -376,10 +466,7 @@ class _HomeProductCardState extends State<HomeProductCard>
                           height: 1.4,
                         ),
                       ),
-
                       const Spacer(),
-
-                      // السعر (ثابت في الأسفل قبل الزر)
                       Row(
                         children: [
                           Text(
@@ -410,8 +497,6 @@ class _HomeProductCardState extends State<HomeProductCard>
                   ),
                 ),
               ),
-
-              // 🛒 زر "أضف للسلة" - ثابت دائماً في الأسفل
               GestureDetector(
                 onTap: _addToCart,
                 child: Container(

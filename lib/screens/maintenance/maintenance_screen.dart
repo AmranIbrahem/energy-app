@@ -35,7 +35,6 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
 
-
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -76,10 +75,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       print('Error fetching requests: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('حدث خطأ في تحميل الطلبات السابقة', style: GoogleFonts.cairo()),
+          content: Text('حدث خطأ في تحميل الطلبات السابقة',
+              style: GoogleFonts.cairo()),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -108,10 +109,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
     if (_messageController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('الرجاء كتابة المشكلة التي تواجهها', style: GoogleFonts.cairo()),
+          content: Text('الرجاء كتابة المشكلة التي تواجهها',
+              style: GoogleFonts.cairo()),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -124,9 +127,15 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       final response = await widget.apiService.sendMaintenanceRequest(
         message: _messageController.text.trim(),
         type: _supportType,
-        name: _nameController.text.trim().isEmpty ? null : _nameController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        name: _nameController.text.trim().isEmpty
+            ? null
+            : _nameController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
         image: _imageFile,
       );
 
@@ -141,13 +150,18 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(children: [
-                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                  const Icon(Icons.check_circle_rounded,
+                      color: Colors.white, size: 20),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(response['message'] ?? 'تم إرسال طلب الصيانة بنجاح', style: GoogleFonts.cairo())),
+                  Expanded(
+                      child: Text(
+                          response['message'] ?? 'تم إرسال طلب الصيانة بنجاح',
+                          style: GoogleFonts.cairo())),
                 ]),
                 backgroundColor: primaryBlue,
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 margin: const EdgeInsets.all(16),
               ),
             );
@@ -156,13 +170,18 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const Icon(Icons.check_circle_rounded,
+                    color: Colors.white, size: 20),
                 const SizedBox(width: 10),
-                Expanded(child: Text(response['message'] ?? 'تم إرسال طلب الصيانة بنجاح', style: GoogleFonts.cairo())),
+                Expanded(
+                    child: Text(
+                        response['message'] ?? 'تم إرسال طلب الصيانة بنجاح',
+                        style: GoogleFonts.cairo())),
               ]),
               backgroundColor: primaryBlue,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -180,11 +199,14 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
           content: Row(children: [
             const Icon(Icons.error_rounded, color: Colors.white, size: 20),
             const SizedBox(width: 10),
-            Expanded(child: Text('حدث خطأ: ${e.toString()}', style: GoogleFonts.cairo())),
+            Expanded(
+                child: Text('حدث خطأ: ${e.toString()}',
+                    style: GoogleFonts.cairo())),
           ]),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -200,7 +222,8 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Container(
           width: MediaQuery.of(context).size.width * 0.9,
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -212,26 +235,36 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+                  borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24)),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: const Icon(Icons.psychology_rounded, size: 24, color: primaryBlue),
+                      decoration: BoxDecoration(
+                          color: Colors.white, shape: BoxShape.circle),
+                      child: const Icon(Icons.psychology_rounded,
+                          size: 24, color: primaryBlue),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text('حل المشكلة',
-                          style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                          style: GoogleFonts.cairo(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Container(
                         padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                        child: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
+                        decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded,
+                            size: 18, color: Colors.white),
                       ),
                     ),
                   ],
@@ -245,10 +278,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.access_time_rounded, size: 14, color: Colors.grey.shade500),
+                          Icon(Icons.access_time_rounded,
+                              size: 14, color: Colors.grey.shade500),
                           const SizedBox(width: 6),
                           Text('تم الحل بواسطة الذكاء الاصطناعي',
-                              style: GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
+                              style: GoogleFonts.cairo(
+                                  fontSize: 12, color: mediumGray)),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -256,28 +291,39 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Colors.purple.withOpacity(0.06), Colors.purple.withOpacity(0.03)],
+                            colors: [
+                              Colors.purple.withOpacity(0.06),
+                              Colors.purple.withOpacity(0.03)
+                            ],
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(solution, style: GoogleFonts.cairo(fontSize: 14, height: 1.6, color: darkColor)),
+                        child: Text(solution,
+                            style: GoogleFonts.cairo(
+                                fontSize: 14, height: 1.6, color: darkColor)),
                       ),
                       const SizedBox(height: 16),
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [primaryBlue.withOpacity(0.06), secondaryBlue.withOpacity(0.03)],
+                            colors: [
+                              primaryBlue.withOpacity(0.06),
+                              secondaryBlue.withOpacity(0.03)
+                            ],
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline_rounded, size: 16, color: primaryBlue),
+                            Icon(Icons.info_outline_rounded,
+                                size: 16, color: primaryBlue),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Text('إذا لم يتم حل مشكلتك، يرجى التواصل مع فريق الدعم',
-                                  style: GoogleFonts.cairo(fontSize: 11, color: primaryBlue)),
+                              child: Text(
+                                  'إذا لم يتم حل مشكلتك، يرجى التواصل مع فريق الدعم',
+                                  style: GoogleFonts.cairo(
+                                      fontSize: 11, color: primaryBlue)),
                             ),
                           ],
                         ),
@@ -290,7 +336,9 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: lightGray,
-                  borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
+                  borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(24),
+                      bottomRight: Radius.circular(24)),
                 ),
                 child: Row(
                   children: [
@@ -299,9 +347,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                         onPressed: () => Navigator.pop(context),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: Text('إغلاق', style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
+                        child: Text('إغلاق',
+                            style: GoogleFonts.cairo(
+                                fontSize: 14, color: mediumGray)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -311,10 +362,14 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                         child: Text('مشكلة جديدة',
-                            style: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                            style: GoogleFonts.cairo(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
                       ),
                     ),
                   ],
@@ -341,19 +396,25 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
             Container(
               width: 40,
               height: 4,
-              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 20),
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)]),
+                  gradient: LinearGradient(colors: [
+                    primaryBlue.withOpacity(0.12),
+                    secondaryBlue.withOpacity(0.06)
+                  ]),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.camera_alt_rounded, color: primaryBlue),
               ),
-              title: Text('التقاط صورة', style: GoogleFonts.cairo(fontSize: 15, color: darkColor)),
+              title: Text('التقاط صورة',
+                  style: GoogleFonts.cairo(fontSize: 15, color: darkColor)),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.camera);
@@ -363,12 +424,17 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)]),
+                  gradient: LinearGradient(colors: [
+                    primaryBlue.withOpacity(0.12),
+                    secondaryBlue.withOpacity(0.06)
+                  ]),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.photo_library_rounded, color: primaryBlue),
+                child:
+                    const Icon(Icons.photo_library_rounded, color: primaryBlue),
               ),
-              title: Text('اختيار من المعرض', style: GoogleFonts.cairo(fontSize: 15, color: darkColor)),
+              title: Text('اختيار من المعرض',
+                  style: GoogleFonts.cairo(fontSize: 15, color: darkColor)),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.gallery);
@@ -396,7 +462,10 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
           ),
         ),
         title: Text('طلب صيانة',
-            style: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            style: GoogleFonts.cairo(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
         elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -404,29 +473,29 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: primaryBlue))
           : Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildInfoForm(),
-                  const SizedBox(height: 16),
-                  _buildMessageForm(),
-                  const SizedBox(height: 16),
-                  _buildImageSection(),
-                  const SizedBox(height: 16),
-                  _buildSupportTypeSelector(),
-                  const SizedBox(height: 24),
-                  _buildSubmitButton(),
-                  const SizedBox(height: 24),
-                  _buildPreviousRequestsSection(),
-                ],
-              ),
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        _buildInfoForm(),
+                        const SizedBox(height: 16),
+                        _buildMessageForm(),
+                        const SizedBox(height: 16),
+                        _buildImageSection(),
+                        const SizedBox(height: 16),
+                        _buildSupportTypeSelector(),
+                        const SizedBox(height: 24),
+                        _buildSubmitButton(),
+                        const SizedBox(height: 24),
+                        _buildPreviousRequestsSection(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -436,7 +505,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: primaryBlue.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2))
+        ],
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
@@ -447,22 +521,42 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)]),
+                  gradient: LinearGradient(colors: [
+                    primaryBlue.withOpacity(0.12),
+                    secondaryBlue.withOpacity(0.06)
+                  ]),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.person_outline_rounded, color: primaryBlue, size: 18),
+                child: const Icon(Icons.person_outline_rounded,
+                    color: primaryBlue, size: 18),
               ),
               const SizedBox(width: 10),
               Text('معلومات التواصل (اختياري)',
-                  style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold, color: darkColor)),
+                  style: GoogleFonts.cairo(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: darkColor)),
             ],
           ),
           const SizedBox(height: 12),
-          _buildTextField(controller: _nameController, label: 'الاسم', icon: Icons.person_outline_rounded),
+          _buildTextField(
+              controller: _nameController,
+              label: 'الاسم',
+              icon: Icons.person_outline_rounded),
           const SizedBox(height: 12),
-          _buildTextField(controller: _phoneController, label: 'رقم الهاتف', icon: Icons.phone_outlined, isLtr: true, keyboardType: TextInputType.phone),
+          _buildTextField(
+              controller: _phoneController,
+              label: 'رقم الهاتف',
+              icon: Icons.phone_outlined,
+              isLtr: true,
+              keyboardType: TextInputType.phone),
           const SizedBox(height: 12),
-          _buildTextField(controller: _emailController, label: 'البريد الإلكتروني', icon: Icons.email_outlined, isLtr: true, keyboardType: TextInputType.emailAddress),
+          _buildTextField(
+              controller: _emailController,
+              label: 'البريد الإلكتروني',
+              icon: Icons.email_outlined,
+              isLtr: true,
+              keyboardType: TextInputType.emailAddress),
         ],
       ),
     );
@@ -484,10 +578,13 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         labelText: label,
         labelStyle: GoogleFonts.cairo(color: mediumGray, fontSize: 13),
         prefixIcon: Icon(icon, color: primaryBlue, size: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
         filled: true,
         fillColor: lightGray,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
@@ -498,7 +595,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: primaryBlue.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2))
+        ],
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
@@ -509,14 +611,21 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)]),
+                  gradient: LinearGradient(colors: [
+                    primaryBlue.withOpacity(0.12),
+                    secondaryBlue.withOpacity(0.06)
+                  ]),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.description_rounded, color: primaryBlue, size: 18),
+                child: const Icon(Icons.description_rounded,
+                    color: primaryBlue, size: 18),
               ),
               const SizedBox(width: 10),
               Text('تفاصيل المشكلة',
-                  style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold, color: darkColor)),
+                  style: GoogleFonts.cairo(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: darkColor)),
             ],
           ),
           const SizedBox(height: 12),
@@ -527,8 +636,11 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
             style: GoogleFonts.cairo(fontSize: 14, color: darkColor),
             decoration: InputDecoration(
               hintText: 'اكتب مشكلتك بالتفصيل...',
-              hintStyle: GoogleFonts.cairo(color: Colors.grey.shade400, fontSize: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              hintStyle:
+                  GoogleFonts.cairo(color: Colors.grey.shade400, fontSize: 14),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
               filled: true,
               fillColor: lightGray,
               contentPadding: const EdgeInsets.all(16),
@@ -545,7 +657,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: primaryBlue.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2))
+        ],
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
@@ -556,15 +673,24 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)]),
+                  gradient: LinearGradient(colors: [
+                    primaryBlue.withOpacity(0.12),
+                    secondaryBlue.withOpacity(0.06)
+                  ]),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.image_rounded, color: primaryBlue, size: 18),
+                child: const Icon(Icons.image_rounded,
+                    color: primaryBlue, size: 18),
               ),
               const SizedBox(width: 10),
-              Text('صورة توضيحية', style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold, color: darkColor)),
+              Text('صورة توضيحية',
+                  style: GoogleFonts.cairo(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: darkColor)),
               const SizedBox(width: 8),
-              Text('(اختياري)', style: GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
+              Text('(اختياري)',
+                  style: GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
             ],
           ),
           const SizedBox(height: 12),
@@ -574,9 +700,13 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               child: Container(
                 height: 120,
                 decoration: BoxDecoration(
-                  border: Border.all(color: primaryBlue.withOpacity(0.2), width: 1.5),
+                  border: Border.all(
+                      color: primaryBlue.withOpacity(0.2), width: 1.5),
                   borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.03), secondaryBlue.withOpacity(0.02)]),
+                  gradient: LinearGradient(colors: [
+                    primaryBlue.withOpacity(0.03),
+                    secondaryBlue.withOpacity(0.02)
+                  ]),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -584,13 +714,18 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.1), secondaryBlue.withOpacity(0.05)]),
+                        gradient: LinearGradient(colors: [
+                          primaryBlue.withOpacity(0.1),
+                          secondaryBlue.withOpacity(0.05)
+                        ]),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.add_photo_alternate_rounded, size: 35, color: primaryBlue),
+                      child: Icon(Icons.add_photo_alternate_rounded,
+                          size: 35, color: primaryBlue),
                     ),
                     const SizedBox(height: 8),
-                    Text('انقر لإضافة صورة', style: GoogleFonts.cairo(color: mediumGray)),
+                    Text('انقر لإضافة صورة',
+                        style: GoogleFonts.cairo(color: mediumGray)),
                   ],
                 ),
               ),
@@ -600,7 +735,8 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Image.file(_imageFile!, height: 150, width: double.infinity, fit: BoxFit.cover),
+                  child: Image.file(_imageFile!,
+                      height: 150, width: double.infinity, fit: BoxFit.cover),
                 ),
                 Positioned(
                   top: 8,
@@ -609,8 +745,10 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                     onTap: _removeImage,
                     child: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                      child: const Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                      decoration: const BoxDecoration(
+                          color: Colors.red, shape: BoxShape.circle),
+                      child: const Icon(Icons.close_rounded,
+                          size: 16, color: Colors.white),
                     ),
                   ),
                 ),
@@ -627,7 +765,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: primaryBlue.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2))
+        ],
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
@@ -638,13 +781,21 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)]),
+                  gradient: LinearGradient(colors: [
+                    primaryBlue.withOpacity(0.12),
+                    secondaryBlue.withOpacity(0.06)
+                  ]),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.send_rounded, color: primaryBlue, size: 18),
+                child: const Icon(Icons.send_rounded,
+                    color: primaryBlue, size: 18),
               ),
               const SizedBox(width: 10),
-              Text('إرسال إلى', style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold, color: darkColor)),
+              Text('إرسال إلى',
+                  style: GoogleFonts.cairo(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: darkColor)),
             ],
           ),
           const SizedBox(height: 12),
@@ -675,16 +826,22 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.purple.withOpacity(0.06), Colors.purple.withOpacity(0.03)]),
+                  gradient: LinearGradient(colors: [
+                    Colors.purple.withOpacity(0.06),
+                    Colors.purple.withOpacity(0.03)
+                  ]),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.hourglass_empty_rounded, size: 20, color: Colors.purple),
+                    Icon(Icons.hourglass_empty_rounded,
+                        size: 20, color: Colors.purple),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text('سيتم حل مشكلتك تلقائياً بواسطة الذكاء الاصطناعي فور إرسالها',
-                          style: GoogleFonts.cairo(fontSize: 12, color: Colors.purple)),
+                      child: Text(
+                          'سيتم حل مشكلتك تلقائياً بواسطة الذكاء الاصطناعي فور إرسالها',
+                          style: GoogleFonts.cairo(
+                              fontSize: 12, color: Colors.purple)),
                     ),
                   ],
                 ),
@@ -707,11 +864,18 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           gradient: isSelected
-              ? LinearGradient(colors: [primaryBlue.withOpacity(0.08), secondaryBlue.withOpacity(0.04)])
+              ? LinearGradient(colors: [
+                  primaryBlue.withOpacity(0.08),
+                  secondaryBlue.withOpacity(0.04)
+                ])
               : null,
           color: isSelected ? null : lightGray,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isSelected ? primaryBlue.withOpacity(0.3) : Colors.grey.shade300, width: 1.5),
+          border: Border.all(
+              color: isSelected
+                  ? primaryBlue.withOpacity(0.3)
+                  : Colors.grey.shade300,
+              width: 1.5),
         ),
         child: Column(
           children: [
@@ -719,12 +883,17 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 gradient: isSelected
-                    ? LinearGradient(colors: [primaryBlue.withOpacity(0.15), secondaryBlue.withOpacity(0.08)])
+                    ? LinearGradient(colors: [
+                        primaryBlue.withOpacity(0.15),
+                        secondaryBlue.withOpacity(0.08)
+                      ])
                     : null,
                 color: isSelected ? null : Colors.grey.shade200,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: isSelected ? primaryBlue : Colors.grey.shade600, size: 24),
+              child: Icon(icon,
+                  color: isSelected ? primaryBlue : Colors.grey.shade600,
+                  size: 24),
             ),
             const SizedBox(height: 8),
             Text(
@@ -749,14 +918,22 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         onPressed: _isSubmitting ? null : _submitRequest,
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 3,
           shadowColor: primaryBlue.withOpacity(0.4),
         ),
         child: _isSubmitting
-            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2))
             : Text('إرسال الطلب',
-            style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: GoogleFonts.cairo(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
       ),
     );
   }
@@ -772,14 +949,21 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)]),
+                gradient: LinearGradient(colors: [
+                  primaryBlue.withOpacity(0.12),
+                  secondaryBlue.withOpacity(0.06)
+                ]),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.history_rounded, color: primaryBlue, size: 18),
+              child: const Icon(Icons.history_rounded,
+                  color: primaryBlue, size: 18),
             ),
             const SizedBox(width: 10),
             Text('طلباتك السابقة',
-                style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: darkColor)),
+                style: GoogleFonts.cairo(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor)),
           ],
         ),
         const SizedBox(height: 12),
@@ -795,7 +979,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               decoration: BoxDecoration(
                 color: cardWhite,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                boxShadow: [
+                  BoxShadow(
+                      color: primaryBlue.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2))
+                ],
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: Column(
@@ -804,30 +993,49 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           gradient: request['type'] == 'ai'
-                              ? LinearGradient(colors: [Colors.purple.withOpacity(0.08), Colors.purple.withOpacity(0.04)])
-                              : LinearGradient(colors: [primaryBlue.withOpacity(0.08), secondaryBlue.withOpacity(0.04)]),
+                              ? LinearGradient(colors: [
+                                  Colors.purple.withOpacity(0.08),
+                                  Colors.purple.withOpacity(0.04)
+                                ])
+                              : LinearGradient(colors: [
+                                  primaryBlue.withOpacity(0.08),
+                                  secondaryBlue.withOpacity(0.04)
+                                ]),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(request['type'] == 'ai' ? Icons.psychology_rounded : Icons.support_agent_rounded,
-                                size: 14, color: request['type'] == 'ai' ? Colors.purple : primaryBlue),
+                            Icon(
+                                request['type'] == 'ai'
+                                    ? Icons.psychology_rounded
+                                    : Icons.support_agent_rounded,
+                                size: 14,
+                                color: request['type'] == 'ai'
+                                    ? Colors.purple
+                                    : primaryBlue),
                             const SizedBox(width: 4),
                             Text(
-                              request['type'] == 'ai' ? 'ذكاء اصطناعي' : 'فريق الدعم',
+                              request['type'] == 'ai'
+                                  ? 'ذكاء اصطناعي'
+                                  : 'فريق الدعم',
                               style: GoogleFonts.cairo(
-                                  fontSize: 11, color: request['type'] == 'ai' ? Colors.purple : primaryBlue),
+                                  fontSize: 11,
+                                  color: request['type'] == 'ai'
+                                      ? Colors.purple
+                                      : primaryBlue),
                             ),
                           ],
                         ),
                       ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: request['status'] == 'resolved'
                               ? Colors.green.withOpacity(0.08)
@@ -835,33 +1043,46 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          request['status'] == 'resolved' ? 'تم الحل' : 'قيد المعالجة',
+                          request['status'] == 'resolved'
+                              ? 'تم الحل'
+                              : 'قيد المعالجة',
                           style: GoogleFonts.cairo(
                             fontSize: 11,
-                            color: request['status'] == 'resolved' ? Colors.green : Colors.orange,
+                            color: request['status'] == 'resolved'
+                                ? Colors.green
+                                : Colors.orange,
                           ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(request['message'], maxLines: 2, overflow: TextOverflow.ellipsis,
+                  Text(request['message'],
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.cairo(fontSize: 13, color: darkColor)),
                   if (request['ai_response'] != null)
                     Container(
                       margin: const EdgeInsets.only(top: 8),
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [Colors.purple.withOpacity(0.05), Colors.purple.withOpacity(0.02)]),
+                        gradient: LinearGradient(colors: [
+                          Colors.purple.withOpacity(0.05),
+                          Colors.purple.withOpacity(0.02)
+                        ]),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.psychology_rounded, size: 16, color: Colors.purple),
+                          Icon(Icons.psychology_rounded,
+                              size: 16, color: Colors.purple),
                           const SizedBox(width: 6),
                           Expanded(
-                            child: Text(request['ai_response'], maxLines: 2, overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.cairo(fontSize: 11, color: Colors.purple)),
+                            child: Text(request['ai_response'],
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.cairo(
+                                    fontSize: 11, color: Colors.purple)),
                           ),
                         ],
                       ),

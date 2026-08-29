@@ -7,37 +7,28 @@ class NotificationService {
   NotificationService._internal();
 
   final FlutterLocalNotificationsPlugin _localNotifications =
-  FlutterLocalNotificationsPlugin();
+      FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    // تهيئة الإشعارات المحلية
     const AndroidInitializationSettings androidSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const DarwinInitializationSettings iosSettings =
-    DarwinInitializationSettings();
+        DarwinInitializationSettings();
     const InitializationSettings settings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
     await _localNotifications.initialize(settings);
 
-    // طلب إذن الإشعارات
     await FirebaseMessaging.instance.requestPermission();
 
-    // الحصول على التوكن (أرسله للخادم لاحقاً)
     final token = await FirebaseMessaging.instance.getToken();
-    print('📱 FCM Token الخاص بك: $token');
-    // TODO: سترسل هذا التوكن إلى الخادم
 
-    // عندما يكون التطبيق مفتوحاً
     FirebaseMessaging.onMessage.listen((message) {
       _showLocalNotification(message);
     });
 
-    // عندما يضغط المستخدم على الإشعار
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      print('تم الضغط على الإشعار');
-    });
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {});
   }
 
   void _showLocalNotification(RemoteMessage message) {

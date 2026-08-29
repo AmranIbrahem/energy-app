@@ -35,7 +35,6 @@ class _CartBadgeState extends State<CartBadge> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      // يمكن استخدام Stream لمراقبة التغييرات
       builder: (context, snapshot) {
         return Stack(
           clipBehavior: Clip.none,
@@ -68,7 +67,8 @@ class _CartBadgeState extends State<CartBadge> {
               ),
           ],
         );
-      }, stream: null,
+      },
+      stream: null,
     );
   }
 }

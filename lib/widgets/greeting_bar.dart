@@ -61,17 +61,48 @@ class _GreetingBarState extends State<GreetingBar>
     return const Color(0xFF1A237E);
   }
 
-  // محاكاة درجة الحرارة حسب المحافظة
   Map<String, dynamic> _getWeatherData() {
     final weatherData = {
-      'دمشق': {'temp': '28°', 'icon': Icons.wb_sunny_rounded, 'condition': 'مشمس'},
-      'حلب': {'temp': '30°', 'icon': Icons.wb_sunny_rounded, 'condition': 'مشمس جزئياً'},
-      'حمص': {'temp': '26°', 'icon': Icons.wb_cloudy_rounded, 'condition': 'غائم'},
-      'اللاذقية': {'temp': '25°', 'icon': Icons.water_drop_rounded, 'condition': 'رطب'},
-      'طرطوس': {'temp': '24°', 'icon': Icons.water_drop_rounded, 'condition': 'رطب'},
-      'حماة': {'temp': '29°', 'icon': Icons.wb_sunny_rounded, 'condition': 'مشمس'},
-      'درعا': {'temp': '31°', 'icon': Icons.wb_sunny_rounded, 'condition': 'حار'},
-      'السويداء': {'temp': '27°', 'icon': Icons.wb_cloudy_rounded, 'condition': 'معتدل'},
+      'دمشق': {
+        'temp': '28°',
+        'icon': Icons.wb_sunny_rounded,
+        'condition': 'مشمس'
+      },
+      'حلب': {
+        'temp': '30°',
+        'icon': Icons.wb_sunny_rounded,
+        'condition': 'مشمس جزئياً'
+      },
+      'حمص': {
+        'temp': '26°',
+        'icon': Icons.wb_cloudy_rounded,
+        'condition': 'غائم'
+      },
+      'اللاذقية': {
+        'temp': '25°',
+        'icon': Icons.water_drop_rounded,
+        'condition': 'رطب'
+      },
+      'طرطوس': {
+        'temp': '24°',
+        'icon': Icons.water_drop_rounded,
+        'condition': 'رطب'
+      },
+      'حماة': {
+        'temp': '29°',
+        'icon': Icons.wb_sunny_rounded,
+        'condition': 'مشمس'
+      },
+      'درعا': {
+        'temp': '31°',
+        'icon': Icons.wb_sunny_rounded,
+        'condition': 'حار'
+      },
+      'السويداء': {
+        'temp': '27°',
+        'icon': Icons.wb_cloudy_rounded,
+        'condition': 'معتدل'
+      },
     };
     return weatherData[widget.governorate] ??
         {'temp': '25°', 'icon': Icons.wb_sunny_rounded, 'condition': 'معتدل'};
@@ -112,7 +143,6 @@ class _GreetingBarState extends State<GreetingBar>
       ),
       child: Row(
         children: [
-          // أيقونة الوقت مع تأثير النبض
           AnimatedBuilder(
             animation: _weatherAnimation,
             builder: (context, child) => Transform.scale(
@@ -146,7 +176,6 @@ class _GreetingBarState extends State<GreetingBar>
             ),
           ),
           const SizedBox(width: 16),
-          // نص الترحيب
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,8 +198,8 @@ class _GreetingBarState extends State<GreetingBar>
                           width: 24,
                           height: 24,
                           errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.emoji_emotions,
-                              color: Colors.amber, size: 20),
+                              const Icon(Icons.emoji_emotions,
+                                  color: Colors.amber, size: 20),
                         ),
                       ),
                   ],
@@ -187,7 +216,6 @@ class _GreetingBarState extends State<GreetingBar>
               ],
             ),
           ),
-          // معلومات الطقس
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(

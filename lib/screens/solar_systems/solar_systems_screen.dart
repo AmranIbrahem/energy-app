@@ -29,7 +29,7 @@ class _SolarSystemsScreenState extends State<SolarSystemsScreen>
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _errorMessage;
-  final String _baseUrl = 'https://aa-dev.online/energy';
+  final String _baseUrl = 'https://nexsy.shop';
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);

@@ -96,13 +96,12 @@ class _OfferStoriesState extends State<OfferStories>
 
     return Column(
       children: [
-        // صف دوائر الستوريز
         SizedBox(
           height: 120,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: widget.offers.length + 1, // +1 لزر "عرض الكل"
+            itemCount: widget.offers.length + 1,
             itemBuilder: (context, index) {
               if (index == widget.offers.length) {
                 return _buildViewAllButton();
@@ -111,7 +110,6 @@ class _OfferStoriesState extends State<OfferStories>
             },
           ),
         ),
-        // نافذة الستوري المنبثقة
         if (_isStoryOpen) _buildStoryViewer(),
       ],
     );
@@ -130,7 +128,6 @@ class _OfferStoriesState extends State<OfferStories>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // دائرة الستوري مع حدود متدرجة
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               padding: const EdgeInsets.all(3),
@@ -138,32 +135,32 @@ class _OfferStoriesState extends State<OfferStories>
                 shape: BoxShape.circle,
                 gradient: isActive
                     ? const LinearGradient(
-                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
+                        colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
                     : isViewed
-                    ? const LinearGradient(
-                  colors: [Colors.grey, Colors.grey],
-                )
-                    : const LinearGradient(
-                  colors: [
-                    Color(0xFF1E3A8A),
-                    Color(0xFF3B82F6),
-                    Color(0xFF60A5FA),
-                    Color(0xFFF59E0B),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                        ? const LinearGradient(
+                            colors: [Colors.grey, Colors.grey],
+                          )
+                        : const LinearGradient(
+                            colors: [
+                              Color(0xFF1E3A8A),
+                              Color(0xFF3B82F6),
+                              Color(0xFF60A5FA),
+                              Color(0xFFF59E0B),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                 boxShadow: isActive
                     ? [
-                  BoxShadow(
-                    color: const Color(0xFF1E3A8A).withOpacity(0.4),
-                    blurRadius: 15,
-                    spreadRadius: 2,
-                  ),
-                ]
+                        BoxShadow(
+                          color: const Color(0xFF1E3A8A).withOpacity(0.4),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                        ),
+                      ]
                     : null,
               ),
               child: Container(
@@ -176,29 +173,28 @@ class _OfferStoriesState extends State<OfferStories>
                 child: ClipOval(
                   child: offer['image_path'] != null
                       ? CachedNetworkImage(
-                    imageUrl: offer['image_path'],
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
-                      child: Container(color: Colors.grey[300]),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.local_offer,
-                          color: Colors.grey, size: 30),
-                    ),
-                  )
+                          imageUrl: offer['image_path'],
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Shimmer.fromColors(
+                            baseColor: Colors.grey[300]!,
+                            highlightColor: Colors.grey[100]!,
+                            child: Container(color: Colors.grey[300]),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.local_offer,
+                                color: Colors.grey, size: 30),
+                          ),
+                        )
                       : Container(
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.local_offer,
-                        color: Colors.grey, size: 30),
-                  ),
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.local_offer,
+                              color: Colors.grey, size: 30),
+                        ),
                 ),
               ),
             ),
             const SizedBox(height: 6),
-            // اسم العرض
             Text(
               offer['title'] ?? 'عرض',
               style: GoogleFonts.cairo(
@@ -240,7 +236,6 @@ class _OfferStoriesState extends State<OfferStories>
   Widget _buildViewAllButton() {
     return GestureDetector(
       onTap: () {
-        // التنقل إلى صفحة جميع العروض
         widget.onOfferTap({});
       },
       child: Container(
@@ -303,7 +298,6 @@ class _OfferStoriesState extends State<OfferStories>
         color: Colors.black87,
         child: Stack(
           children: [
-            // صورة الستوري
             Center(
               child: Hero(
                 tag: 'story_${currentOffer['id']}',
@@ -322,7 +316,6 @@ class _OfferStoriesState extends State<OfferStories>
                 ),
               ),
             ),
-            // شريط التقدم
             Positioned(
               top: 8,
               left: 8,
@@ -330,7 +323,7 @@ class _OfferStoriesState extends State<OfferStories>
               child: Row(
                 children: List.generate(
                   widget.offers.length,
-                      (index) => Expanded(
+                  (index) => Expanded(
                     child: Container(
                       height: 3,
                       margin: const EdgeInsets.symmetric(horizontal: 2),
@@ -340,26 +333,25 @@ class _OfferStoriesState extends State<OfferStories>
                       ),
                       child: index == _currentStoryIndex
                           ? AnimatedBuilder(
-                        animation: _progressController,
-                        builder: (context, child) {
-                          return LinearProgressIndicator(
-                            value: _progressController.value,
-                            backgroundColor: Colors.transparent,
-                            valueColor:
-                            const AlwaysStoppedAnimation<Color>(
-                                Colors.white),
-                          );
-                        },
-                      )
+                              animation: _progressController,
+                              builder: (context, child) {
+                                return LinearProgressIndicator(
+                                  value: _progressController.value,
+                                  backgroundColor: Colors.transparent,
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                );
+                              },
+                            )
                           : index < _currentStoryIndex
-                          ? Container(color: Colors.white)
-                          : null,
+                              ? Container(color: Colors.white)
+                              : null,
                     ),
                   ),
                 ),
               ),
             ),
-            // معلومات العرض
             Positioned(
               bottom: 0,
               left: 0,
@@ -420,7 +412,6 @@ class _OfferStoriesState extends State<OfferStories>
                             ),
                           ),
                         const Spacer(),
-                        // أزرار التحكم
                         Row(
                           children: [
                             _buildStoryButton(
@@ -446,7 +437,6 @@ class _OfferStoriesState extends State<OfferStories>
                 ),
               ),
             ),
-            // زر الإغلاق العلوي
             Positioned(
               top: 40,
               right: 16,

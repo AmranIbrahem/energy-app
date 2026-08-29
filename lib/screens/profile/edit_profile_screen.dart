@@ -31,7 +31,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _selectedGovernorate;
   bool _isLoading = false;
 
-  
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -89,14 +88,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                  const Icon(Icons.check_circle_rounded,
+                      color: Colors.white, size: 20),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(response['message'], style: GoogleFonts.cairo(fontSize: 14))),
+                  Expanded(
+                      child: Text(response['message'],
+                          style: GoogleFonts.cairo(fontSize: 14))),
                 ],
               ),
               backgroundColor: primaryBlue,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
               margin: const EdgeInsets.all(16),
               duration: const Duration(seconds: 2),
             ),
@@ -107,7 +110,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.error_rounded, color: Colors.white, size: 20),
+                  const Icon(Icons.error_rounded,
+                      color: Colors.white, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -119,7 +123,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
               margin: const EdgeInsets.all(16),
               duration: const Duration(seconds: 2),
             ),
@@ -135,13 +140,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const Icon(Icons.error_rounded, color: Colors.white, size: 20),
               const SizedBox(width: 10),
               Expanded(
-                child: Text('حدث خطأ في الاتصال', style: GoogleFonts.cairo(fontSize: 14)),
+                child: Text('حدث خطأ في الاتصال',
+                    style: GoogleFonts.cairo(fontSize: 14)),
               ),
             ],
           ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 2),
         ),
@@ -202,7 +209,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
               Center(
                 child: Column(
                   children: [
@@ -231,26 +237,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: ClipOval(
                         child: widget.userData['profile_image'] != null
                             ? CachedNetworkImage(
-                          imageUrl: widget.userData['profile_image'],
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey.shade200,
-                            child: const Icon(Icons.person, size: 50, color: Colors.grey),
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Colors.grey.shade200,
-                            child: const Icon(Icons.person, size: 50, color: Colors.grey),
-                          ),
-                        )
+                                imageUrl: widget.userData['profile_image'],
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Container(
+                                  color: Colors.grey.shade200,
+                                  child: const Icon(Icons.person,
+                                      size: 50, color: Colors.grey),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: Colors.grey.shade200,
+                                  child: const Icon(Icons.person,
+                                      size: 50, color: Colors.grey),
+                                ),
+                              )
                             : Container(
-                          color: Colors.grey.shade200,
-                          child: const Icon(Icons.person, size: 50, color: Colors.grey),
-                        ),
+                                color: Colors.grey.shade200,
+                                child: const Icon(Icons.person,
+                                    size: 50, color: Colors.grey),
+                              ),
                       ),
                     ),
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
                         color: cardWhite,
                         borderRadius: BorderRadius.circular(12),
@@ -264,32 +274,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       child: Text(
                         'لتغيير الصورة اذهب إلى حسابي ← صورة شخصية',
-                        style: GoogleFonts.cairo(fontSize: 11, color: mediumGray),
+                        style:
+                            GoogleFonts.cairo(fontSize: 11, color: mediumGray),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 30),
-
-              
               _buildSectionHeader('المعلومات الشخصية'),
               const SizedBox(height: 16),
-
-              
               _buildTextField(
                 controller: _nameController,
                 label: 'الاسم الكامل',
                 icon: Icons.person_outline_rounded,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'الرجاء إدخال الاسم الكامل';
-                  if (value.length < 3) return 'الاسم يجب أن يكون 3 أحرف على الأقل';
+                  if (value == null || value.isEmpty)
+                    return 'الرجاء إدخال الاسم الكامل';
+                  if (value.length < 3)
+                    return 'الاسم يجب أن يكون 3 أحرف على الأقل';
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-
-              
               _buildTextField(
                 controller: _phoneController,
                 label: 'رقم الهاتف (مثال: +963933314341)',
@@ -297,64 +304,63 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 keyboardType: TextInputType.phone,
                 textDirection: TextDirection.ltr,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'الرجاء إدخال رقم الهاتف';
-                  if (!Helpers.isValidPhone(value)) return 'الرجاء إدخال رقم هاتف صحيح (يبدأ بـ +963)';
+                  if (value == null || value.isEmpty)
+                    return 'الرجاء إدخال رقم الهاتف';
+                  if (!Helpers.isValidPhone(value))
+                    return 'الرجاء إدخال رقم هاتف صحيح (يبدأ بـ +963)';
                   return null;
                 },
               ),
               const SizedBox(height: 24),
-
               _buildSectionHeader('العنوان'),
               const SizedBox(height: 16),
-
-              
               DropdownButtonFormField<String>(
                 value: _selectedGovernorate,
-                decoration: _buildInputDecoration('المحافظة', Icons.location_city_rounded),
+                decoration: _buildInputDecoration(
+                    'المحافظة', Icons.location_city_rounded),
                 dropdownColor: cardWhite,
                 style: GoogleFonts.cairo(fontSize: 15, color: darkColor),
                 items: AppConstants.syrianGovernorates.map((gov) {
                   return DropdownMenuItem(
                     value: gov,
-                    child: Text(gov, style: GoogleFonts.cairo(fontSize: 15, color: darkColor)),
+                    child: Text(gov,
+                        style:
+                            GoogleFonts.cairo(fontSize: 15, color: darkColor)),
                   );
                 }).toList(),
                 onChanged: (value) {
                   setState(() => _selectedGovernorate = value);
                 },
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'الرجاء اختيار المحافظة';
+                  if (value == null || value.isEmpty)
+                    return 'الرجاء اختيار المحافظة';
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-
-              
               _buildTextField(
                 controller: _districtController,
                 label: 'المنطقة',
                 icon: Icons.location_on_outlined,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'الرجاء إدخال المنطقة';
+                  if (value == null || value.isEmpty)
+                    return 'الرجاء إدخال المنطقة';
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-
-              
               _buildTextField(
                 controller: _addressController,
                 label: 'العنوان التفصيلي',
                 icon: Icons.home_outlined,
                 maxLines: 2,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'الرجاء إدخال العنوان';
+                  if (value == null || value.isEmpty)
+                    return 'الرجاء إدخال العنوان';
                   return null;
                 },
               ),
               const SizedBox(height: 32),
-
-              
               SizedBox(
                 width: double.infinity,
                 height: 55,
@@ -363,20 +369,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryBlue,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15)),
                     elevation: 5,
                     shadowColor: primaryBlue.withOpacity(0.5),
                   ),
                   child: _isLoading
                       ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                  )
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
                       : Text(
-                    'حفظ التغييرات',
-                    style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                          'حفظ التغييرات',
+                          style: GoogleFonts.cairo(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
               const SizedBox(height: 20),

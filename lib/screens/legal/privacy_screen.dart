@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 class PrivacyScreen extends StatelessWidget {
   const PrivacyScreen({super.key});
 
-
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -95,7 +94,7 @@ class PrivacyScreen extends StatelessWidget {
             ),
             _buildSection(
               '10. الاتصال بنا',
-              'للاستفسارات حول سياسة الخصوصية:\n📧 البريد الإلكتروني: privacy@geniushouse.com\n📞 رقم الهاتف: +963 11 1234567\n📍 العنوان: دمشق، سوريا',
+              'للاستفسارات حول سياسة الخصوصية:\n📧 البريد الإلكتروني: privacy@nexsy.com\nا',
             ),
           ],
         ),
@@ -152,7 +151,7 @@ class PrivacyScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'آخر تحديث: 1 يناير 2024',
+                  'آخر تحديث: 1 اغسطس 2026',
                   style: GoogleFonts.cairo(
                     fontSize: 12,
                     color: mediumGray,

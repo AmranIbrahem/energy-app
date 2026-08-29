@@ -11,7 +11,7 @@ import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/screens/profile/edit_profile_screen.dart';
 import 'package:GeniusHouse/screens/profile/change_password_screen.dart';
 import 'package:flutter/services.dart';
-
+import 'package:GeniusHouse/screens/company/request_company_screen.dart';
 import 'orders_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -40,7 +40,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   int _favoritesCount = 0;
   int _ordersCount = 0;
   int _selectedTab = 0;
-
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
@@ -117,7 +116,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       } else {
         setState(() {
           _isLoading = false;
-          _errorMessage = response['message'] ?? 'حدث خطأ في تحميل الملف الشخصي';
+          _errorMessage =
+              response['message'] ?? 'حدث خطأ في تحميل الملف الشخصي';
         });
       }
     } catch (e) {
@@ -134,7 +134,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         '/v1/user/favorites',
         requiresAuth: true,
       );
-      if (favoritesResponse.containsKey('data') && favoritesResponse['data'].containsKey('total')) {
+      if (favoritesResponse.containsKey('data') &&
+          favoritesResponse['data'].containsKey('total')) {
         setState(() => _favoritesCount = favoritesResponse['data']['total']);
       }
     } catch (e) {}
@@ -144,7 +145,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         '/v1/user/orders',
         requiresAuth: true,
       );
-      if (ordersResponse.containsKey('data') && ordersResponse['data'].containsKey('total')) {
+      if (ordersResponse.containsKey('data') &&
+          ordersResponse['data'].containsKey('total')) {
         setState(() => _ordersCount = ordersResponse['data']['total']);
       }
     } catch (e) {}
@@ -152,7 +154,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _updateProfileImage(ImageSource source) async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source, maxWidth: 500, maxHeight: 500, imageQuality: 80);
+    final pickedFile = await picker.pickImage(
+        source: source, maxWidth: 500, maxHeight: 500, imageQuality: 80);
     if (pickedFile == null) return;
 
     setState(() => _isUploadingImage = true);
@@ -170,7 +173,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         _showSnackBar('تم تحديث الصورة الشخصية بنجاح', primaryBlue);
       } else {
         setState(() => _isUploadingImage = false);
-        _showSnackBar(response['message'] ?? 'حدث خطأ في رفع الصورة', Colors.red);
+        _showSnackBar(
+            response['message'] ?? 'حدث خطأ في رفع الصورة', Colors.red);
       }
     } catch (e) {
       setState(() => _isUploadingImage = false);
@@ -179,12 +183,14 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _deleteProfileImage() async {
-    final confirm = await _showConfirmationDialog('حذف الصورة', 'هل أنت متأكد من حذف الصورة الشخصية؟');
+    final confirm = await _showConfirmationDialog(
+        'حذف الصورة', 'هل أنت متأكد من حذف الصورة الشخصية؟');
     if (confirm != true) return;
 
     setState(() => _isUploadingImage = true);
     try {
-      await widget.apiService.delete('/v1/user/profile/profile-image', requiresAuth: true);
+      await widget.apiService
+          .delete('/v1/user/profile/profile-image', requiresAuth: true);
       if (mounted) {
         setState(() {
           _userData!['profile_image'] = null;
@@ -349,14 +355,20 @@ class _ProfileScreenState extends State<ProfileScreen>
           );
         },
         child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-          title: Text(title, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 20, color: darkColor)),
-          content: Text(content, style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          title: Text(title,
+              style: GoogleFonts.cairo(
+                  fontWeight: FontWeight.bold, fontSize: 20, color: darkColor)),
+          content: Text(content,
+              style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
           actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('إلغاء', style: GoogleFonts.cairo(fontWeight: FontWeight.w600, color: mediumGray)),
+              child: Text('إلغاء',
+                  style: GoogleFonts.cairo(
+                      fontWeight: FontWeight.w600, color: mediumGray)),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
@@ -365,10 +377,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text('تأكيد', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+              child: Text('تأكيد',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -383,12 +398,15 @@ class _ProfileScreenState extends State<ProfileScreen>
         content: Row(
           children: [
             Icon(
-              color == primaryBlue ? Icons.check_circle_rounded : Icons.error_rounded,
+              color == primaryBlue
+                  ? Icons.check_circle_rounded
+                  : Icons.error_rounded,
               color: Colors.white,
               size: 20,
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
+            Expanded(
+                child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
           ],
         ),
         backgroundColor: color,
@@ -401,7 +419,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _logout() async {
-    final confirm = await _showConfirmationDialog('تسجيل خروج', 'هل أنت متأكد من تسجيل الخروج؟');
+    final confirm = await _showConfirmationDialog(
+        'تسجيل خروج', 'هل أنت متأكد من تسجيل الخروج؟');
     if (confirm == true) widget.onLogout();
   }
 
@@ -423,7 +442,8 @@ class _ProfileScreenState extends State<ProfileScreen>
             );
           },
           child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
             title: Row(
               children: [
                 Container(
@@ -432,11 +452,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                     color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.warning_rounded, color: Colors.red.shade700, size: 24),
+                  child: Icon(Icons.warning_rounded,
+                      color: Colors.red.shade700, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Text('حذف الحساب',
-                    style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: Colors.red.shade700, fontSize: 20)),
+                    style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade700,
+                        fontSize: 20)),
               ],
             ),
             content: Form(
@@ -455,7 +479,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                     child: Text(
                       'تحذير: هذا الإجراء لا يمكن التراجع عنه. سيتم حذف جميع بياناتك نهائياً.',
-                      style: GoogleFonts.cairo(fontSize: 13, color: Colors.red.shade800, height: 1.5),
+                      style: GoogleFonts.cairo(
+                          fontSize: 13,
+                          color: Colors.red.shade800,
+                          height: 1.5),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -473,27 +500,33 @@ class _ProfileScreenState extends State<ProfileScreen>
                           color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.lock_outline, color: Colors.red, size: 20),
+                        child: const Icon(Icons.lock_outline,
+                            color: Colors.red, size: 20),
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15)),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
-                        borderSide: const BorderSide(color: Colors.red, width: 2),
+                        borderSide:
+                            const BorderSide(color: Colors.red, width: 2),
                       ),
                       filled: true,
                       fillColor: lightGray,
                     ),
                     validator: (v) => v == null || v.isEmpty
                         ? 'الرجاء إدخال كلمة المرور'
-                        : (v.length < 6 ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : null),
+                        : (v.length < 6
+                            ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
+                            : null),
                   ),
                   const SizedBox(height: 12),
                   InkWell(
-                    onTap: () => setStateDialog(() => isConfirming = !isConfirming),
+                    onTap: () =>
+                        setStateDialog(() => isConfirming = !isConfirming),
                     borderRadius: BorderRadius.circular(12),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
@@ -501,11 +534,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(15),
                         border: Border.all(
-                          color: isConfirming ? Colors.red : Colors.grey.shade300,
+                          color:
+                              isConfirming ? Colors.red : Colors.grey.shade300,
                           width: 1.5,
                         ),
                         gradient: isConfirming
-                            ? LinearGradient(colors: [Colors.red.shade50, Colors.red.shade100])
+                            ? LinearGradient(colors: [
+                                Colors.red.shade50,
+                                Colors.red.shade100
+                              ])
                             : null,
                       ),
                       child: Row(
@@ -517,12 +554,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: isConfirming ? Colors.red : Colors.grey.shade400,
+                                color: isConfirming
+                                    ? Colors.red
+                                    : Colors.grey.shade400,
                                 width: 2,
                               ),
-                              color: isConfirming ? Colors.red : Colors.transparent,
+                              color: isConfirming
+                                  ? Colors.red
+                                  : Colors.transparent,
                             ),
-                            child: isConfirming ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                            child: isConfirming
+                                ? const Icon(Icons.check,
+                                    size: 16, color: Colors.white)
+                                : null,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -530,7 +574,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                               'أنا متأكد من رغبتي في حذف حسابي نهائياً',
                               style: GoogleFonts.cairo(
                                 fontSize: 13,
-                                color: isConfirming ? Colors.red.shade800 : mediumGray,
+                                color: isConfirming
+                                    ? Colors.red.shade800
+                                    : mediumGray,
                               ),
                             ),
                           ),
@@ -545,23 +591,30 @@ class _ProfileScreenState extends State<ProfileScreen>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: Text('إلغاء', style: GoogleFonts.cairo(fontWeight: FontWeight.w600, color: mediumGray)),
+                child: Text('إلغاء',
+                    style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.w600, color: mediumGray)),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: () {
                   if (formKey.currentState!.validate() && isConfirming)
                     Navigator.pop(context, true);
-                  else if (!isConfirming) _showSnackBar('الرجاء تأكيد رغبتك في حذف الحساب', Colors.orange);
+                  else if (!isConfirming)
+                    _showSnackBar(
+                        'الرجاء تأكيد رغبتك في حذف الحساب', Colors.orange);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red.shade600,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text('حذف الحساب', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                child: Text('حذف الحساب',
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -576,7 +629,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           requiresAuth: true,
           data: {'password': passwordController.text, 'confirmation': 'yes'},
         );
-        _showSnackBar(response['message'] ?? 'تم حذف الحساب بنجاح', primaryBlue);
+        _showSnackBar(
+            response['message'] ?? 'تم حذف الحساب بنجاح', primaryBlue);
         widget.onLogout();
       } catch (e) {
         _showSnackBar('حدث خطأ في حذف الحساب', Colors.red);
@@ -604,7 +658,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
             boxShadow: [
-              BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, -10)),
+              BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 20,
+                  offset: Offset(0, -10)),
             ],
           ),
           padding: const EdgeInsets.all(24),
@@ -615,7 +672,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 width: 50,
                 height: 5,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.grey.shade400, Colors.grey.shade300]),
+                  gradient: LinearGradient(
+                      colors: [Colors.grey.shade400, Colors.grey.shade300]),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -632,52 +690,76 @@ class _ProfileScreenState extends State<ProfileScreen>
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)],
+                      colors: [
+                        primaryBlue.withOpacity(0.12),
+                        secondaryBlue.withOpacity(0.06)
+                      ],
                     ),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.card_giftcard_rounded, size: 50, color: primaryBlue),
+                  child: const Icon(Icons.card_giftcard_rounded,
+                      size: 50, color: primaryBlue),
                 ),
               ),
               const SizedBox(height: 20),
-              Text('رمز الدعوة الخاص بك', style: GoogleFonts.cairo(fontSize: 22, fontWeight: FontWeight.bold, color: darkColor)),
+              Text('رمز الدعوة الخاص بك',
+                  style: GoogleFonts.cairo(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: darkColor)),
               const SizedBox(height: 10),
               Text(
                 'ادعُ أصدقائك واحصل على 5 نقاط لكل صديق يسجل باستخدام رمزك',
-                style: GoogleFonts.cairo(fontSize: 14, color: mediumGray, height: 1.5),
+                style: GoogleFonts.cairo(
+                    fontSize: 14, color: mediumGray, height: 1.5),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [primaryBlue.withOpacity(0.08), secondaryBlue.withOpacity(0.04)],
+                    colors: [
+                      primaryBlue.withOpacity(0.08),
+                      secondaryBlue.withOpacity(0.04)
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(25),
-                  border: Border.all(color: primaryBlue.withOpacity(0.2), width: 2),
+                  border:
+                      Border.all(color: primaryBlue.withOpacity(0.2), width: 2),
                 ),
                 child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
                         color: cardWhite,
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: const Offset(0, 4)),
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 15,
+                              offset: const Offset(0, 4)),
                         ],
                       ),
                       child: Text(
                         referralCode,
-                        style: GoogleFonts.cairo(fontSize: 32, fontWeight: FontWeight.bold, color: primaryBlue, letterSpacing: 4),
+                        style: GoogleFonts.cairo(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: primaryBlue,
+                            letterSpacing: 4),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text('انسخ هذا الرمز وشاركه مع أصدقائك', style: GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
+                    Text('انسخ هذا الرمز وشاركه مع أصدقائك',
+                        style:
+                            GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
                   ],
                 ),
               ),
@@ -688,15 +770,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: referralCode));
-                        _showSnackBar('تم نسخ الرمز: $referralCode', primaryBlue);
+                        _showSnackBar(
+                            'تم نسخ الرمز: $referralCode', primaryBlue);
                         HapticFeedback.lightImpact();
                         Navigator.pop(context);
                       },
                       icon: const Icon(Icons.copy_rounded, size: 20),
-                      label: Text('نسخ', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                      label: Text('نسخ',
+                          style:
+                              GoogleFonts.cairo(fontWeight: FontWeight.w600)),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15)),
                         side: BorderSide(color: Colors.grey.shade300),
                       ),
                     ),
@@ -706,13 +792,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: ElevatedButton.icon(
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.close_rounded, size: 20),
-                      label: Text('إغلاق', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                      label: Text('إغلاق',
+                          style:
+                              GoogleFonts.cairo(fontWeight: FontWeight.w600)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryBlue,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15)),
                       ),
                     ),
                   ),
@@ -731,13 +820,17 @@ class _ProfileScreenState extends State<ProfileScreen>
       backgroundColor: lightGray,
       body: _isLoading
           ? _buildShimmerLoading()
-          : (_errorMessage != null ? _buildErrorWidget() : _buildProfileContent()),
+          : (_errorMessage != null
+              ? _buildErrorWidget()
+              : _buildProfileContent()),
     );
   }
 
   Widget _buildProfileContent() {
-    final hasImage = _userData?['profile_image'] != null && _userData!['profile_image'].isNotEmpty;
-    final userType = _userData?['user_type'] == 'customer' ? 'عميل عادي' : 'تاجر';
+    final hasImage = _userData?['profile_image'] != null &&
+        _userData!['profile_image'].isNotEmpty;
+    final userType =
+        _userData?['user_type'] == 'customer' ? 'عميل عادي' : 'تاجر';
     final createdAt = _userData?['created_at'] != null
         ? DateTime.parse(_userData!['created_at']).toString().split(' ')[0]
         : '';
@@ -805,7 +898,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                         animation: _pulseAnimationController,
                         builder: (context, child) {
                           return Opacity(
-                            opacity: 0.3 + (_pulseAnimationController.value * 0.3),
+                            opacity:
+                                0.3 + (_pulseAnimationController.value * 0.3),
                             child: child,
                           );
                         },
@@ -831,7 +925,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                           tween: Tween(begin: 0.0, end: 1.0),
                           duration: const Duration(milliseconds: 800),
                           curve: Curves.elasticOut,
-                          builder: (context, value, child) => Transform.scale(scale: value, child: child),
+                          builder: (context, value, child) =>
+                              Transform.scale(scale: value, child: child),
                           child: Stack(
                             alignment: Alignment.bottomRight,
                             children: [
@@ -840,7 +935,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 height: 110,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 4),
+                                  border:
+                                      Border.all(color: Colors.white, width: 4),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.3),
@@ -857,30 +953,42 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 child: ClipOval(
                                   child: _isUploadingImage
                                       ? Container(
-                                    color: Colors.black54,
-                                    child: const Center(
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                                    ),
-                                  )
+                                          color: Colors.black54,
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 3),
+                                          ),
+                                        )
                                       : (hasImage
-                                      ? CachedNetworkImage(
-                                    imageUrl: _userData!['profile_image'],
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) => Container(
-                                      color: Colors.grey.shade200,
-                                      child: const Center(
-                                        child: CircularProgressIndicator(color: primaryBlue, strokeWidth: 2),
-                                      ),
-                                    ),
-                                    errorWidget: (_, __, ___) => Container(
-                                      color: Colors.white,
-                                      child: Icon(Icons.person, size: 55, color: Colors.grey.shade400),
-                                    ),
-                                  )
-                                      : Container(
-                                    color: Colors.white,
-                                    child: Icon(Icons.person, size: 55, color: Colors.grey.shade400),
-                                  )),
+                                          ? CachedNetworkImage(
+                                              imageUrl:
+                                                  _userData!['profile_image'],
+                                              fit: BoxFit.cover,
+                                              placeholder: (_, __) => Container(
+                                                color: Colors.grey.shade200,
+                                                child: const Center(
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          color: primaryBlue,
+                                                          strokeWidth: 2),
+                                                ),
+                                              ),
+                                              errorWidget: (_, __, ___) =>
+                                                  Container(
+                                                color: Colors.white,
+                                                child: Icon(Icons.person,
+                                                    size: 55,
+                                                    color:
+                                                        Colors.grey.shade400),
+                                              ),
+                                            )
+                                          : Container(
+                                              color: Colors.white,
+                                              child: Icon(Icons.person,
+                                                  size: 55,
+                                                  color: Colors.grey.shade400),
+                                            )),
                                 ),
                               ),
                               Container(
@@ -898,7 +1006,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     ),
                                   ],
                                 ),
-                                child: const Icon(Icons.camera_alt_rounded, size: 18, color: Colors.white),
+                                child: const Icon(Icons.camera_alt_rounded,
+                                    size: 18, color: Colors.white),
                               ),
                             ],
                           ),
@@ -911,7 +1020,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     left: 0,
                     right: 0,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 18),
                       decoration: BoxDecoration(
                         color: cardWhite,
                         borderRadius: const BorderRadius.only(
@@ -934,7 +1044,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.star_rounded, color: Color(0xFFFFA726), size: 24),
+                                    const Icon(Icons.star_rounded,
+                                        color: Color(0xFFFFA726), size: 24),
                                     const SizedBox(width: 6),
                                     Text(
                                       points.toString(),
@@ -949,7 +1060,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 const SizedBox(height: 4),
                                 Text(
                                   'نقاطي',
-                                  style: GoogleFonts.cairo(fontSize: 12, color: mediumGray, fontWeight: FontWeight.w500),
+                                  style: GoogleFonts.cairo(
+                                      fontSize: 12,
+                                      color: mediumGray,
+                                      fontWeight: FontWeight.w500),
                                 ),
                               ],
                             ),
@@ -961,7 +1075,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                colors: [Colors.grey.shade200, Colors.grey.shade100, Colors.grey.shade200],
+                                colors: [
+                                  Colors.grey.shade200,
+                                  Colors.grey.shade100,
+                                  Colors.grey.shade200
+                                ],
                               ),
                             ),
                           ),
@@ -971,13 +1089,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                               onTap: _copyReferralCode,
                               borderRadius: BorderRadius.circular(12),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 4, horizontal: 8),
                                 child: Column(
                                   children: [
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.card_giftcard_rounded, color: primaryBlue, size: 18),
+                                        const Icon(Icons.card_giftcard_rounded,
+                                            color: primaryBlue, size: 18),
                                         const SizedBox(width: 6),
                                         Text(
                                           referralCode,
@@ -993,16 +1113,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                                           padding: const EdgeInsets.all(4),
                                           decoration: BoxDecoration(
                                             color: primaryBlue.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
-                                          child: const Icon(Icons.copy_rounded, size: 14, color: primaryBlue),
+                                          child: const Icon(Icons.copy_rounded,
+                                              size: 14, color: primaryBlue),
                                         ),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       'رمز الدعوة (اضغط للنسخ)',
-                                      style: GoogleFonts.cairo(fontSize: 10, color: mediumGray, fontWeight: FontWeight.w500),
+                                      style: GoogleFonts.cairo(
+                                          fontSize: 10,
+                                          color: mediumGray,
+                                          fontWeight: FontWeight.w500),
                                     ),
                                   ],
                                 ),
@@ -1025,7 +1150,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 borderRadius: BorderRadius.circular(15),
               ),
               child: IconButton(
-                icon: const Icon(Icons.share_rounded, color: Colors.white, size: 22),
+                icon: const Icon(Icons.share_rounded,
+                    color: Colors.white, size: 22),
                 onPressed: _shareReferralCode,
               ),
             ),
@@ -1055,10 +1181,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 10),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)],
+                          colors: [
+                            primaryBlue.withOpacity(0.12),
+                            secondaryBlue.withOpacity(0.06)
+                          ],
                         ),
                         borderRadius: BorderRadius.circular(30),
                         border: Border.all(color: primaryBlue.withOpacity(0.2)),
@@ -1077,7 +1207,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                             animation: _pulseAnimationController,
                             builder: (context, child) {
                               return Transform.scale(
-                                scale: 1.0 + (_pulseAnimationController.value * 0.2),
+                                scale: 1.0 +
+                                    (_pulseAnimationController.value * 0.2),
                                 child: child,
                               );
                             },
@@ -1105,11 +1236,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const SizedBox(height: 24),
                     Row(
                       children: [
-                        _buildStatCard(Icons.favorite_rounded, _favoritesCount.toString(), 'مفضلة', Colors.red.shade400, 0),
+                        _buildStatCard(
+                            Icons.favorite_rounded,
+                            _favoritesCount.toString(),
+                            'مفضلة',
+                            Colors.red.shade400,
+                            0),
                         const SizedBox(width: 12),
-                        _buildStatCard(Icons.shopping_bag_rounded, _ordersCount.toString(), 'طلبات', Colors.blue.shade400, 1),
+                        _buildStatCard(
+                            Icons.shopping_bag_rounded,
+                            _ordersCount.toString(),
+                            'طلبات',
+                            Colors.blue.shade400,
+                            1),
                         const SizedBox(width: 12),
-                        _buildStatCard(Icons.calendar_today_rounded, createdAt, 'تاريخ التسجيل', Colors.orange.shade400, 2),
+                        _buildStatCard(Icons.calendar_today_rounded, createdAt,
+                            'تاريخ التسجيل', Colors.orange.shade400, 2),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -1131,7 +1273,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                         );
                       },
-                      child: _selectedTab == 0 ? _buildPersonalInfoSection() : _buildSettingsSection(),
+                      child: _selectedTab == 0
+                          ? _buildPersonalInfoSection()
+                          : _buildSettingsSection(),
                     ),
                     const SizedBox(height: 30),
                   ],
@@ -1148,10 +1292,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.grey.shade100, Colors.grey.shade200]),
+        gradient: LinearGradient(
+            colors: [Colors.grey.shade100, Colors.grey.shade200]),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -1176,17 +1324,26 @@ class _ProfileScreenState extends State<ProfileScreen>
           curve: Curves.easeInOutCubic,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
           decoration: BoxDecoration(
-            gradient: isSelected ? const LinearGradient(colors: [primaryBlue, secondaryBlue]) : null,
+            gradient: isSelected
+                ? const LinearGradient(colors: [primaryBlue, secondaryBlue])
+                : null,
             color: isSelected ? null : Colors.transparent,
             borderRadius: BorderRadius.circular(25),
             boxShadow: isSelected
-                ? [BoxShadow(color: primaryBlue.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 3))]
+                ? [
+                    BoxShadow(
+                        color: primaryBlue.withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 3))
+                  ]
                 : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 20, color: isSelected ? Colors.white : Colors.grey.shade500),
+              Icon(icon,
+                  size: 20,
+                  color: isSelected ? Colors.white : Colors.grey.shade500),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -1205,25 +1362,51 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildPersonalInfoSection() {
     final items = [
-      {'icon': Icons.email_rounded, 'title': 'البريد الإلكتروني', 'value': _userData?['email'] ?? '', 'color': Colors.blue},
-      {'icon': Icons.phone_rounded, 'title': 'رقم الهاتف', 'value': _userData?['phone'] ?? '', 'color': Colors.green},
-      {'icon': Icons.location_on_rounded, 'title': 'المحافظة', 'value': _userData?['governorate'] ?? '', 'color': Colors.orange},
-      {'icon': Icons.location_city_rounded, 'title': 'المنطقة', 'value': _userData?['district'] ?? '', 'color': Colors.purple},
-      {'icon': Icons.home_rounded, 'title': 'العنوان', 'value': _userData?['address'] ?? '', 'color': Colors.teal},
+      {
+        'icon': Icons.email_rounded,
+        'title': 'البريد الإلكتروني',
+        'value': _userData?['email'] ?? '',
+        'color': Colors.blue
+      },
+      {
+        'icon': Icons.phone_rounded,
+        'title': 'رقم الهاتف',
+        'value': _userData?['phone'] ?? '',
+        'color': Colors.green
+      },
+      {
+        'icon': Icons.location_on_rounded,
+        'title': 'المحافظة',
+        'value': _userData?['governorate'] ?? '',
+        'color': Colors.orange
+      },
+      {
+        'icon': Icons.location_city_rounded,
+        'title': 'المنطقة',
+        'value': _userData?['district'] ?? '',
+        'color': Colors.purple
+      },
+      {
+        'icon': Icons.home_rounded,
+        'title': 'العنوان',
+        'value': _userData?['address'] ?? '',
+        'color': Colors.teal
+      },
     ];
 
     return Column(
       key: const ValueKey('personal_info'),
       children: List.generate(
         items.length,
-            (index) => TweenAnimationBuilder(
+        (index) => TweenAnimationBuilder(
           tween: Tween<double>(begin: 0.0, end: 1.0),
           duration: Duration(milliseconds: 400 + (index * 100)),
           curve: Curves.easeOut,
           builder: (context, double value, child) {
             return Opacity(
               opacity: value,
-              child: Transform.translate(offset: Offset(0, 30 * (1 - value)), child: child),
+              child: Transform.translate(
+                  offset: Offset(0, 30 * (1 - value)), child: child),
             );
           },
           child: Padding(
@@ -1241,7 +1424,26 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildSettingsSection() {
+
     final settingsItems = [
+
+      if (_userData?['user_type'] == 'customer')
+        {
+          'icon': Icons.business_rounded,
+          'title': 'طلب فتح حساب شركة / تاجر',
+          'color': primaryBlue,
+          'onTap': () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RequestCompanyScreen(
+                  authService: widget.authService,
+                  apiService: widget.apiService, // ✅ apiService موجود في ProfileScreen
+                ),
+              ),
+            );
+          },
+        },
       {
         'icon': Icons.edit_rounded,
         'title': 'تعديل الملف الشخصي',
@@ -1250,7 +1452,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => EditProfileScreen(userData: _userData!, apiService: widget.apiService),
+              builder: (_) => EditProfileScreen(
+                  userData: _userData!, apiService: widget.apiService),
             ),
           );
           if (result == true) _fetchProfile();
@@ -1263,9 +1466,12 @@ class _ProfileScreenState extends State<ProfileScreen>
         'onTap': () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => ChangePasswordScreen(apiService: widget.apiService)),
+            MaterialPageRoute(
+                builder: (_) =>
+                    ChangePasswordScreen(apiService: widget.apiService)),
           );
-          if (result == true) _showSnackBar('تم تغيير كلمة المرور بنجاح', primaryBlue);
+          if (result == true)
+            _showSnackBar('تم تغيير كلمة المرور بنجاح', primaryBlue);
         },
       },
       {
@@ -1276,7 +1482,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => OrdersScreen(apiService: widget.apiService, authService: widget.authService),
+              builder: (context) => OrdersScreen(
+                  apiService: widget.apiService,
+                  authService: widget.authService),
             ),
           );
         },
@@ -1301,14 +1509,15 @@ class _ProfileScreenState extends State<ProfileScreen>
       key: const ValueKey('settings'),
       children: List.generate(
         settingsItems.length,
-            (index) => TweenAnimationBuilder(
+        (index) => TweenAnimationBuilder(
           tween: Tween<double>(begin: 0.0, end: 1.0),
           duration: Duration(milliseconds: 400 + (index * 100)),
           curve: Curves.easeOut,
           builder: (context, double value, child) {
             return Opacity(
               opacity: value,
-              child: Transform.translate(offset: Offset(0, 30 * (1 - value)), child: child),
+              child: Transform.translate(
+                  offset: Offset(0, 30 * (1 - value)), child: child),
             );
           },
           child: Padding(
@@ -1318,7 +1527,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               settingsItems[index]['title'] as String,
               settingsItems[index]['color'] as Color,
               settingsItems[index]['onTap'] as VoidCallback,
-              isDestructive: settingsItems[index]['isDestructive'] as bool? ?? false,
+              isDestructive:
+                  settingsItems[index]['isDestructive'] as bool? ?? false,
             ),
           ),
         ),
@@ -1326,7 +1536,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildStatCard(IconData icon, String value, String label, Color color, int index) {
+  Widget _buildStatCard(
+      IconData icon, String value, String label, Color color, int index) {
     return Expanded(
       child: TweenAnimationBuilder(
         tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -1335,7 +1546,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         builder: (context, double animValue, child) {
           return Opacity(
             opacity: animValue,
-            child: Transform.scale(scale: 0.8 + (0.2 * animValue), child: child),
+            child:
+                Transform.scale(scale: 0.8 + (0.2 * animValue), child: child),
           );
         },
         child: Container(
@@ -1347,7 +1559,12 @@ class _ProfileScreenState extends State<ProfileScreen>
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(22),
-            boxShadow: [BoxShadow(color: color.withOpacity(0.15), blurRadius: 15, offset: const Offset(0, 4))],
+            boxShadow: [
+              BoxShadow(
+                  color: color.withOpacity(0.15),
+                  blurRadius: 15,
+                  offset: const Offset(0, 4))
+            ],
             border: Border.all(color: color.withOpacity(0.2), width: 1),
           ),
           child: Column(
@@ -1355,15 +1572,26 @@ class _ProfileScreenState extends State<ProfileScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [color.withOpacity(0.15), color.withOpacity(0.08)]),
+                  gradient: LinearGradient(colors: [
+                    color.withOpacity(0.15),
+                    color.withOpacity(0.08)
+                  ]),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(icon, size: 26, color: color),
               ),
               const SizedBox(height: 12),
-              Text(value, style: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.bold, color: darkColor)),
+              Text(value,
+                  style: GoogleFonts.cairo(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: darkColor)),
               const SizedBox(height: 4),
-              Text(label, style: GoogleFonts.cairo(fontSize: 12, color: mediumGray, fontWeight: FontWeight.w500)),
+              Text(label,
+                  style: GoogleFonts.cairo(
+                      fontSize: 12,
+                      color: mediumGray,
+                      fontWeight: FontWeight.w500)),
             ],
           ),
         ),
@@ -1371,7 +1599,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildInfoCard(IconData icon, String title, String value, Color color) {
+  Widget _buildInfoCard(
+      IconData icon, String title, String value, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1381,7 +1610,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 4))
+        ],
         border: Border.all(color: color.withOpacity(0.15), width: 1),
       ),
       child: Row(
@@ -1389,7 +1623,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [color.withOpacity(0.15), color.withOpacity(0.08)]),
+              gradient: LinearGradient(
+                  colors: [color.withOpacity(0.15), color.withOpacity(0.08)]),
               borderRadius: BorderRadius.circular(15),
             ),
             child: Icon(icon, size: 22, color: color),
@@ -1399,23 +1634,36 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.cairo(fontSize: 12, color: mediumGray, fontWeight: FontWeight.w500)),
+                Text(title,
+                    style: GoogleFonts.cairo(
+                        fontSize: 12,
+                        color: mediumGray,
+                        fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                Text(value, style: GoogleFonts.cairo(fontSize: 15, fontWeight: FontWeight.w600, color: darkColor)),
+                Text(value,
+                    style: GoogleFonts.cairo(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: darkColor)),
               ],
             ),
           ),
           Container(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
-            child: Icon(Icons.chevron_left_rounded, size: 18, color: Colors.grey.shade400),
+            decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10)),
+            child: Icon(Icons.chevron_left_rounded,
+                size: 18, color: Colors.grey.shade400),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(IconData icon, String title, Color color, VoidCallback onTap, {bool isDestructive = false}) {
+  Widget _buildActionButton(
+      IconData icon, String title, Color color, VoidCallback onTap,
+      {bool isDestructive = false}) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1427,17 +1675,24 @@ class _ProfileScreenState extends State<ProfileScreen>
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             gradient: isDestructive
-                ? LinearGradient(colors: [Colors.red.shade50, Colors.red.shade100])
+                ? LinearGradient(
+                    colors: [Colors.red.shade50, Colors.red.shade100])
                 : LinearGradient(
-              colors: [cardWhite, color.withOpacity(0.03)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+                    colors: [cardWhite, color.withOpacity(0.03)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: isDestructive ? Colors.red.shade200 : color.withOpacity(0.2), width: 1),
+            border: Border.all(
+                color: isDestructive
+                    ? Colors.red.shade200
+                    : color.withOpacity(0.2),
+                width: 1),
             boxShadow: [
               BoxShadow(
-                color: isDestructive ? Colors.red.withOpacity(0.1) : color.withOpacity(0.1),
+                color: isDestructive
+                    ? Colors.red.withOpacity(0.1)
+                    : color.withOpacity(0.1),
                 blurRadius: 15,
                 offset: const Offset(0, 4),
               ),
@@ -1448,7 +1703,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [color.withOpacity(0.15), color.withOpacity(0.08)]),
+                  gradient: LinearGradient(colors: [
+                    color.withOpacity(0.15),
+                    color.withOpacity(0.08)
+                  ]),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(icon, size: 22, color: color),
@@ -1467,10 +1725,12 @@ class _ProfileScreenState extends State<ProfileScreen>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.grey.shade100, Colors.grey.shade200]),
+                  gradient: LinearGradient(
+                      colors: [Colors.grey.shade100, Colors.grey.shade200]),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey.shade500),
+                child: Icon(Icons.arrow_forward_ios_rounded,
+                    size: 16, color: Colors.grey.shade500),
               ),
             ],
           ),
@@ -1492,34 +1752,55 @@ class _ProfileScreenState extends State<ProfileScreen>
                 Container(
                   margin: const EdgeInsets.all(20),
                   padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(25)),
+                  decoration: BoxDecoration(
+                      color: cardWhite,
+                      borderRadius: BorderRadius.circular(25)),
                   child: Column(
                     children: [
-                      Container(height: 24, width: 180, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8))),
+                      Container(
+                          height: 24,
+                          width: 180,
+                          decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(8))),
                       const SizedBox(height: 16),
-                      Container(height: 16, width: 120, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8))),
+                      Container(
+                          height: 16,
+                          width: 120,
+                          decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(8))),
                       const SizedBox(height: 24),
                       Row(
                         children: List.generate(
                           3,
-                              (index) => Expanded(
+                          (index) => Expanded(
                             child: Container(
                               margin: const EdgeInsets.symmetric(horizontal: 6),
                               height: 90,
-                              decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(18)),
+                              decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(18)),
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
-                      Container(height: 50, width: double.infinity, decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(25))),
+                      Container(
+                          height: 50,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(25))),
                       const SizedBox(height: 20),
                       ...List.generate(
                         5,
-                            (index) => Container(
+                        (index) => Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           height: 75,
-                          decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(18)),
+                          decoration: BoxDecoration(
+                              color: Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(18)),
                         ),
                       ),
                     ],
@@ -1552,28 +1833,34 @@ class _ProfileScreenState extends State<ProfileScreen>
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.red.shade50, Colors.red.shade100]),
+                  gradient: LinearGradient(
+                      colors: [Colors.red.shade50, Colors.red.shade100]),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.error_outline_rounded, size: 64, color: Colors.red.shade300),
+                child: Icon(Icons.error_outline_rounded,
+                    size: 64, color: Colors.red.shade300),
               ),
               const SizedBox(height: 24),
               Text(
                 _errorMessage!,
-                style: GoogleFonts.cairo(fontSize: 16, color: mediumGray, height: 1.5),
+                style: GoogleFonts.cairo(
+                    fontSize: 16, color: mediumGray, height: 1.5),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: _fetchProfile,
                 icon: const Icon(Icons.refresh_rounded),
-                label: Text('إعادة المحاولة', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                label: Text('إعادة المحاولة',
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryBlue,
                   foregroundColor: Colors.white,
                   elevation: 5,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15)),
                   shadowColor: primaryBlue.withOpacity(0.5),
                 ),
               ),

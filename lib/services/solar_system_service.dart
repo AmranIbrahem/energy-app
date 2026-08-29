@@ -18,7 +18,6 @@ class SolarSystemService {
     return authService.token;
   }
 
-  // جلب جميع منظومات المستخدم
   Future<Map<String, dynamic>> getUserSolarSystems({int page = 1}) async {
     try {
       final token = await _getToken();
@@ -27,7 +26,7 @@ class SolarSystemService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/user/solar-systems?page=$page'),
+        Uri.parse('$baseUrl/api/nex/v1/user/solar-systems?page=$page'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -53,7 +52,6 @@ class SolarSystemService {
     }
   }
 
-  // جلب تفاصيل منظومة معينة
   Future<Map<String, dynamic>> getSolarSystemDetails(int systemId) async {
     try {
       final token = await _getToken();
@@ -62,7 +60,7 @@ class SolarSystemService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/user/solar-systems/$systemId'),
+        Uri.parse('$baseUrl/api/nex/v1/user/solar-systems/$systemId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -88,7 +86,6 @@ class SolarSystemService {
     }
   }
 
-  // ✅ إضافة منظومة جديدة مع الصور
   Future<Map<String, dynamic>> addSolarSystem({
     required String installationDate,
     required bool isNew,
@@ -118,13 +115,12 @@ class SolarSystemService {
 
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('$baseUrl/api/v1/user/solar-systems/store'),
+        Uri.parse('$baseUrl/api/nex/v1/user/solar-systems/store'),
       );
 
       request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'application/json';
 
-      // إضافة الحقول النصية
       request.fields['installation_date'] = installationDate;
       request.fields['is_new'] = isNew ? 'true' : 'false';
       request.fields['panels_count'] = panelsCount.toString();
@@ -159,15 +155,17 @@ class SolarSystemService {
         request.fields['details_notes'] = detailsNotes;
       }
 
-      // إضافة الصور
       if (panelImage != null) {
-        request.files.add(await http.MultipartFile.fromPath('panel_image', panelImage.path));
+        request.files.add(
+            await http.MultipartFile.fromPath('panel_image', panelImage.path));
       }
       if (inverterImage != null) {
-        request.files.add(await http.MultipartFile.fromPath('inverter_image', inverterImage.path));
+        request.files.add(await http.MultipartFile.fromPath(
+            'inverter_image', inverterImage.path));
       }
       if (batteryImage != null) {
-        request.files.add(await http.MultipartFile.fromPath('battery_image', batteryImage.path));
+        request.files.add(await http.MultipartFile.fromPath(
+            'battery_image', batteryImage.path));
       }
 
       final response = await request.send();
@@ -191,7 +189,6 @@ class SolarSystemService {
     }
   }
 
-  // حذف منظومة
   Future<Map<String, dynamic>> deleteSolarSystem(int systemId) async {
     try {
       final token = await _getToken();
@@ -200,7 +197,7 @@ class SolarSystemService {
       }
 
       final response = await http.delete(
-        Uri.parse('$baseUrl/api/v1/user/solar-systems/$systemId'),
+        Uri.parse('$baseUrl/api/nex/v1/user/solar-systems/$systemId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -214,8 +211,4 @@ class SolarSystemService {
       return {'success': false, 'message': 'حدث خطأ في حذف المنظومة'};
     }
   }
-
-
-
-
 }

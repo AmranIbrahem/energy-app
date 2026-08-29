@@ -34,28 +34,23 @@ class _ProductCardState extends State<ProductCard> {
   @override
   void initState() {
     super.initState();
-    // تحميل حالة المفضلة من الخدمة المحلية
+
     _isFavorite = _favoritesService.isProductFavorite(widget.product['id']);
   }
 
   Future<void> _toggleFavorite() async {
-    // إذا لم يكن المستخدم مسجلاً، نسمح بإضافة المفضلة محلياً
-    // لأن الفلاتر تعمل محلياً للجميع
-
     setState(() {
       _isUpdatingFavorite = true;
     });
 
     try {
       if (_isFavorite) {
-        // إزالة من المفضلة المحلية
         await _favoritesService.removeProduct(widget.product['id']);
         setState(() {
           _isFavorite = false;
         });
         _showSnackBar('تم إزالة المنتج من المفضلة', Colors.orange);
       } else {
-        // إضافة إلى المفضلة المحلية
         final productData = {
           'id': widget.product['id'],
           'name_ar': widget.product['name_ar'],
@@ -88,15 +83,37 @@ class _ProductCardState extends State<ProductCard> {
   void _addToCart() {
     final cartService = CartService.instance;
 
+    // ✅ استخراج shipping_cities من المنتج
+    List<Map<String, dynamic>>? shippingCities;
+    if (widget.product['shipping_cities'] != null) {
+      shippingCities = List<Map<String, dynamic>>.from(
+        (widget.product['shipping_cities'] as List).map((cityData) {
+          if (cityData is String) {
+            return {'city': cityData, 'cost': null};
+          }
+          if (cityData is Map) {
+            return {
+              'city': cityData['city']?.toString() ?? '',
+              'cost': cityData['cost']?.toString(),
+            };
+          }
+          return {'city': '', 'cost': null};
+        }),
+      );
+    }
+
     final cartItem = CartItemModel(
       id: widget.product['id'],
       name: widget.product['name_ar']?.toString() ?? 'غير معروف',
       slug: widget.product['slug']?.toString() ?? '',
       price: double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0,
-      finalPrice: double.tryParse(widget.product['final_price']?.toString() ?? '0') ?? 0,
+      finalPrice:
+      double.tryParse(widget.product['final_price']?.toString() ?? '0') ??
+          0,
       image: widget.product['main_image']?.toString(),
       stock: widget.product['stock'] ?? 0,
       discountPercentage: widget.product['discount_percentage']?.toDouble(),
+      shippingCities: shippingCities, // ✅ إضافة shipping_cities
     );
 
     cartService.addItem(cartItem);
@@ -117,11 +134,16 @@ class _ProductCardState extends State<ProductCard> {
   @override
   Widget build(BuildContext context) {
     final bool hasDiscount = (widget.product['discount_percentage'] ?? 0) > 0;
-    final double finalPrice = double.tryParse(widget.product['final_price']?.toString() ?? '0') ?? 0;
-    final double originalPrice = double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0;
+    final double finalPrice =
+        double.tryParse(widget.product['final_price']?.toString() ?? '0') ?? 0;
+    final double originalPrice =
+        double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0;
     final String name = widget.product['name_ar']?.toString() ?? 'غير معروف';
     final String imageUrl = widget.product['main_image']?.toString() ?? '';
     final String brand = widget.product['brand']?.toString() ?? '';
+    // ✅ استخراج اسم المحافظة
+    final String governorate =
+        widget.product['governorate_product']?.toString() ?? '';
 
     return GestureDetector(
       onTap: () {
@@ -135,9 +157,9 @@ class _ProductCardState extends State<ProductCard> {
             ),
           ),
         ).then((_) {
-          // تحديث حالة المفضلة عند العودة
           setState(() {
-            _isFavorite = _favoritesService.isProductFavorite(widget.product['id']);
+            _isFavorite =
+                _favoritesService.isProductFavorite(widget.product['id']);
           });
         });
       },
@@ -158,7 +180,6 @@ class _ProductCardState extends State<ProductCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section
             Stack(
               children: [
                 ClipRRect(
@@ -183,22 +204,24 @@ class _ProductCardState extends State<ProductCard> {
                     errorWidget: (context, url, error) => Container(
                       height: 130,
                       color: Colors.grey.shade200,
-                      child: const Icon(Icons.image_not_supported, size: 40),
+                      child:
+                      const Icon(Icons.image_not_supported, size: 40),
                     ),
                   )
                       : Container(
                     height: 130,
                     color: Colors.grey.shade200,
-                    child: const Icon(Icons.image_not_supported, size: 40),
+                    child:
+                    const Icon(Icons.image_not_supported, size: 40),
                   ),
                 ),
-                // Discount Badge
                 if (hasDiscount)
                   Positioned(
                     top: 8,
                     left: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(12),
@@ -213,7 +236,45 @@ class _ProductCardState extends State<ProductCard> {
                       ),
                     ),
                   ),
-                // Favorite Button
+                // ✅ إضافة المحافظة في الزاوية السفلى يسار الصورة
+                if (governorate.isNotEmpty)
+                  Positioned(
+                    bottom: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF059669).withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            color: Colors.white,
+                            size: 11,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            governorate,
+                            style: GoogleFonts.cairo(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 Positioned(
                   top: 8,
                   right: 8,
@@ -238,14 +299,15 @@ class _ProductCardState extends State<ProductCard> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                           : Icon(
-                        _isFavorite ? Icons.favorite : Icons.favorite_border,
+                        _isFavorite
+                            ? Icons.favorite
+                            : Icons.favorite_border,
                         color: _isFavorite ? Colors.red : Colors.grey,
                         size: 16,
                       ),
                     ),
                   ),
                 ),
-                // Cart Button
                 Positioned(
                   bottom: 8,
                   right: 8,
@@ -273,7 +335,6 @@ class _ProductCardState extends State<ProductCard> {
                 ),
               ],
             ),
-            // Content Section
             Padding(
               padding: const EdgeInsets.all(10),
               child: Column(

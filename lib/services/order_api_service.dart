@@ -18,7 +18,6 @@ class OrderApiService {
     try {
       await authService.refreshAuthState();
       final token = authService.token;
-      print('🟡 OrderApiService - Token: ${token != null ? "Found ✅" : "Not Found ❌"}');
 
       if (token == null || token.isEmpty) {
         print('❌ No valid token found');
@@ -32,7 +31,6 @@ class OrderApiService {
     }
   }
 
-  // ✅ إنشاء طلب جديد
   Future<Map<String, dynamic>> createOrder({
     required String firstName,
     required String lastName,
@@ -42,6 +40,7 @@ class OrderApiService {
     required List<CartItemModel> items,
     String? couponCode,
     String? userNotes,
+    bool isPrepaid = false, // ✅ جديد
   }) async {
     try {
       final token = await _getToken();
@@ -49,11 +48,13 @@ class OrderApiService {
         return {'success': false, 'message': 'يرجى تسجيل الدخول أولاً'};
       }
 
-      final itemsData = items.map((item) => {
+      final itemsData = items
+          .map((item) => {
         'type': item.itemType,
         'id': item.id,
         'quantity': item.quantity,
-      }).toList();
+      })
+          .toList();
 
       final body = {
         'first_name': firstName,
@@ -62,6 +63,8 @@ class OrderApiService {
         'shipping_address': shippingAddress,
         'payment_method': paymentMethod,
         'items': itemsData,
+        // ✅ إضافة الدفع المسبق
+        'is_prepaid': isPrepaid,
       };
 
       if (couponCode != null && couponCode.isNotEmpty) {
@@ -71,10 +74,8 @@ class OrderApiService {
         body['user_notes'] = userNotes;
       }
 
-      print('Sending order: $body');
-
       final response = await http.post(
-        Uri.parse('$baseUrl/api/v1/user/orders/create'),
+        Uri.parse('$baseUrl/api/nex/v1/user/orders/create'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -82,9 +83,6 @@ class OrderApiService {
         },
         body: jsonEncode(body),
       );
-
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       final data = jsonDecode(response.body);
 
@@ -105,20 +103,19 @@ class OrderApiService {
     }
   }
 
-  // ✅ الحصول على طلبات المستخدم
-  Future<Map<String, dynamic>> getUserOrders({int page = 1, String? status}) async {
+  Future<Map<String, dynamic>> getUserOrders(
+      {int page = 1, String? status}) async {
     try {
       final token = await _getToken();
       if (token == null) {
         return {'success': false, 'message': 'يرجى تسجيل الدخول أولاً'};
       }
 
-      String url = '$baseUrl/api/v1/user/orders/my-orders?page=$page&per_page=15';
+      String url =
+          '$baseUrl/api/nex/v1/user/orders/my-orders?page=$page&per_page=15';
       if (status != null && status.isNotEmpty && status != 'all') {
         url += '&status=$status';
       }
-
-      print('🟡 Fetching orders from: $url');
 
       final response = await http.get(
         Uri.parse(url),
@@ -128,9 +125,6 @@ class OrderApiService {
           'Accept': 'application/json',
         },
       );
-
-      print('🟢 Response status: ${response.statusCode}');
-      print('🟢 Response body: ${response.body}');
 
       final data = jsonDecode(response.body);
 
@@ -148,7 +142,6 @@ class OrderApiService {
     }
   }
 
-  // ✅ الحصول على تفاصيل طلب محدد
   Future<Map<String, dynamic>> getOrderDetails(int invoiceId) async {
     try {
       final token = await _getToken();
@@ -157,16 +150,13 @@ class OrderApiService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/user/orders/$invoiceId'),
+        Uri.parse('$baseUrl/api/nex/v1/user/orders/$invoiceId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
       );
-
-      print('🟢 Response status: ${response.statusCode}');
-      print('🟢 Response body: ${response.body}');
 
       final data = jsonDecode(response.body);
 
@@ -184,7 +174,6 @@ class OrderApiService {
     }
   }
 
-  // ✅ إلغاء طلب
   Future<Map<String, dynamic>> cancelOrder(int invoiceId) async {
     try {
       final token = await _getToken();
@@ -193,16 +182,13 @@ class OrderApiService {
       }
 
       final response = await http.post(
-        Uri.parse('$baseUrl/api/v1/user/orders/$invoiceId/cancel'),
+        Uri.parse('$baseUrl/api/nex/v1/user/orders/$invoiceId/cancel'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
       );
-
-      print('🟢 Response status: ${response.statusCode}');
-      print('🟢 Response body: ${response.body}');
 
       final data = jsonDecode(response.body);
 
@@ -220,8 +206,8 @@ class OrderApiService {
     }
   }
 
-  // ✅ التحقق من صحة الكوبون
-  Future<Map<String, dynamic>> validateCoupon(String couponCode, double subtotal) async {
+  Future<Map<String, dynamic>> validateCoupon(
+      String couponCode, double subtotal) async {
     try {
       final token = await _getToken();
       if (token == null) {
@@ -229,7 +215,7 @@ class OrderApiService {
       }
 
       final response = await http.post(
-        Uri.parse('$baseUrl/api/v1/user/orders/validate-coupon'),
+        Uri.parse('$baseUrl/api/nex/v1/user/orders/validate-coupon'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -240,9 +226,6 @@ class OrderApiService {
           'subtotal': subtotal.toString(),
         }),
       );
-
-      print('🟢 Response status: ${response.statusCode}');
-      print('🟢 Response body: ${response.body}');
 
       final data = jsonDecode(response.body);
 
@@ -260,7 +243,6 @@ class OrderApiService {
     }
   }
 
-  // ✅ الحصول على إحصائيات الطلبات
   Future<Map<String, dynamic>> getOrderStats() async {
     try {
       final token = await _getToken();
@@ -269,16 +251,13 @@ class OrderApiService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/user/orders/stats'),
+        Uri.parse('$baseUrl/api/nex/v1/user/orders/stats'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
       );
-
-      print('🟢 Response status: ${response.statusCode}');
-      print('🟢 Response body: ${response.body}');
 
       final data = jsonDecode(response.body);
 

@@ -36,7 +36,6 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
   String? _errorMessage;
   int? _zoomedCardIndex;
 
-  
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -88,12 +87,12 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
     final filteredCategories = _searchQuery.isEmpty
         ? _subCategories
         : _subCategories.where((category) {
-      final name = category['name_ar']?.toString().toLowerCase() ?? '';
-      return name.contains(_searchQuery.toLowerCase());
-    }).toList();
+            final name = category['name_ar']?.toString().toLowerCase() ?? '';
+            return name.contains(_searchQuery.toLowerCase());
+          }).toList();
 
     return Scaffold(
-      backgroundColor: lightGray, 
+      backgroundColor: lightGray,
       appBar: AppBar(
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -126,7 +125,9 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
               icon: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: Icon(
-                  _isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                  _isGridView
+                      ? Icons.view_list_rounded
+                      : Icons.grid_view_rounded,
                   key: ValueKey(_isGridView),
                   color: Colors.white,
                   size: 22,
@@ -171,20 +172,24 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                 style: GoogleFonts.cairo(fontSize: 14, color: darkColor),
                 decoration: InputDecoration(
                   hintText: 'ابحث عن قسم...',
-                  hintStyle: GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade400),
-                  prefixIcon: const Icon(Icons.search, size: 20, color: primaryBlue),
+                  hintStyle: GoogleFonts.cairo(
+                      fontSize: 14, color: Colors.grey.shade400),
+                  prefixIcon:
+                      const Icon(Icons.search, size: 20, color: primaryBlue),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                    icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
-                    onPressed: () {
-                      setState(() {
-                        _searchQuery = '';
-                      });
-                    },
-                  )
+                          icon: const Icon(Icons.clear,
+                              size: 18, color: Colors.grey),
+                          onPressed: () {
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                          },
+                        )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 ),
               ),
             ),
@@ -194,14 +199,14 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
       body: _isLoading
           ? _buildShimmerLoading()
           : _errorMessage != null
-          ? _buildErrorWidget()
-          : _subCategories.isEmpty
-          ? _buildEmptyWidget()
-          : filteredCategories.isEmpty
-          ? _buildNoResultsWidget()
-          : _isGridView
-          ? _buildGridView(filteredCategories)
-          : _buildListView(filteredCategories),
+              ? _buildErrorWidget()
+              : _subCategories.isEmpty
+                  ? _buildEmptyWidget()
+                  : filteredCategories.isEmpty
+                      ? _buildNoResultsWidget()
+                      : _isGridView
+                          ? _buildGridView(filteredCategories)
+                          : _buildListView(filteredCategories),
     );
   }
 
@@ -275,7 +280,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                 return FadeTransition(
                   opacity: animation,
                   child: ScaleTransition(
-                    scale: Tween<double>(begin: 0.95, end: 1).animate(animation),
+                    scale:
+                        Tween<double>(begin: 0.95, end: 1).animate(animation),
                     child: child,
                   ),
                 );
@@ -310,7 +316,6 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
             borderRadius: BorderRadius.circular(24),
             child: Stack(
               children: [
-                
                 Positioned.fill(
                   child: CachedNetworkImage(
                     imageUrl: imageUrl,
@@ -334,7 +339,6 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                     ),
                   ),
                 ),
-                
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
@@ -351,7 +355,6 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                     ),
                   ),
                 ),
-                
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -389,7 +392,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                         ),
                       const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -502,7 +506,6 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
           ),
           child: Row(
             children: [
-              
               ClipRRect(
                 borderRadius: const BorderRadius.only(
                   topRight: Radius.circular(20),
@@ -571,7 +574,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                         const SizedBox(height: 8),
                       ],
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: primaryBlue.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(12),
@@ -660,7 +664,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
               color: Colors.red.shade50,
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.error_outline, size: 50, color: Colors.red.shade400),
+            child:
+                Icon(Icons.error_outline, size: 50, color: Colors.red.shade400),
           ),
           const SizedBox(height: 20),
           Text(
@@ -675,7 +680,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
@@ -702,7 +708,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                 ),
               ],
             ),
-            child: Icon(Icons.category_outlined, size: 50, color: Colors.grey.shade400),
+            child: Icon(Icons.category_outlined,
+                size: 50, color: Colors.grey.shade400),
           ),
           const SizedBox(height: 20),
           Text(
@@ -741,7 +748,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                 ),
               ],
             ),
-            child: Icon(Icons.search_off, size: 50, color: Colors.orange.shade300),
+            child:
+                Icon(Icons.search_off, size: 50, color: Colors.orange.shade300),
           ),
           const SizedBox(height: 20),
           Text(
@@ -765,7 +773,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),

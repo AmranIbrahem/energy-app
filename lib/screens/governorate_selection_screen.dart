@@ -6,7 +6,8 @@ import 'package:GeniusHouse/utils/helpers.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:GeniusHouse/screens/home_screen.dart' hide FadeInAnimation;
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart' hide FadeInAnimation;
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'
+    hide FadeInAnimation;
 import 'package:lottie/lottie.dart';
 import 'dart:ui' as ui;
 
@@ -29,13 +30,12 @@ class GovernorateSelectionScreen extends StatefulWidget {
       _GovernorateSelectionScreenState();
 }
 
-class _GovernorateSelectionScreenState
-    extends State<GovernorateSelectionScreen> with TickerProviderStateMixin {
+class _GovernorateSelectionScreenState extends State<GovernorateSelectionScreen>
+    with TickerProviderStateMixin {
   String? _selectedGovernorate;
   bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
@@ -163,17 +163,11 @@ class _GovernorateSelectionScreenState
     return Scaffold(
       body: Stack(
         children: [
-
           _buildAnimatedBackground(),
-
-
           SafeArea(
             child: Column(
               children: [
-
                 _buildModernTopBar(),
-
-
                 Expanded(
                   child: AnimationLimiter(
                     child: SingleChildScrollView(
@@ -188,25 +182,13 @@ class _GovernorateSelectionScreenState
                           ),
                           children: [
                             const SizedBox(height: 20),
-
-
                             _buildAnimatedIcon(),
-
                             const SizedBox(height: 30),
-
-
                             _buildModernTitle(),
-
                             const SizedBox(height: 12),
-
-
                             _buildModernDescription(),
-
                             const SizedBox(height: 40),
-
-
                             _buildGovernorateCard(),
-
                             const SizedBox(height: 30),
                           ],
                         ),
@@ -214,8 +196,6 @@ class _GovernorateSelectionScreenState
                     ),
                   ),
                 ),
-
-
                 _buildModernBottomButtons(),
               ],
             ),
@@ -224,7 +204,6 @@ class _GovernorateSelectionScreenState
       ),
     );
   }
-
 
   Widget _buildAnimatedBackground() {
     return Container(
@@ -243,14 +222,12 @@ class _GovernorateSelectionScreenState
     );
   }
 
-
   Widget _buildModernTopBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-
           if (!widget.isFromOnboarding)
             TweenAnimationBuilder(
               tween: Tween<double>(begin: 0, end: 1),
@@ -264,7 +241,31 @@ class _GovernorateSelectionScreenState
                     color: Colors.white,
                     shadowColor: primaryBlue.withOpacity(0.1),
                     child: InkWell(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () {
+                        Navigator.pushReplacement(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (_, __, ___) => LoginScreen(
+                              authService: widget.authService,
+                              storageService: widget.storageService,
+                            ),
+                            transitionsBuilder: (_, animation, __, child) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(-0.3, 0),
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            transitionDuration:
+                                const Duration(milliseconds: 500),
+                          ),
+                        );
+                      },
                       borderRadius: BorderRadius.circular(15),
                       child: Container(
                         padding: const EdgeInsets.all(10),
@@ -279,8 +280,6 @@ class _GovernorateSelectionScreenState
                 );
               },
             ),
-
-
           TweenAnimationBuilder(
             tween: Tween<double>(begin: 0, end: 1),
             duration: const Duration(milliseconds: 800),
@@ -288,7 +287,8 @@ class _GovernorateSelectionScreenState
               return Opacity(
                 opacity: value,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -310,7 +310,7 @@ class _GovernorateSelectionScreenState
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'GeniusHouse',
+                        'NEX',
                         style: GoogleFonts.poppins(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -328,7 +328,6 @@ class _GovernorateSelectionScreenState
       ),
     );
   }
-
 
   Widget _buildAnimatedIcon() {
     return TweenAnimationBuilder(
@@ -363,7 +362,7 @@ class _GovernorateSelectionScreenState
             ),
             child: ClipOval(
               child: Image.asset(
-                'assets/images/app_icon.png',
+                'assets/images/app_nex_icon.jpg',
                 width: 120,
                 height: 120,
                 fit: BoxFit.cover,
@@ -383,7 +382,6 @@ class _GovernorateSelectionScreenState
       },
     );
   }
-
 
   Widget _buildModernTitle() {
     return Column(
@@ -411,7 +409,6 @@ class _GovernorateSelectionScreenState
       ],
     );
   }
-
 
   Widget _buildModernDescription() {
     return Container(
@@ -446,7 +443,6 @@ class _GovernorateSelectionScreenState
       ),
     );
   }
-
 
   Widget _buildGovernorateCard() {
     return Container(
@@ -498,7 +494,6 @@ class _GovernorateSelectionScreenState
     );
   }
 
-
   Widget _buildModernGovernorateCard({
     required String governorate,
     required bool isSelected,
@@ -512,15 +507,15 @@ class _GovernorateSelectionScreenState
         decoration: BoxDecoration(
           gradient: isSelected
               ? const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [primaryBlue, secondaryBlue],
-          )
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [primaryBlue, secondaryBlue],
+                )
               : LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [lightGray, Colors.grey.shade100],
-          ),
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [lightGray, Colors.grey.shade100],
+                ),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isSelected ? primaryBlue : Colors.grey.shade200,
@@ -528,12 +523,12 @@ class _GovernorateSelectionScreenState
           ),
           boxShadow: isSelected
               ? [
-            BoxShadow(
-              color: primaryBlue.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ]
+                  BoxShadow(
+                    color: primaryBlue.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
               : null,
         ),
         child: Row(
@@ -574,7 +569,6 @@ class _GovernorateSelectionScreenState
     );
   }
 
-
   Widget _buildModernBottomButtons() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -601,11 +595,8 @@ class _GovernorateSelectionScreenState
               child: FadeInAnimation(child: widget),
             ),
             children: [
-
               _buildPremiumGuestButton(),
               const SizedBox(height: 12),
-
-
               _buildPremiumLoginButton(),
             ],
           ),
@@ -613,7 +604,6 @@ class _GovernorateSelectionScreenState
       ),
     );
   }
-
 
   Widget _buildPremiumGuestButton() {
     return TweenAnimationBuilder(
@@ -651,40 +641,39 @@ class _GovernorateSelectionScreenState
               ),
               child: _isLoading
                   ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2.5,
-                ),
-              )
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
                   : const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.visibility_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    'تصفح كزائر',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.visibility_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'تصفح كزائر',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         );
       },
     );
   }
-
 
   Widget _buildPremiumLoginButton() {
     return TweenAnimationBuilder(
@@ -737,7 +726,6 @@ class _GovernorateSelectionScreenState
     );
   }
 }
-
 
 class FadeInSlideAnimation extends StatelessWidget {
   final Widget child;

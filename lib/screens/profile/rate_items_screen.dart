@@ -35,8 +35,7 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
   bool _isLoading = true;
   bool _isSubmitting = false;
   late RatingApiService _ratingApiService;
-  final String _baseUrl = 'https://aa-dev.online/energy';
-
+  final String _baseUrl = 'https://nexsy.shop';
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
@@ -54,7 +53,8 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
   }
 
   void _initApiService() {
-    final authService = widget.authService ?? AuthService(storageService: StorageService()..init());
+    final authService = widget.authService ??
+        AuthService(storageService: StorageService()..init());
     _ratingApiService = RatingApiService(
       baseUrl: _baseUrl,
       authService: authService,
@@ -84,7 +84,8 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
   }
 
   Future<void> _submitAllRatings() async {
-    final unratedItems = _items.where((item) => _ratings[item['id']] == 0).toList();
+    final unratedItems =
+        _items.where((item) => _ratings[item['id']] == 0).toList();
     if (unratedItems.isNotEmpty) {
       _showSnackBar('يرجى تقييم جميع المنتجات قبل الإرسال', Colors.orange);
       return;
@@ -121,7 +122,8 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
       _showSnackBar('شكراً لك! تم إرسال جميع التقييمات بنجاح', primaryBlue);
       Navigator.pop(context, true);
     } else {
-      _showSnackBar('تم إرسال $successCount تقييم، فشل $failedCount', Colors.orange);
+      _showSnackBar(
+          'تم إرسال $successCount تقييم، فشل $failedCount', Colors.orange);
     }
   }
 
@@ -131,12 +133,15 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
         content: Row(
           children: [
             Icon(
-              color == primaryBlue ? Icons.check_circle_rounded : Icons.info_rounded,
+              color == primaryBlue
+                  ? Icons.check_circle_rounded
+                  : Icons.info_rounded,
               color: Colors.white,
               size: 20,
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
+            Expanded(
+                child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
           ],
         ),
         backgroundColor: color,
@@ -172,7 +177,8 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
         ),
         title: Text(
           'تقييم الطلب #${widget.invoiceNumber}',
-          style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+          style: GoogleFonts.cairo(
+              fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         elevation: 0,
         centerTitle: true,
@@ -181,22 +187,22 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
       body: _isLoading
           ? _buildShimmerLoading()
           : _items.isEmpty
-          ? _buildEmptyState()
-          : Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _items.length,
-              itemBuilder: (context, index) {
-                final item = _items[index];
-                return _buildRatingCard(item);
-              },
-            ),
-          ),
-          _buildSubmitButton(),
-        ],
-      ),
+              ? _buildEmptyState()
+              : Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _items.length,
+                        itemBuilder: (context, index) {
+                          final item = _items[index];
+                          return _buildRatingCard(item);
+                        },
+                      ),
+                    ),
+                    _buildSubmitButton(),
+                  ],
+                ),
     );
   }
 
@@ -223,7 +229,6 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -232,39 +237,44 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
                   borderRadius: BorderRadius.circular(12),
                   child: itemImage.isNotEmpty
                       ? CachedNetworkImage(
-                    imageUrl: itemImage,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      width: 60,
-                      height: 60,
-                      color: Colors.grey.shade200,
-                      child: const Center(
-                        child: CircularProgressIndicator(color: primaryBlue, strokeWidth: 2),
-                      ),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      width: 60,
-                      height: 60,
-                      color: Colors.grey.shade200,
-                      child: Icon(
-                        itemType == 'offer' ? Icons.local_offer : Icons.image_not_supported,
-                        size: 30,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  )
+                          imageUrl: itemImage,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(
+                            width: 60,
+                            height: 60,
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                  color: primaryBlue, strokeWidth: 2),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            width: 60,
+                            height: 60,
+                            color: Colors.grey.shade200,
+                            child: Icon(
+                              itemType == 'offer'
+                                  ? Icons.local_offer
+                                  : Icons.image_not_supported,
+                              size: 30,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        )
                       : Container(
-                    width: 60,
-                    height: 60,
-                    color: Colors.grey.shade200,
-                    child: Icon(
-                      itemType == 'offer' ? Icons.local_offer : Icons.shopping_bag,
-                      size: 30,
-                      color: Colors.grey,
-                    ),
-                  ),
+                          width: 60,
+                          height: 60,
+                          color: Colors.grey.shade200,
+                          child: Icon(
+                            itemType == 'offer'
+                                ? Icons.local_offer
+                                : Icons.shopping_bag,
+                            size: 30,
+                            color: Colors.grey,
+                          ),
+                        ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -285,7 +295,8 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
                           ),
                           if (itemType == 'offer')
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
@@ -294,7 +305,8 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: primaryBlue.withOpacity(0.2)),
+                                border: Border.all(
+                                    color: primaryBlue.withOpacity(0.2)),
                               ),
                               child: Text(
                                 'عرض',
@@ -313,7 +325,8 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
                           itemType == 'product'
                               ? '${item['details']['brand'] ?? ''} ${item['details']['model'] ?? ''}'
                               : '${item['details']['total_wattage'] ?? 0} واط - ${item['details']['total_capacity'] ?? 0} واط/س',
-                          style: GoogleFonts.cairo(fontSize: 12, color: mediumGray),
+                          style: GoogleFonts.cairo(
+                              fontSize: 12, color: mediumGray),
                         ),
                     ],
                   ),
@@ -322,7 +335,6 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
             ),
           ),
           const Divider(height: 1),
-
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -346,9 +358,12 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
                     itemCount: 5,
                     itemSize: 40,
                     ratingWidget: RatingWidget(
-                      full: const Icon(Icons.star_rounded, color: Colors.amber, size: 40),
-                      half: const Icon(Icons.star_half_rounded, color: Colors.amber, size: 40),
-                      empty: const Icon(Icons.star_outline_rounded, color: Colors.amber, size: 40),
+                      full: const Icon(Icons.star_rounded,
+                          color: Colors.amber, size: 40),
+                      half: const Icon(Icons.star_half_rounded,
+                          color: Colors.amber, size: 40),
+                      empty: const Icon(Icons.star_outline_rounded,
+                          color: Colors.amber, size: 40),
                     ),
                     onRatingUpdate: (rating) {
                       setState(() {
@@ -376,7 +391,8 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: primaryBlue, width: 2),
+                      borderSide:
+                          const BorderSide(color: primaryBlue, width: 2),
                     ),
                     filled: true,
                     fillColor: lightGray,
@@ -415,27 +431,30 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
             backgroundColor: primaryBlue,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
             elevation: 5,
             shadowColor: primaryBlue.withOpacity(0.5),
           ),
           child: _isSubmitting
               ? const SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-          )
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2),
+                )
               : Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.send_rounded, size: 22),
-              const SizedBox(width: 12),
-              Text(
-                'إرسال التقييمات',
-                style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.send_rounded, size: 22),
+                    const SizedBox(width: 12),
+                    Text(
+                      'إرسال التقييمات',
+                      style: GoogleFonts.cairo(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -451,7 +470,8 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
         child: Container(
           margin: const EdgeInsets.only(bottom: 16),
           height: 250,
-          decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(
+              color: cardWhite, borderRadius: BorderRadius.circular(20)),
         ),
       ),
     );
@@ -476,12 +496,14 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
                 ),
               ],
             ),
-            child: Icon(Icons.star_outline_rounded, size: 50, color: Colors.grey.shade400),
+            child: Icon(Icons.star_outline_rounded,
+                size: 50, color: Colors.grey.shade400),
           ),
           const SizedBox(height: 20),
           Text(
             'جميع المنتجات مقيمة',
-            style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: darkColor),
+            style: GoogleFonts.cairo(
+                fontSize: 18, fontWeight: FontWeight.bold, color: darkColor),
           ),
           const SizedBox(height: 8),
           Text(
@@ -492,11 +514,13 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
           ElevatedButton.icon(
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_rounded),
-            label: Text('رجوع', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+            label: Text('رجوع',
+                style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
@@ -505,7 +529,6 @@ class _RateItemsScreenState extends State<RateItemsScreen> {
     );
   }
 }
-
 
 class RatingBar extends StatelessWidget {
   final double initialRating;
@@ -538,7 +561,9 @@ class RatingBar extends StatelessWidget {
           onTap: () => onRatingUpdate((index + 1).toDouble()),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: index + 1 <= initialRating ? ratingWidget.full : ratingWidget.empty,
+            child: index + 1 <= initialRating
+                ? ratingWidget.full
+                : ratingWidget.empty,
           ),
         );
       }),

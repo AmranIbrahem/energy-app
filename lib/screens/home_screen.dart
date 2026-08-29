@@ -30,6 +30,24 @@ import 'package:GeniusHouse/screens/chat/guest_chat_screen.dart';
 import 'package:GeniusHouse/screens/solar_systems/solar_systems_screen.dart';
 import 'package:GeniusHouse/services/text_ad_service.dart';
 import 'package:GeniusHouse/widgets/text_ads_carousel.dart';
+import 'package:GeniusHouse/screens/company/company_dashboard_screen.dart';
+import 'package:GeniusHouse/screens/complaints/add_complaint_screen.dart';
+import 'package:GeniusHouse/screens/profile/order_tracking_screen.dart';
+import 'package:GeniusHouse/screens/workshop/workshop_request_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:GeniusHouse/screens/appliances/appliance_compatibility_screen.dart';
+import 'package:GeniusHouse/screens/appliances/guest_appliance_compatibility_screen.dart';
+import 'package:GeniusHouse/screens/appliances/appliance_maintenance_screen.dart';
+import 'package:GeniusHouse/screens/appliances/guest_appliance_maintenance_screen.dart';
+import 'package:GeniusHouse/screens/appliances/appliance_savings_screen.dart';
+import 'package:GeniusHouse/screens/appliances/guest_appliance_savings_screen.dart';
+import 'package:GeniusHouse/screens/appliances/appliance_schedule_screen.dart';
+import 'package:GeniusHouse/screens/appliances/guest_appliance_schedule_screen.dart';
+import 'package:GeniusHouse/screens/chat/support_solar_chat_screen.dart';
+import 'package:GeniusHouse/screens/chat/guest_support_solar_chat_screen.dart';
+import 'package:GeniusHouse/screens/chat/solar_chat_screen.dart';
+import 'package:GeniusHouse/screens/chat/guest_solar_chat_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   final AuthService authService;
@@ -53,14 +71,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _unreadCount = 0;
   String _governorate = 'دمشق';
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
+  bool _quickActionsExpanded = false;
+  List<String> _customQuickActions = [];
+  List<String> _tempSelectedQuickActions = [];
+  bool _isCustomizingQuickActions = false;
   String _greetingMessage = 'مرحباً';
+  Map<String, dynamic>? _activeRequestsStats;
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
   static const Color darkColor = Color(0xFF111827);
   static const Color mediumGray = Color(0xFF4B5563);
+  static const Color successGreen = Color(0xFF10B981);  // ✅ أضف هذا
+  bool _showActiveRequestsDetails = false;  // ✅ متغير جديد للطي
 
   late AnimationController _drawerAnimationController;
   late AnimationController _pulseAnimationController;
@@ -119,11 +143,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     _scrollController = ScrollController();
     _scrollController!.addListener(_scrollListener);
+    _loadCustomQuickActions();
 
     _loadGovernorate();
     _updateGreeting();
     _fetchHomeData();
     _fetchUnreadCount();
+    if (widget.authService.isAuthenticated) {
+      _fetchActiveRequestsStats();
+    }
   }
 
   @override
@@ -180,6 +208,836 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (savedGov != null && savedGov.isNotEmpty) {
       setState(() => _governorate = savedGov);
     }
+  }
+
+  Widget _buildActiveRequestsStats() {
+    if (_activeRequestsStats == null) return const SizedBox.shrink();
+
+    final summary = _activeRequestsStats!['summary'] as Map<String, dynamic>? ?? {};
+    final workshop = _activeRequestsStats!['workshop_requests'] as Map<String, dynamic>? ?? {};
+    final store = _activeRequestsStats!['store_orders'] as Map<String, dynamic>? ?? {};
+    final solar = _activeRequestsStats!['solar_system_orders'] as Map<String, dynamic>? ?? {};
+
+    final totalActive = summary['total_active_requests'] ?? 0;
+    final pending = summary['pending_requests'] ?? 0;
+    final processing = summary['processing_requests'] ?? 0;
+
+    // ✅ إذا لا توجد طلبات → لا يظهر
+    if (totalActive == 0) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primaryBlue.withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // ✅ العنوان مع زر العرض
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue.withOpacity(0.1), secondaryBlue.withOpacity(0.05)],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.analytics_rounded, color: primaryBlue, size: 16),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'طلباتك النشطة',
+                  style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor,
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderTrackingScreen(
+                          authService: widget.authService,
+                          apiService: _apiService,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'عرض الكل',
+                        style: GoogleFonts.cairo(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: primaryBlue,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(Icons.arrow_forward_rounded, color: primaryBlue, size: 12),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ✅ الأرقام الرئيسية (مصغرة)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildMiniStat(
+                  icon: Icons.receipt_long_rounded,
+                  value: totalActive.toString(),
+                  label: 'إجمالي',
+                  color: Colors.white,
+                ),
+                _buildMiniStat(
+                  icon: Icons.hourglass_top_rounded,
+                  value: pending.toString(),
+                  label: 'انتظار',
+                  color: Colors.amber,
+                ),
+                _buildMiniStat(
+                  icon: Icons.autorenew_rounded,
+                  value: processing.toString(),
+                  label: 'معالجة',
+                  color: Colors.cyan,
+                ),
+              ],
+            ),
+          ),
+
+          // ✅ زر التفاصيل (للطي)
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _showActiveRequestsDetails = !_showActiveRequestsDetails;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Colors.grey.shade100),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _showActiveRequestsDetails ? 'إخفاء التفاصيل' : 'عرض التفاصيل',
+                    style: GoogleFonts.cairo(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: mediumGray,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    _showActiveRequestsDetails
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: mediumGray,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ✅ التفاصيل عند الطي
+          if (_showActiveRequestsDetails) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildTypeItem(
+                    icon: Icons.build_rounded,
+                    label: 'ورشة',
+                    value: (workshop['total_active'] ?? 0).toString(),
+                    color: Colors.orange,
+                  ),
+                  _buildTypeItem(
+                    icon: Icons.shopping_bag_rounded,
+                    label: 'متجر',
+                    value: (store['total_active'] ?? 0).toString(),
+                    color: Colors.green,
+                  ),
+                  _buildTypeItem(
+                    icon: Icons.solar_power_rounded,
+                    label: 'منظومة',
+                    value: (solar['total_active'] ?? 0).toString(),
+                    color: Colors.blue,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
+      ),
+    );
+  }
+  // ✅ دالة بناء عنصر إحصائي مصغر
+  Widget _buildMiniStat({
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.cairo(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.cairo(
+            fontSize: 10,
+            color: mediumGray,
+          ),
+        ),
+      ],
+    );
+  }
+
+// ✅ دالة بناء عنصر نوع
+  Widget _buildTypeItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(icon, color: color, size: 14),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$value $label',
+          style: GoogleFonts.cairo(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: darkColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+// مكان: بعد _loadGovernorate أو قبل _fetchTextAds
+  Future<void> _fetchActiveRequestsStats() async {
+    if (!widget.authService.isAuthenticated) return;
+
+    try {
+      final response = await _apiService.get(
+        '/v1/user/dashboard/active-requests-stats',
+        requiresAuth: true,
+      );
+
+      if (response['success'] == true && mounted) {
+        setState(() {
+          _activeRequestsStats = response['data'];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching active requests stats: $e');
+    }
+  }
+
+
+  // ✅ جلب الأيقونات المخصصة من التخزين
+  Future<void> _loadCustomQuickActions() async {
+    final savedActions = widget.storageService.getCustomQuickActions();
+    final isExpanded = widget.storageService.isQuickActionsExpanded();
+
+    if (savedActions.isEmpty) {
+      // ✅ إذا لم يخصص المستخدم من قبل → استخدام الأيقونات الافتراضية
+      _customQuickActions = _getDefaultQuickActions();
+    } else {
+      _customQuickActions = savedActions;
+    }
+
+    if (mounted) {
+      setState(() {
+        _quickActionsExpanded = isExpanded;
+        _tempSelectedQuickActions = List.from(_customQuickActions);
+      });
+    }
+  }
+
+  // ✅ الحصول على الأيقونات الافتراضية (5 أيقونات)
+  List<String> _getDefaultQuickActions() {
+    final List<String> defaults = ['comparisons', 'maintenance', 'system_builder', 'workshop', 'order_tracking'];
+    if (!widget.authService.isAuthenticated) {
+      defaults.remove('order_tracking');
+    }
+    return defaults;
+  }
+  // ✅ حفظ الأيقونات المخصصة في التخزين
+  Future<void> _saveCustomQuickActions() async {
+    await widget.storageService.saveCustomQuickActions(_customQuickActions);
+    await widget.storageService.saveQuickActionsExpanded(_quickActionsExpanded);
+  }
+
+  // ✅ تبديل حالة "إظهار الكل/إخفاء"
+  void _toggleQuickActionsExpanded() {
+    setState(() {
+      _quickActionsExpanded = !_quickActionsExpanded;
+    });
+    _saveCustomQuickActions();
+  }
+
+  // ✅ عرض نافذة التخصيص
+  void _showQuickActionsCustomization() {
+    setState(() {
+      _isCustomizingQuickActions = true;
+      _tempSelectedQuickActions = List.from(_customQuickActions);
+    });
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildQuickActionsCustomizationSheet(),
+    );
+  }
+
+  // ✅ نافذة التخصيص (Bottom Sheet)
+  Widget _buildQuickActionsCustomizationSheet() {
+    final allActions = _getAllQuickActions();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ✅ مؤشر السحب
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ✅ العنوان
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue.withOpacity(0.1), secondaryBlue.withOpacity(0.05)],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.tune_rounded, color: primaryBlue, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'تخصيص الإجراءات السريعة',
+                        style: GoogleFonts.cairo(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: darkColor,
+                        ),
+                      ),
+                      Text(
+                        'اختر الأيقونات التي تريد ظهورها',
+                        style: GoogleFonts.cairo(
+                          fontSize: 12,
+                          color: mediumGray,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // ✅ قائمة الأيقونات
+            Expanded(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: allActions.length,
+                itemBuilder: (context, index) {
+                  final action = allActions[index];
+                  final isSelected = _tempSelectedQuickActions.contains(action['id'] as String);
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          _tempSelectedQuickActions.remove(action['id'] as String);
+                        } else {
+                          _tempSelectedQuickActions.add(action['id'] as String);
+                        }
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: isSelected
+                            ? LinearGradient(
+                          colors: [primaryBlue.withOpacity(0.08), secondaryBlue.withOpacity(0.04)],
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                        )
+                            : null,
+                        color: isSelected ? null : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected ? primaryBlue.withOpacity(0.3) : Colors.grey.shade200,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: (action['color'] as Color).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              action['icon'] as IconData,
+                              color: action['color'] as Color,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              action['label'] as String,
+                              style: GoogleFonts.cairo(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: darkColor,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: isSelected ? primaryBlue : Colors.grey.shade300,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isSelected ? Icons.check_rounded : Icons.add_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // ✅ أزرار الحفظ والإلغاء
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() => _isCustomizingQuickActions = false);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'إلغاء',
+                      style: GoogleFonts.cairo(
+                        color: mediumGray,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _customQuickActions = List.from(_tempSelectedQuickActions);
+                        _isCustomizingQuickActions = false;
+                      });
+                      _saveCustomQuickActions();
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.check_rounded, size: 18),
+                    label: Text(
+                      'حفظ التخصيص',
+                      style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ الحصول على كل الإجراءات المتاحة
+  List<Map<String, dynamic>> _getAllQuickActions() {
+    final bool isGuest = !widget.authService.isAuthenticated;
+
+    final List<Map<String, dynamic>> allActions = [
+      {
+        'id': 'comparisons',
+        'icon': Icons.compare_arrows_rounded,
+        'label': 'المقارنات',
+        'color': const Color(0xFF6366F1),
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ComparisonScreen(
+                apiService: _apiService,
+                authService: widget.authService,
+              ),
+            ),
+          );
+        },
+      },
+      {
+        'id': 'maintenance',
+        'icon': Icons.build_rounded,
+        'label': 'صيانة',
+        'color': const Color(0xFFF59E0B),
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MaintenanceScreen(
+                authService: widget.authService,
+                apiService: _apiService,
+                storageService: widget.storageService,
+              ),
+            ),
+          );
+        },
+      },
+      {
+        'id': 'system_builder',
+        'icon': Icons.design_services_rounded,
+        'label': 'تصميم منظومة',
+        'color': const Color(0xFF3B82F6),
+        'onTap': _navigateToSystemBuilder,
+      },
+      {
+        'id': 'workshop',
+        'icon': Icons.handyman_rounded,
+        'label': 'طلب ورشة',
+        'color': const Color(0xFFEF4444),
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WorkshopRequestScreen(
+                authService: widget.authService,
+                apiService: _apiService,
+              ),
+            ),
+          );
+        },
+      },
+      if (!isGuest)
+        {
+          'id': 'order_tracking',
+          'icon': Icons.local_shipping_rounded,
+          'label': 'تتبع طلباتي',
+          'color': const Color(0xFF10B981),
+          'onTap': () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OrderTrackingScreen(
+                  authService: widget.authService,
+                  apiService: _apiService,
+                ),
+              ),
+            );
+          },
+        },
+      {
+        'id': 'compatibility_check',
+        'icon': Icons.check_circle_outline_rounded,
+        'label': 'فحص توافق المكونات',
+        'color': const Color(0xFF06B6D4),
+        'onTap': () {
+          if (isGuest) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GuestApplianceCompatibilityScreen(
+                  apiService: _apiService,
+                  storageService: widget.storageService,
+                  initialGovernorate: widget.storageService.getGuestGovernorate(),
+                ),
+              ),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ApplianceCompatibilityScreen(
+                  authService: widget.authService,
+                  apiService: _apiService,
+                ),
+              ),
+            );
+          }
+        },
+      },
+      {
+        'id': 'smart_maintenance',
+        'icon': Icons.electrical_services_rounded,
+        'label': 'الصيانة الذكية',
+        'color': const Color(0xFF3B82F6),
+        'onTap': () {
+          if (isGuest) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GuestApplianceMaintenanceScreen(
+                  apiService: _apiService,
+                  storageService: widget.storageService,
+                  initialGovernorate: widget.storageService.getGuestGovernorate(),
+                ),
+              ),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ApplianceMaintenanceScreen(
+                  authService: widget.authService,
+                  apiService: _apiService,
+                ),
+              ),
+            );
+          }
+        },
+      },
+      {
+        'id': 'savings_calculator',
+        'icon': Icons.calculate_rounded,
+        'label': 'حاسبة توفير الإنفرتر',
+        'color': const Color(0xFF10B981),
+        'onTap': () {
+          if (isGuest) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GuestApplianceSavingsScreen(
+                  apiService: _apiService,
+                  storageService: widget.storageService,
+                  initialGovernorate: widget.storageService.getGuestGovernorate(),
+                ),
+              ),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ApplianceSavingsScreen(
+                  authService: widget.authService,
+                  apiService: _apiService,
+                ),
+              ),
+            );
+          }
+        },
+      },
+      {
+        'id': 'appliance_schedule',
+        'icon': Icons.schedule_rounded,
+        'label': 'جدولة تشغيل الأجهزة',
+        'color': const Color(0xFFF59E0B),
+        'onTap': () {
+          if (isGuest) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GuestApplianceScheduleScreen(
+                  apiService: _apiService,
+                  storageService: widget.storageService,
+                  initialGovernorate: widget.storageService.getGuestGovernorate(),
+                ),
+              ),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ApplianceScheduleScreen(
+                  authService: widget.authService,
+                  apiService: _apiService,
+                ),
+              ),
+            );
+          }
+        },
+      },
+      {
+        'id': 'solar_support',
+        'icon': Icons.support_agent_rounded,
+        'label': 'دعم بشري للطاقة',
+        'color': const Color(0xFF6366F1),
+        'onTap': () {
+          if (isGuest) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GuestSupportSolarChatScreen(
+                  apiService: _apiService,
+                  storageService: widget.storageService,
+                  initialGovernorate: widget.storageService.getGuestGovernorate(),
+                ),
+              ),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SupportSolarChatScreen(
+                  authService: widget.authService,
+                  apiService: _apiService,
+                ),
+              ),
+            );
+          }
+        },
+      },
+      {
+        'id': 'solar_qa',
+        'icon': Icons.help_outline_rounded,
+        'label': 'أسئلة واستفسارات',
+        'color': const Color(0xFFEF4444),
+        'onTap': () {
+          if (isGuest) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GuestSolarChatScreen(
+                  apiService: _apiService,
+                  storageService: widget.storageService,
+                  initialGovernorate: widget.storageService.getGuestGovernorate(),
+                ),
+              ),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SolarChatScreen(
+                  authService: widget.authService,
+                  apiService: _apiService,
+                ),
+              ),
+            );
+          }
+        },
+      },
+    ];
+
+    return allActions;
   }
 
   Future<void> _fetchTextAds() async {
@@ -264,14 +1122,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         '/v1/user/public/advertisements',
         requiresAuth: false,
       );
+
       if (response.containsKey('data') && mounted) {
+        final data = response['data'];
+
+        List<dynamic> advertisements = [];
+
+        // ✅ التحقق من البنية الصحيحة للبيانات
+        if (data is Map && data.containsKey('advertisements')) {
+          // البيانات في شكل {advertisements: [...], total: 3}
+          advertisements = List<dynamic>.from(data['advertisements'] ?? []);
+        } else if (data is List) {
+          // البيانات مباشرة في شكل قائمة
+          advertisements = data;
+        }
+
         setState(() {
-          _advertisements = response['data'];
+          _advertisements = advertisements;
           _isLoadingAdvertisements = false;
         });
+
+        debugPrint('✅ Advertisements loaded: ${_advertisements.length}');
+      } else {
+        if (mounted) {
+          setState(() => _isLoadingAdvertisements = false);
+          _advertisements = [];
+        }
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoadingAdvertisements = false);
+      debugPrint('❌ Error fetching advertisements: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingAdvertisements = false;
+          _advertisements = [];
+        });
+      }
     }
   }
 
@@ -639,7 +1524,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 offers: null,
                 apiService: _apiService,
                 authService: widget.authService),
-            const CartScreen(),
+            CartScreen(
+              apiService: _apiService,
+              authService: widget.authService,
+            ),
             isGuest
                 ? _buildLockedScreen(
                     'حسابي', 'يجب تسجيل الدخول لعرض معلومات حسابك')
@@ -667,6 +1555,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             slivers: [
               _buildSliverAppBar(),
               SliverToBoxAdapter(child: _buildGreetingWidget()),
+              if (widget.authService.isAuthenticated && _activeRequestsStats != null)
+                SliverToBoxAdapter(child: _buildActiveRequestsStats()),
               if (!_isInitialLoad) ...[
                 if (!_isLoadingTextAds && _textAds.isNotEmpty)
                   SliverToBoxAdapter(
@@ -1049,7 +1939,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(width: 8),
           Text(
-            'GeniusHouse',
+            'NEX',
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -1478,65 +2368,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+
   Widget _buildQuickActionsBar() {
-    final quickActions = [
-      {
-        'icon': Icons.compare_arrows_rounded,
-        'label': 'المقارنات',
-        'color': const Color(0xFF6366F1),
-        'onTap': () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ComparisonScreen(
-                apiService: _apiService,
-                authService: widget.authService,
-              ),
-            ),
-          );
-        },
-      },
-      {
-        'icon': Icons.build_rounded,
-        'label': 'صيانة',
-        'color': const Color(0xFFF59E0B),
-        'onTap': () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MaintenanceScreen(
-                authService: widget.authService,
-                apiService: _apiService,
-                storageService: widget.storageService,
-              ),
-            ),
-          );
-        },
-      },
-      {
-        'icon': Icons.settings_rounded,
-        'label': 'الإعدادات',
-        'color': const Color(0xFF3B82F6),
-        'onTap': () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SettingsScreen()),
-          );
-        },
-      },
-      {
-        'icon': Icons.design_services_rounded,
-        'label': 'تصميم منظومة',
-        'color': const Color(0xFF10B981),
-        'onTap': _navigateToSystemBuilder,
-      },
-    ];
+    final bool isGuest = !widget.authService.isAuthenticated;
+    final List<Map<String, dynamic>> allActions = _getAllQuickActions();
+    final List<Map<String, dynamic>> visibleActions = allActions
+        .where((action) => _customQuickActions.contains(action['id'] as String))
+        .toList();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ✅ عنوان القسم مع زر إظهار الكل
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(
@@ -1559,70 +2404,250 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     color: darkColor,
                   ),
                 ),
+                const Spacer(),
+                // ✅ زر "إظهار الكل" أو "إخفاء"
+                GestureDetector(
+                  onTap: _toggleQuickActionsExpanded,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: _quickActionsExpanded
+                          ? primaryBlue.withOpacity(0.1)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _quickActionsExpanded
+                            ? primaryBlue.withOpacity(0.3)
+                            : Colors.grey.shade200,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _quickActionsExpanded ? 'إخفاء' : 'إظهار الكل',
+                          style: GoogleFonts.cairo(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: _quickActionsExpanded ? primaryBlue : mediumGray,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          _quickActionsExpanded
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          size: 16,
+                          color: _quickActionsExpanded ? primaryBlue : mediumGray,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: quickActions.map((action) {
-              return TweenAnimationBuilder(
-                tween: Tween<double>(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeOut,
-                builder: (context, double value, child) {
-                  return Opacity(
-                    opacity: value,
-                    child: Transform.scale(
-                        scale: 0.7 + (0.3 * value), child: child),
+
+          // ✅ الأيقونات المرئية - قابلة للتحريك أفقياً
+          if (visibleActions.isNotEmpty)
+            SizedBox(
+              height: 90,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                itemCount: visibleActions.length,
+                itemBuilder: (context, index) {
+                  final action = visibleActions[index];
+                  return TweenAnimationBuilder(
+                    tween: Tween<double>(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOut,
+                    builder: (context, double value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.scale(
+                          scale: 0.7 + (0.3 * value),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: GestureDetector(
+                      onTap: action['onTap'] as VoidCallback,
+                      child: Container(
+                        width: 80,
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: (action['color'] as Color).withOpacity(0.1),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: (action['color'] as Color).withOpacity(0.2),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Icon(
+                                action['icon'] as IconData,
+                                color: action['color'] as Color,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              width: 70,
+                              child: Text(
+                                action['label'] as String,
+                                style: GoogleFonts.cairo(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: darkColor,
+                                  height: 1.2,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   );
                 },
-                child: GestureDetector(
-                  onTap: action['onTap'] as VoidCallback,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: (action['color'] as Color).withOpacity(0.1),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: (action['color'] as Color).withOpacity(0.2),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Icon(
-                          action['icon'] as IconData,
-                          color: action['color'] as Color,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      SizedBox(
-                        width: 70,
-                        child: Text(
-                          action['label'] as String,
-                          style: GoogleFonts.cairo(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: darkColor,
-                            height: 1.2,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+              ),
+            ),
+
+          // ✅ عند "إظهار الكل" → عرض كل الأيقونات مع إمكانية الاختيار
+          if (_quickActionsExpanded)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'اختر الإجراءات التي تريد ظهورها:',
+                      style: GoogleFonts.cairo(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: mediumGray,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 90,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: allActions.length,
+                      itemBuilder: (context, index) {
+                        final action = allActions[index];
+                        final isSelected = _customQuickActions.contains(action['id'] as String);
+                        return GestureDetector(
+                          onTap: () => _toggleActionSelection(action['id'] as String),
+                          child: Container(
+                            width: 80,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? (action['color'] as Color).withOpacity(0.1)
+                                        : Colors.grey.shade100,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? (action['color'] as Color).withOpacity(0.2)
+                                          : Colors.grey.shade200,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    action['icon'] as IconData,
+                                    color: isSelected
+                                        ? action['color'] as Color
+                                        : Colors.grey.shade400,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                SizedBox(
+                                  width: 70,
+                                  child: Text(
+                                    action['label'] as String,
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                      color: isSelected ? darkColor : Colors.grey.shade500,
+                                      height: 1.2,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                // ✅ علامة الاختيار
+                                Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? successGreen : Colors.grey.shade300,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    isSelected ? Icons.check_rounded : Icons.add_rounded,
+                                    color: Colors.white,
+                                    size: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  void _toggleActionSelection(String actionId) {
+    setState(() {
+      if (_customQuickActions.contains(actionId)) {
+        _customQuickActions.remove(actionId);
+      } else {
+        _customQuickActions.add(actionId);
+      }
+    });
+    _saveCustomQuickActions();
   }
 
   Widget _buildMainCategories() {
@@ -1763,7 +2788,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       child: ClipOval(
                         child: Image.asset(
-                          'assets/images/app_icon.png',
+                          'assets/images/app_nex_icon.jpg',
                           width: 90,
                           height: 90,
                           fit: BoxFit.cover,
@@ -1988,6 +3013,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const SettingsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      if (_isCompanyOwner())
+                        _buildDrawerItem(
+                          icon: Icons.dashboard_rounded,
+                          title: 'لوحة تحكم الشركة',
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CompanyDashboardScreen(
+                                  authService: widget.authService,
+                                  storageService: widget.storageService,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      _buildDrawerItem(
+                        icon: Icons.feedback_rounded,
+                        title: 'تقديم شكوى',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddComplaintScreen(
+                                authService: widget.authService,
+                                storageService: widget.storageService,
+                              ),
                             ),
                           );
                         },
@@ -2358,6 +3416,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+// في نفس ملف HomeScreen - أضف هذه الدوال والمتغيرات
+
+// ==================== تعديل _buildAdvertisementsCarousel ====================
+
   Widget _buildAdvertisementsCarousel() {
     return CarouselSlider(
       options: CarouselOptions(
@@ -2368,49 +3430,69 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         viewportFraction: 0.9,
       ),
       items: _advertisements.map((ad) {
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(25),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CachedNetworkImage(
-                  imageUrl: ad['image_path'],
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Shimmer.fromColors(
-                    baseColor: Colors.grey.shade300,
-                    highlightColor: Colors.grey.shade100,
-                    child: Container(color: Colors.grey.shade300),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.error, size: 50),
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                        Colors.black.withOpacity(0.3),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
+        return GestureDetector(
+          onTap: () => _showAdvertisementFullScreen(ad),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
                 ),
               ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(25),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CachedNetworkImage(
+                    imageUrl: ad['image_path'] ?? ad['image_url'] ?? '',
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Shimmer.fromColors(
+                      baseColor: Colors.grey.shade300,
+                      highlightColor: Colors.grey.shade100,
+                      child: Container(color: Colors.grey.shade300),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey.shade200,
+                      child: const Icon(Icons.error, size: 50),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.3),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                  // ✅ مؤشر الضغط للتكبير
+                  Positioned(
+                    bottom: 10,
+                    right: 10,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.zoom_in_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -2418,6 +3500,227 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+// ==================== دالة عرض الإعلان في شاشة كاملة ====================
+
+  void _showAdvertisementFullScreen(dynamic ad) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.95),
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.zero,
+          child: Stack(
+            children: [
+              // ✅ الصورة في الخلفية
+              Center(
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 3.0,
+                  child: CachedNetworkImage(
+                    imageUrl: ad['image_path'] ?? ad['image_url'] ?? '',
+                    fit: BoxFit.contain,
+                    width: MediaQuery.of(context).size.width,
+                    placeholder: (context, url) => Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey.shade800,
+                      child: const Icon(
+                        Icons.error_outline_rounded,
+                        color: Colors.white,
+                        size: 60,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ✅ زر الإغلاق X في الأعلى
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 10,
+                right: 10,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ),
+
+              // ✅ الأزرار في الأسفل
+              Positioned(
+                bottom: 30,
+                left: 20,
+                right: 20,
+                child: Column(
+                  children: [
+                    // ✅ زر الرابط (إذا وجد)
+                    if (ad['has_link'] == true && ad['link_url'] != null)
+                      _buildAdvertisementActionButton(
+                        icon: Icons.link_rounded,
+                        label: 'الذهاب إلى الرابط',
+                        color: const Color(0xFF3B82F6),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _openUrl(ad['link_url']);
+                        },
+                      ),
+
+                    const SizedBox(height: 10),
+
+                    // ✅ زر الاتصال (إذا وجد)
+                    if (ad['has_phone'] == true && ad['phone'] != null)
+                      _buildAdvertisementActionButton(
+                        icon: Icons.phone_rounded,
+                        label: 'اتصال: ${ad['phone']}',
+                        color: const Color(0xFF10B981),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _makePhoneCall(ad['phone_url'] ?? ad['phone']);
+                        },
+                      ),
+
+                    const SizedBox(height: 10),
+
+                    // ✅ زر الواتساب (إذا وجد)
+                    if (ad['has_whatsapp'] == true && ad['whatsapp'] != null)
+                      _buildAdvertisementActionButton(
+                        icon: Icons.chat_rounded,
+                        label: 'محادثة واتساب',
+                        color: const Color(0xFF25D366),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _openWhatsapp(ad['whatsapp_link'] ?? ad['whatsapp']);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+// ==================== دالة بناء زر الإجراء ====================
+
+  Widget _buildAdvertisementActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.4),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 22),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: GoogleFonts.cairo(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+// ==================== دوال فتح الروابط ====================
+
+  void _openUrl(String? url) async {
+    if (url == null || url.isEmpty) return;
+
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Error opening URL: $e');
+      _showSnackBarMessage('تعذر فتح الرابط');
+    }
+  }
+
+  void _makePhoneCall(String? phone) async {
+    if (phone == null || phone.isEmpty) return;
+
+    try {
+      final uri = Uri.parse(phone.startsWith('tel:') ? phone : 'tel:$phone');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      debugPrint('Error making call: $e');
+      _showSnackBarMessage('تعذر إجراء المكالمة');
+    }
+  }
+
+  void _openWhatsapp(String? whatsapp) async {
+    if (whatsapp == null || whatsapp.isEmpty) return;
+
+    try {
+      final uri = Uri.parse(whatsapp.startsWith('http') ? whatsapp : 'https://wa.me/$whatsapp');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Error opening WhatsApp: $e');
+      _showSnackBarMessage('تعذر فتح الواتساب');
+    }
+  }
+
+  void _showSnackBarMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.cairo(),
+        ),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(20),
+      ),
+    );
+  }
   Widget _buildSectionHeader({
     required String title,
     IconData? icon,
@@ -2727,5 +4030,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       );
     }
+  }
+  bool _isCompanyOwner() {
+    if (!widget.authService.isAuthenticated) return false;
+
+    try {
+      final userData = widget.storageService.getUserDataMap();
+      if (userData != null && userData['user_type'] == 'company_owner') {
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error checking company owner: $e');
+    }
+
+    return false;
   }
 }

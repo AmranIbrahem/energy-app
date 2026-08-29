@@ -11,6 +11,9 @@ import 'package:GeniusHouse/screens/governorate_selection_screen.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:GeniusHouse/screens/onboarding_screen.dart';
+import 'package:GeniusHouse/screens/auth/email_verification_screen.dart';
+import 'package:GeniusHouse/screens/auth/forgot_password_screen.dart';
+import 'package:GeniusHouse/screens/company/company_choice_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
@@ -26,7 +29,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -37,7 +41,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -113,29 +116,97 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         await _saveCredentials();
         await widget.authService.sendFcmTokenToServer();
 
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => HomeScreen(
-              authService: widget.authService,
-              storageService: widget.storageService,
-            ),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(
-                opacity: animation,
-                child: ScaleTransition(
-                  scale: Tween<double>(begin: 0.95, end: 1).animate(animation),
-                  child: child,
-                ),
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 600),
-          ),
-        );
+        // ✅ التحقق من نوع المستخدم
+        final userType = result['user_type'] ?? result['data']?['user_type'];
+
+        if (userType == 'company_owner') {
+          // ✅ توجيه صاحب الشركة إلى شاشة الاختيار
+          _navigateToCompanyChoice();
+        } else {
+          // مستخدم عادي - توجيه مباشر للتطبيق
+          _navigateToHome();
+        }
       } else {
-        _showModernErrorSnackBar(result['message'] ?? 'فشل تسجيل الدخول');
+        // ✅ التحقق من حالة تأكيد البريد الإلكتروني
+        final emailVerificationRequired =
+            result['email_verification_required'] == true ||
+                result['data']?['email_verification_required'] == true ||
+                result['message']?.toString().contains('تأكيد') == true ||
+                result['message']?.toString().contains('verify') == true ||
+                result['message']?.toString().contains('Verification') == true;
+
+        if (emailVerificationRequired) {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => EmailVerificationScreen(
+                authService: widget.authService,
+                storageService: widget.storageService,
+                email: _emailController.text.trim(),
+                isFromLogin: true,
+              ),
+              transitionsBuilder: (_, animation, __, child) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.95, end: 1).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+          );
+        } else {
+          _showModernErrorSnackBar(result['message'] ?? 'فشل تسجيل الدخول');
+        }
       }
     }
+  }
+
+  // ✅ دوال التوجيه
+  void _navigateToHome() {
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => HomeScreen(
+          authService: widget.authService,
+          storageService: widget.storageService,
+        ),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.95, end: 1).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 600),
+      ),
+    );
+  }
+
+  void _navigateToCompanyChoice() {
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => CompanyChoiceScreen(
+          authService: widget.authService,
+          storageService: widget.storageService,
+        ),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.95, end: 1).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 600),
+      ),
+    );
   }
 
   void _goToRegister() {
@@ -215,10 +286,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     return Scaffold(
       body: Stack(
         children: [
-          
           _buildAnimatedBackground(),
-
-          
           SafeArea(
             child: AnimationLimiter(
               child: SingleChildScrollView(
@@ -231,34 +299,19 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       child: FadeInAnimation(child: widget),
                     ),
                     children: [
-                      
                       _buildModernTopBar(),
-
                       const SizedBox(height: 10),
-
-                      
                       _buildAnimatedLogo(),
-
                       const SizedBox(height: 20),
-
-                      
                       _buildModernTitle(),
-
                       const SizedBox(height: 12),
-
-                      
                       _buildModernDescription(),
-
                       const SizedBox(height: 40),
-
-                      
                       _buildModernLoginForm(),
-
                       const SizedBox(height: 20),
-
-                      
+                      _buildModernGuestButton(),
+                      const SizedBox(height: 20),
                       _buildModernLinks(),
-
                       const SizedBox(height: 30),
                     ],
                   ),
@@ -271,7 +324,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
   Widget _buildAnimatedBackground() {
     return Container(
       decoration: BoxDecoration(
@@ -289,14 +341,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
   Widget _buildModernTopBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          
           TweenAnimationBuilder(
             tween: Tween<double>(begin: 0, end: 1),
             duration: const Duration(milliseconds: 600),
@@ -347,8 +397,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               );
             },
           ),
-
-          
           TweenAnimationBuilder(
             tween: Tween<double>(begin: 0, end: 1),
             duration: const Duration(milliseconds: 800),
@@ -356,7 +404,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               return Opacity(
                 opacity: value,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -378,7 +427,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'GeniusHouse',
+                        'NEX',
                         style: GoogleFonts.poppins(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -397,7 +446,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
   Widget _buildAnimatedLogo() {
     return TweenAnimationBuilder(
       tween: Tween<double>(begin: 0, end: 1),
@@ -431,12 +479,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             ),
             child: ClipOval(
               child: Image.asset(
-                'assets/images/app_icon.png',
+                'assets/images/app_nex_icon.jpg',
                 width: 110,
                 height: 110,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  
                   return const Center(
                     child: Icon(
                       Icons.bolt_rounded,
@@ -453,7 +500,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
   Widget _buildModernTitle() {
     return Column(
       children: [
@@ -481,7 +527,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
   Widget _buildModernDescription() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -516,7 +561,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
   Widget _buildModernLoginForm() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -531,28 +575,20 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             offset: const Offset(0, 10),
           ),
         ],
-        border: Border.all(
-          color: primaryBlue.withOpacity(0.05),
-        ),
+        border: Border.all(color: primaryBlue.withOpacity(0.05)),
       ),
       child: Form(
         key: _formKey,
         child: Column(
           children: [
-            
             _buildModernEmailField(),
             const SizedBox(height: 20),
-
-            
             _buildModernPasswordField(),
+            const SizedBox(height: 8),
+            _buildForgotPasswordLink(),
             const SizedBox(height: 10),
-
-            
             _buildRememberMeOption(),
-
             const SizedBox(height: 20),
-
-            
             _buildModernLoginButton(),
           ],
         ),
@@ -560,7 +596,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
   Widget _buildModernEmailField() {
     return TextFormField(
       controller: _emailController,
@@ -612,7 +647,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
   Widget _buildModernPasswordField() {
     return TextFormField(
       controller: _passwordController,
@@ -632,7 +666,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         ),
         suffixIcon: IconButton(
           icon: Icon(
-            _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+            _obscurePassword
+                ? Icons.visibility_off_rounded
+                : Icons.visibility_rounded,
             color: mediumGray,
             size: 20,
           ),
@@ -670,7 +706,51 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
+  Widget _buildForgotPasswordLink() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => ForgotPasswordScreen(
+                authService: widget.authService,
+                storageService: widget.storageService,
+              ),
+              transitionsBuilder: (_, animation, __, child) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.3, 0),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+          );
+        },
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: Text(
+          'نسيت كلمة المرور؟',
+          style: GoogleFonts.cairo(
+            fontSize: 13,
+            color: primaryBlue,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildRememberMeOption() {
     return InkWell(
       onTap: () {
@@ -715,7 +795,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
   Widget _buildModernLoginButton() {
     return TweenAnimationBuilder(
       tween: Tween<double>(begin: 0, end: 1),
@@ -786,11 +865,75 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     );
   }
 
-  
+  // ✅ زر تصفح كزائر بنفس شكل زر تسجيل الدخول
+  Widget _buildModernGuestButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: TweenAnimationBuilder(
+        tween: Tween<double>(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.easeOut,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: value,
+            child: Container(
+              width: double.infinity,
+              height: 58,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: primaryBlue.withOpacity(0.3),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryBlue.withOpacity(0.1),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: _goToGuestMode,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.person_outline_rounded,
+                      color: primaryBlue,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'تصفح كزائر',
+                      style: GoogleFonts.cairo(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: primaryBlue,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildModernLinks() {
     return Column(
       children: [
-        
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -817,67 +960,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             ),
           ],
         ),
-
-        const SizedBox(height: 8),
-
-        
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: [
-              Expanded(
-                child: Divider(
-                  color: Colors.grey.shade300,
-                  thickness: 1,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'أو',
-                  style: GoogleFonts.cairo(
-                    fontSize: 13,
-                    color: Colors.grey.shade500,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Divider(
-                  color: Colors.grey.shade300,
-                  thickness: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        
-        TextButton.icon(
-          onPressed: _goToGuestMode,
-          icon: Icon(
-            Icons.person_outline_rounded,
-            color: secondaryBlue,
-            size: 18,
-          ),
-          label: Text(
-            'تصفح كزائر',
-            style: GoogleFonts.cairo(
-              fontSize: 14,
-              color: secondaryBlue,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          style: TextButton.styleFrom(
-            foregroundColor: secondaryBlue,
-          ),
-        ),
       ],
     );
   }
 }
-
 
 class FadeInAnimation extends StatelessWidget {
   final Widget child;

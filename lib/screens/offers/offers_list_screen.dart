@@ -40,7 +40,6 @@ class _OffersListScreenState extends State<OffersListScreen>
   String? _errorMessage;
   bool _isGridView = true;
 
-
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -176,7 +175,9 @@ class _OffersListScreenState extends State<OffersListScreen>
         }
 
         final pagination = response['data']['pagination'] ??
-            (response.containsKey('pagination') ? response['pagination'] : null);
+            (response.containsKey('pagination')
+                ? response['pagination']
+                : null);
 
         if (loadMore) {
           setState(() {
@@ -258,7 +259,8 @@ class _OffersListScreenState extends State<OffersListScreen>
                   child: child,
                 );
               },
-              child: const Icon(Icons.local_offer_rounded, color: Colors.yellow, size: 24),
+              child: const Icon(Icons.local_offer_rounded,
+                  color: Colors.yellow, size: 24),
             ),
             const SizedBox(width: 10),
             Flexible(
@@ -288,7 +290,9 @@ class _OffersListScreenState extends State<OffersListScreen>
               icon: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: Icon(
-                  _isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                  _isGridView
+                      ? Icons.view_list_rounded
+                      : Icons.grid_view_rounded,
                   key: ValueKey(_isGridView),
                   color: Colors.white,
                   size: 22,
@@ -307,12 +311,12 @@ class _OffersListScreenState extends State<OffersListScreen>
             child: _isLoading
                 ? _buildShimmerLoading()
                 : _errorMessage != null
-                ? _buildErrorWidget()
-                : _offers.isEmpty
-                ? _buildEmptyWidget()
-                : _isGridView
-                ? _buildGridView()
-                : _buildListView(),
+                    ? _buildErrorWidget()
+                    : _offers.isEmpty
+                        ? _buildEmptyWidget()
+                        : _isGridView
+                            ? _buildGridView()
+                            : _buildListView(),
           ),
         ],
       ),
@@ -354,35 +358,38 @@ class _OffersListScreenState extends State<OffersListScreen>
                   borderRadius: BorderRadius.circular(25),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       gradient: isSelected
                           ? LinearGradient(
-                        colors: [primaryBlue, secondaryBlue],
-                      )
+                              colors: [primaryBlue, secondaryBlue],
+                            )
                           : LinearGradient(
-                        colors: [cardWhite, Colors.grey.shade50],
-                      ),
+                              colors: [cardWhite, Colors.grey.shade50],
+                            ),
                       borderRadius: BorderRadius.circular(25),
                       border: Border.all(
-                        color: isSelected ? Colors.transparent : Colors.grey.shade300,
+                        color: isSelected
+                            ? Colors.transparent
+                            : Colors.grey.shade300,
                         width: 1,
                       ),
                       boxShadow: isSelected
                           ? [
-                        BoxShadow(
-                          color: primaryBlue.withOpacity(0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
+                              BoxShadow(
+                                color: primaryBlue.withOpacity(0.4),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
                           : [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 5,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -397,8 +404,11 @@ class _OffersListScreenState extends State<OffersListScreen>
                           filter['name'],
                           style: GoogleFonts.cairo(
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                            color: isSelected ? Colors.white : Colors.grey.shade700,
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w600,
+                            color: isSelected
+                                ? Colors.white
+                                : Colors.grey.shade700,
                           ),
                         ),
                       ],
@@ -467,7 +477,8 @@ class _OffersListScreenState extends State<OffersListScreen>
                   ),
                 ],
               ),
-              child: Icon(Icons.error_outline_rounded, size: 50, color: Colors.red.shade300),
+              child: Icon(Icons.error_outline_rounded,
+                  size: 50, color: Colors.red.shade300),
             ),
             const SizedBox(height: 20),
             Text(
@@ -482,13 +493,16 @@ class _OffersListScreenState extends State<OffersListScreen>
             ElevatedButton.icon(
               onPressed: _fetchOffers,
               icon: const Icon(Icons.refresh_rounded),
-              label: Text('إعادة المحاولة', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+              label: Text('إعادة المحاولة',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
                 elevation: 5,
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15)),
                 shadowColor: primaryBlue.withOpacity(0.5),
               ),
             ),
@@ -570,7 +584,8 @@ class _OffersListScreenState extends State<OffersListScreen>
   Widget _buildGridView() {
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
-        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 &&
+        if (scrollInfo.metrics.pixels >=
+                scrollInfo.metrics.maxScrollExtent - 200 &&
             !_isLoadingMore &&
             _hasMore) {
           _fetchOffers(loadMore: true);
@@ -627,7 +642,8 @@ class _OffersListScreenState extends State<OffersListScreen>
   Widget _buildListView() {
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
-        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 &&
+        if (scrollInfo.metrics.pixels >=
+                scrollInfo.metrics.maxScrollExtent - 200 &&
             !_isLoadingMore &&
             _hasMore) {
           _fetchOffers(loadMore: true);
@@ -676,44 +692,44 @@ class _OffersListScreenState extends State<OffersListScreen>
       child: Center(
         child: _isLoadingMore
             ? Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: 1.0 + (_pulseAnimationController.value * 0.2),
-                  child: child,
-                );
-              },
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      primaryBlue.withOpacity(0.15),
-                      secondaryBlue.withOpacity(0.08),
-                    ],
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedBuilder(
+                    animation: _pulseAnimationController,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: 1.0 + (_pulseAnimationController.value * 0.2),
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            primaryBlue.withOpacity(0.15),
+                            secondaryBlue.withOpacity(0.08),
+                          ],
+                        ),
+                      ),
+                      child: const CircularProgressIndicator(
+                        color: primaryBlue,
+                        strokeWidth: 3,
+                      ),
+                    ),
                   ),
-                ),
-                child: const CircularProgressIndicator(
-                  color: primaryBlue,
-                  strokeWidth: 3,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'جاري تحميل المزيد...',
-              style: GoogleFonts.cairo(
-                fontSize: 13,
-                color: mediumGray,
-              ),
-            ),
-          ],
-        )
+                  const SizedBox(height: 12),
+                  Text(
+                    'جاري تحميل المزيد...',
+                    style: GoogleFonts.cairo(
+                      fontSize: 13,
+                      color: mediumGray,
+                    ),
+                  ),
+                ],
+              )
             : const SizedBox.shrink(),
       ),
     );

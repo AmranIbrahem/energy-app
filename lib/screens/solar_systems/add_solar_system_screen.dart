@@ -22,7 +22,7 @@ class _AddSolarSystemScreenState extends State<AddSolarSystemScreen>
     with TickerProviderStateMixin {
   late SolarSystemService _solarSystemService;
   final _formKey = GlobalKey<FormState>();
-  final String _baseUrl = 'https://aa-dev.online/energy';
+  final String _baseUrl = 'https://nexsy.shop';
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);

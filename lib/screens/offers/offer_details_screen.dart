@@ -1,4 +1,7 @@
 // lib/screens/offers/offer_details_screen.dart
+
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -49,6 +52,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
   bool _isAnalyzing = false;
   bool _isInComparison = false;
 
+  final TextEditingController _quantityController =
+  TextEditingController(text: '1');
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
@@ -58,6 +63,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
   static const Color lightGray = Color(0xFFF3F4F6);
   static const Color cardWhite = Color(0xFFFFFFFF);
   static const Color successGreen = Color(0xFF10B981);
+  static const Color infoBlue = Color(0xFF3B82F6);
+  static const Color warningOrange = Color(0xFFF59E0B);
 
   late AnimationController _pulseAnimationController;
   late AnimationController _fadeAnimationController;
@@ -94,6 +101,7 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
 
   @override
   void dispose() {
+    _quantityController.dispose();
     _pulseAnimationController.dispose();
     _fadeAnimationController.dispose();
     _heartAnimationController.dispose();
@@ -105,7 +113,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
     final offerId = _offer?['id'];
     if (offerId != null) {
       setState(() {
-        _isInComparison = ComparisonService.instance.isOfferInComparison(offerId);
+        _isInComparison =
+            ComparisonService.instance.isOfferInComparison(offerId);
       });
     }
   }
@@ -128,6 +137,58 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
     _showSnackBar('تم إزالة العرض من المقارنة', Colors.orange);
   }
 
+  TextDirection _getTextDirection(String text) {
+    if (text.isEmpty) return TextDirection.rtl;
+    final firstChar = text.trim().characters.first;
+    final arabicRegex = RegExp(
+        r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]');
+    final englishRegex = RegExp(r'[a-zA-Z]');
+    if (arabicRegex.hasMatch(firstChar)) return TextDirection.rtl;
+    if (englishRegex.hasMatch(firstChar) || RegExp(r'\d').hasMatch(firstChar)) {
+      return TextDirection.ltr;
+    }
+    return arabicRegex.hasMatch(text) ? TextDirection.rtl : TextDirection.ltr;
+  }
+
+  TextAlign _getTextAlign(String text) {
+    if (text.isEmpty) return TextAlign.right;
+    final firstChar = text.trim().characters.first;
+    final arabicRegex = RegExp(
+        r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]');
+    if (arabicRegex.hasMatch(firstChar)) return TextAlign.right;
+    final arabicChars = RegExp(r'[\u0600-\u06FF]').allMatches(text).length;
+    final englishChars = RegExp(r'[a-zA-Z]').allMatches(text).length;
+    return arabicChars > englishChars ? TextAlign.right : TextAlign.left;
+  }
+
+  Color _getRatingColor(String text) {
+    final match = RegExp(r'(\d+\.?\d*)/(\d+)').firstMatch(text);
+    if (match != null) {
+      final score = double.parse(match.group(1)!);
+      final maxScore = double.parse(match.group(2)!);
+      final percentage = score / maxScore;
+      if (percentage >= 0.8) return successGreen;
+      if (percentage >= 0.6) return Colors.orange;
+      return Colors.red;
+    }
+    return mediumGray;
+  }
+
+  String _formatDateTime(String dateTimeStr) {
+    try {
+      final DateTime dateTime = DateTime.parse(dateTimeStr);
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+      if (difference.inMinutes < 1) return 'الآن';
+      if (difference.inHours < 1) return 'منذ ${difference.inMinutes} دقيقة';
+      if (difference.inDays < 1) return 'منذ ${difference.inHours} ساعة';
+      if (difference.inDays < 7) return 'منذ ${difference.inDays} يوم';
+      return '${dateTime.year}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.day.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateTimeStr;
+    }
+  }
+
   Future<void> _fetchOfferDetails() async {
     setState(() {
       _isLoading = true;
@@ -143,7 +204,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
         final governorate = widget.authService != null
             ? await widget.authService!.storageService.getGovernorate()
             : 'دمشق';
-        endpoint = '/v1/user/public/offers/${widget.offerSlug}/show/$governorate';
+        endpoint =
+        '/v1/user/public/offers/${widget.offerSlug}/show/$governorate';
       }
 
       final response = await widget.apiService.get(
@@ -158,6 +220,7 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
           _isFavorite = _favoritesService.isOfferFavorite(_offer?['id']);
           _isLoading = false;
           _quantity = 1;
+          _quantityController.text = '1';
         });
         _fadeAnimationController.forward(from: 0.0);
       } else {
@@ -174,6 +237,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
     }
   }
 
+  // ==================== AI Analysis ====================
+
   Future<void> _askAIAboutOffer() async {
     final offerId = _offer?['id'];
     if (offerId == null) return;
@@ -188,8 +253,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
       );
 
       if (response['success'] == true && mounted) {
-        final analysis = response['data']['analysis'];
-        _showAIAnalysisDialog(analysis);
+        final analysisData = response['data'];
+        _showAIAnalysisDialog(analysisData);
       } else {
         _showSnackBar(
           response['message'] ?? 'عذراً، لم نتمكن من تحليل العرض حالياً',
@@ -206,29 +271,36 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
     }
   }
 
-  void _showAIAnalysisDialog(String analysis) {
+  void _showAIAnalysisDialog(Map<String, dynamic> analysisData) {
+    final String analysis = analysisData['analysis'] ?? '';
+    final String offerName = analysisData['offer_name'] ?? '';
+    final String analyzedAt = analysisData['analyzed_at'] ?? '';
+
+    final Map<String, String> sections = _parseAnalysisSections(analysis);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: cardWhite,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 20,
-              offset: const Offset(0, -10),
-            ),
-          ],
-        ),
-        child: DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) => Column(
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: cardWhite,
+            borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(30)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 20,
+                offset: const Offset(0, -10),
+              ),
+            ],
+          ),
+          child: Column(
             children: [
               Container(
                 margin: const EdgeInsets.symmetric(vertical: 12),
@@ -241,79 +313,625 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  children: [
-                    AnimatedBuilder(
-                      animation: _pulseAnimationController,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: 1.0 + (_pulseAnimationController.value * 0.1),
-                          child: child,
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              primaryBlue.withOpacity(0.15),
-                              secondaryBlue.withOpacity(0.08),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: const Icon(Icons.auto_awesome_rounded, color: primaryBlue, size: 24),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'تحليل الذكاء الاصطناعي',
-                      style: GoogleFonts.cairo(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: darkColor,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded, color: Colors.grey),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 24, thickness: 1),
+              _buildAnalysisHeader(offerName, analyzedAt),
+              const Divider(height: 1, thickness: 1),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: Text(
-                      analysis,
-                      style: GoogleFonts.cairo(
-                        fontSize: 15,
-                        height: 1.7,
-                        color: mediumGray,
-                      ),
-                    ),
-                  ),
-                ),
+                child: _buildAnalysisContent(sections, scrollController),
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildAnalysisHeader(String offerName, String analyzedAt) {
+    final bool hasArabic = RegExp(r'[\u0600-\u06FF]').hasMatch(offerName);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            primaryBlue.withOpacity(0.05),
+            secondaryBlue.withOpacity(0.02),
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          AnimatedBuilder(
+            animation: _pulseAnimationController,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: 1.0 + (_pulseAnimationController.value * 0.1),
+                child: child,
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [primaryBlue, secondaryBlue],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryBlue.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasArabic ? 'تحليل الذكاء الاصطناعي' : 'AI Analysis',
+                  style: GoogleFonts.cairo(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.local_offer_rounded,
+                        size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        offerName,
+                        textDirection: _getTextDirection(offerName),
+                        style: GoogleFonts.cairo(
+                          fontSize: 13,
+                          color: mediumGray,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                if (analyzedAt.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time_rounded,
+                          size: 14, color: Colors.grey.shade400),
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatDateTime(analyzedAt),
+                        style: GoogleFonts.cairo(
+                          fontSize: 11,
+                          color: Colors.grey.shade400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close_rounded, color: Colors.grey),
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalysisContent(
+      Map<String, String> sections, ScrollController scrollController) {
+    return SingleChildScrollView(
+      controller: scrollController,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildScoreCards(sections),
+          const SizedBox(height: 20),
+          ...sections.entries.map((entry) {
+            final title = entry.key.trim();
+            final content = entry.value.trim();
+
+            if (_isScoreLine(title, content)) {
+              return const SizedBox.shrink();
+            }
+
+            return _buildAnalysisSection(
+              title: title,
+              content: content,
+            );
+          }),
+          const SizedBox(height: 30),
+        ],
+      ),
+    );
+  }
+
+  bool _isScoreLine(String title, String content) {
+    final scorePattern = RegExp(r'\d+\.?\d*/\d+');
+    final isScore = scorePattern.hasMatch(content) &&
+        content.trim().split('\n').length <= 2;
+
+    if (isScore) {
+      final contentWithoutScore =
+      content.replaceAll(scorePattern, '').trim();
+      return contentWithoutScore.length < 50;
+    }
+
+    return false;
+  }
+
+  Widget _buildScoreCards(Map<String, String> sections) {
+    final List<Map<String, dynamic>> scores = [];
+
+    sections.forEach((key, value) {
+      final scoreMatch = RegExp(r'(\d+\.?\d*)/(\d+)').firstMatch(value);
+      if (scoreMatch != null && value.trim().split('\n').length <= 2) {
+        scores.add({
+          'title': key.replaceAll('**', '').replaceAll(':', '').trim(),
+          'score': double.parse(scoreMatch.group(1)!),
+          'maxScore': double.parse(scoreMatch.group(2)!),
+        });
+      }
+    });
+
+    if (scores.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.amber.withOpacity(0.15),
+                    Colors.amber.withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.analytics_rounded,
+                size: 20,
+                color: Colors.amber,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'التقييمات',
+              style: GoogleFonts.cairo(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: darkColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 100,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: scores.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final score = scores[index];
+              final percentage =
+                  (score['score'] as double) / (score['maxScore'] as double);
+              final Color scoreColor = percentage >= 0.8
+                  ? successGreen
+                  : percentage >= 0.6
+                  ? Colors.orange
+                  : Colors.red;
+
+              return Container(
+                width: 140,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      scoreColor.withOpacity(0.1),
+                      scoreColor.withOpacity(0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: scoreColor.withOpacity(0.2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: scoreColor.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.star_rounded,
+                            color: scoreColor,
+                            size: 16,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${score['score']}/${score['maxScore']}',
+                          style: GoogleFonts.cairo(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: scoreColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      score['title'] as String,
+                      textDirection:
+                      _getTextDirection(score['title'] as String),
+                      style: GoogleFonts.cairo(
+                        fontSize: 11,
+                        color: mediumGray,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: percentage,
+                        backgroundColor: scoreColor.withOpacity(0.1),
+                        valueColor:
+                        AlwaysStoppedAnimation<Color>(scoreColor),
+                        minHeight: 4,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnalysisSection({
+    required String title,
+    required String content,
+  }) {
+    IconData sectionIcon;
+    Color sectionColor;
+
+    final titleLower = title.toLowerCase();
+
+    if (titleLower.contains('مميزات') ||
+        titleLower.contains('مزايا') ||
+        titleLower.contains('advantages') ||
+        titleLower.contains('pros')) {
+      sectionIcon = Icons.check_circle_outline_rounded;
+      sectionColor = successGreen;
+    } else if (titleLower.contains('عيوب') ||
+        titleLower.contains('ضعف') ||
+        titleLower.contains('سلبيات') ||
+        titleLower.contains('disadvantages') ||
+        titleLower.contains('cons')) {
+      sectionIcon = Icons.warning_amber_rounded;
+      sectionColor = Colors.orange;
+    } else if (titleLower.contains('نصيحة') ||
+        titleLower.contains('توصية') ||
+        titleLower.contains('advice') ||
+        titleLower.contains('recommendation')) {
+      sectionIcon = Icons.lightbulb_outline_rounded;
+      sectionColor = Colors.amber.shade700;
+    } else if (titleLower.contains('استفادة') ||
+        titleLower.contains('كيفية') ||
+        titleLower.contains('كيف') ||
+        titleLower.contains('how to') ||
+        titleLower.contains('usage') ||
+        titleLower.contains('أخبارك')) {
+      sectionIcon = Icons.tips_and_updates_rounded;
+      sectionColor = Colors.blue;
+    } else if (titleLower.contains('تقييم') ||
+        titleLower.contains('عام') ||
+        titleLower.contains('overview') ||
+        titleLower.contains('general')) {
+      sectionIcon = Icons.analytics_outlined;
+      sectionColor = Colors.purple;
+    } else if (titleLower.contains('جودة') ||
+        titleLower.contains('أداء') ||
+        titleLower.contains('قيمة') ||
+        titleLower.contains('quality') ||
+        titleLower.contains('performance') ||
+        titleLower.contains('value')) {
+      sectionIcon = Icons.insights_rounded;
+      sectionColor = Colors.indigo;
+    } else if (titleLower.contains('قارن') ||
+        titleLower.contains('مقارنة') ||
+        titleLower.contains('compare') ||
+        titleLower.contains('سعر')) {
+      sectionIcon = Icons.compare_arrows_rounded;
+      sectionColor = Colors.teal;
+    } else {
+      sectionIcon = Icons.article_outlined;
+      sectionColor = primaryBlue;
+    }
+
+    final List<String> items = _parseListItems(content);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cardWhite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: sectionColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(sectionIcon, color: sectionColor, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  textDirection: _getTextDirection(title),
+                  textAlign: _getTextAlign(title),
+                  style: GoogleFonts.cairo(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (items.length > 1)
+            ...items.asMap().entries.map((entry) {
+              final itemIndex = entry.key;
+              final item = entry.value;
+              final displayText = sectionIcon ==
+                  Icons.check_circle_outline_rounded ||
+                  sectionIcon == Icons.warning_amber_rounded
+                  ? '${itemIndex + 1}. $item'
+                  : item;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: sectionColor.withOpacity(0.6),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildFormattedText(displayText),
+                    ),
+                  ],
+                ),
+              );
+            })
+          else
+            _buildFormattedText(content),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormattedText(String text) {
+    final isRating = RegExp(r'\d+\.?\d*/\d+').hasMatch(text.trim());
+
+    if (text.contains('**')) {
+      final List<InlineSpan> spans = [];
+      final parts = text.split('**');
+
+      for (int i = 0; i < parts.length; i++) {
+        if (parts[i].isEmpty) continue;
+
+        final cleanPart = parts[i].trim();
+        final isPartRating = RegExp(r'\d+\.?\d*/\d+').hasMatch(cleanPart);
+
+        if (i % 2 == 1) {
+          spans.add(WidgetSpan(
+            child: Text(
+              parts[i],
+              textDirection: _getTextDirection(parts[i]),
+              style: GoogleFonts.cairo(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                height: 1.6,
+                color: darkColor,
+              ),
+            ),
+          ));
+        } else {
+          spans.add(WidgetSpan(
+            child: Text(
+              parts[i],
+              textDirection: _getTextDirection(parts[i]),
+              style: GoogleFonts.cairo(
+                fontSize: 14,
+                height: 1.6,
+                color: isPartRating
+                    ? _getRatingColor(cleanPart)
+                    : mediumGray,
+                fontWeight:
+                isPartRating ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ));
+        }
+      }
+
+      return RichText(
+        textAlign: _getTextAlign(text),
+        textDirection: _getTextDirection(text),
+        text: TextSpan(children: spans),
+      );
+    }
+
+    return Text(
+      text,
+      textAlign: _getTextAlign(text),
+      textDirection: _getTextDirection(text),
+      style: GoogleFonts.cairo(
+        fontSize: 14,
+        height: 1.6,
+        color: isRating ? _getRatingColor(text.trim()) : mediumGray,
+        fontWeight: isRating ? FontWeight.w600 : FontWeight.normal,
+      ),
+    );
+  }
+
+  Map<String, String> _parseAnalysisSections(String analysis) {
+    final Map<String, String> sections = {};
+
+    final lines = analysis.split('\n');
+    String currentTitle = 'تقييم عام';
+    StringBuffer currentContent = StringBuffer();
+    bool hasArabicContent = false;
+
+    for (String line in lines) {
+      final trimmedLine = line.trim();
+      if (trimmedLine.isEmpty) continue;
+
+      if (RegExp(r'[\u0600-\u06FF]').hasMatch(trimmedLine)) {
+        hasArabicContent = true;
+      }
+
+      final headerMatch = RegExp(r'\*\*(.*?)\*\*').firstMatch(trimmedLine);
+
+      if (headerMatch != null) {
+        if (currentContent.isNotEmpty) {
+          sections[currentTitle] = currentContent.toString().trim();
+        }
+
+        currentTitle =
+            headerMatch.group(1)!.replaceAll(':', '').trim();
+        currentContent = StringBuffer();
+
+        final remainingText = trimmedLine
+            .replaceFirst(headerMatch.group(0)!, '')
+            .trim();
+        if (remainingText.isNotEmpty) {
+          currentContent.writeln(remainingText);
+        }
+      } else {
+        currentContent.writeln(trimmedLine);
+      }
+    }
+
+    if (currentContent.isNotEmpty) {
+      sections[currentTitle] = currentContent.toString().trim();
+    }
+
+    if (sections.isEmpty) {
+      final defaultTitle =
+      hasArabicContent ? 'تحليل العرض' : 'Offer Analysis';
+      sections[defaultTitle] = analysis;
+    }
+
+    return sections;
+  }
+
+  List<String> _parseListItems(String content) {
+    final mixedNumberedRegex = RegExp(r'[\d\u0660-\u0669]+\.\s+');
+
+    if (mixedNumberedRegex.hasMatch(content)) {
+      final parts = content
+          .split(mixedNumberedRegex)
+          .where((s) => s.trim().isNotEmpty)
+          .toList();
+      if (parts.length > 1) {
+        return parts;
+      }
+    }
+
+    final bulletRegex = RegExp(r'[-•*◉○‣⁃◦◘◙◆◇▪▫]\s+');
+    if (bulletRegex.hasMatch(content)) {
+      final parts = content
+          .split(bulletRegex)
+          .where((s) => s.trim().isNotEmpty)
+          .toList();
+      if (parts.length > 1) {
+        return parts;
+      }
+    }
+
+    final arabicBulletRegex = RegExp(r'^[\s]*[-–—•]+\s*');
+    if (content
+        .split('\n')
+        .any((line) => arabicBulletRegex.hasMatch(line.trimLeft()))) {
+      return content
+          .split('\n')
+          .map((line) => line.replaceFirst(arabicBulletRegex, '').trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+
+    return [content];
+  }
+
+  // ==================== Favorite & Cart ====================
 
   Future<void> _toggleFavorite() async {
     setState(() => _isUpdatingFavorite = true);
@@ -353,13 +971,53 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
   }
 
   void _increaseQuantity() {
-    setState(() => _quantity++);
+    final int stock = _offer?['stock'] ?? -1;
+    if (stock > 0 && _quantity >= stock) {
+      _showSnackBar('الكمية المتاحة: $stock فقط', Colors.orange);
+      return;
+    }
+    setState(() {
+      _quantity++;
+      _quantityController.text = '$_quantity';
+    });
     HapticFeedback.lightImpact();
   }
 
   void _decreaseQuantity() {
     if (_quantity > 1) {
-      setState(() => _quantity--);
+      setState(() {
+        _quantity--;
+        _quantityController.text = '$_quantity';
+      });
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _setQuantity(String value) {
+    if (value.isEmpty) {
+      return;
+    }
+
+    final parsed = int.tryParse(value);
+    final int stock = _offer?['stock'] ?? -1;
+
+    if (parsed == null) return;
+
+    if (parsed <= 0) {
+      return;
+    }
+
+    if (stock > 0 && parsed > stock) {
+      setState(() {
+        _quantity = stock;
+        _quantityController.text = '$stock';
+      });
+      _showSnackBar('هذه الكمية غير متوفرة - الكمية المتاحة: $stock فقط',
+          Colors.orange);
+    } else {
+      setState(() {
+        _quantity = parsed;
+      });
       HapticFeedback.lightImpact();
     }
   }
@@ -414,7 +1072,6 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
     _showGoToCartDialog();
   }
 
-
   void _showGoToCartDialog() {
     showDialog(
       context: context,
@@ -428,7 +1085,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
           );
         },
         child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
           title: Row(
             children: [
               Container(
@@ -442,7 +1100,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                   ),
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: const Icon(Icons.check_circle_rounded, color: primaryBlue, size: 28),
+                child: const Icon(Icons.check_circle_rounded,
+                    color: primaryBlue, size: 28),
               ),
               const SizedBox(width: 12),
               Text(
@@ -463,7 +1122,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text('مواصلة التسوق',
-                  style: GoogleFonts.cairo(color: Colors.grey, fontWeight: FontWeight.w600)),
+                  style: GoogleFonts.cairo(
+                      color: Colors.grey, fontWeight: FontWeight.w600)),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
@@ -480,7 +1140,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                 ).then((_) {
                   if (mounted) {
                     setState(() {
-                      _isFavorite = _favoritesService.isOfferFavorite(_offer?['id']);
+                      _isFavorite =
+                          _favoritesService.isOfferFavorite(_offer?['id']);
                     });
                   }
                 });
@@ -489,8 +1150,10 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
               child: Text('الذهاب إلى السلة',
                   style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
@@ -508,7 +1171,9 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
         content: Row(
           children: [
             Icon(
-              color == primaryBlue ? Icons.check_circle_rounded : Icons.info_rounded,
+              color == primaryBlue
+                  ? Icons.check_circle_rounded
+                  : Icons.info_rounded,
               color: Colors.white,
               size: 20,
             ),
@@ -575,6 +1240,187 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
     );
   }
 
+  // ✅ دالة تحويل shipping_cities إلى List<Map>
+  List<Map<String, dynamic>> _getShippingCitiesWithCosts() {
+    final rawCities = _offer?['shipping_cities'];
+    if (rawCities == null) return [];
+
+    List<dynamic> citiesData = [];
+    if (rawCities is List) {
+      citiesData = rawCities;
+    } else if (rawCities is String) {
+      try {
+        citiesData = jsonDecode(rawCities) as List;
+      } catch (_) {
+        return [];
+      }
+    }
+
+    return citiesData.map((cityData) {
+      if (cityData is String) {
+        return {'city': cityData, 'cost': null};
+      }
+      if (cityData is Map) {
+        return {
+          'city': cityData['city']?.toString() ?? '',
+          'cost': cityData['cost']?.toString(),
+        };
+      }
+      return {'city': '', 'cost': null};
+    }).toList();
+  }
+
+  // ✅ كارد الشحن مع الأسعار
+  Widget _buildShippingCard() {
+    final shippingCities = _getShippingCitiesWithCosts();
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            infoBlue.withOpacity(0.06),
+            infoBlue.withOpacity(0.02)
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: infoBlue.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.check_circle_rounded,
+                    color: successGreen, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'الشحن متاح',
+                style: GoogleFonts.cairo(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: successGreen,
+                ),
+              ),
+            ],
+          ),
+          if (shippingCities.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              'مدن الشحن والأسعار:',
+              style: GoogleFonts.cairo(
+                fontSize: 13,
+                color: mediumGray,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...shippingCities.map((cityData) {
+              final city = cityData['city']?.toString() ?? '';
+              final cost = cityData['cost']?.toString();
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: infoBlue.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_on_rounded,
+                        color: Colors.red, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        city,
+                        style: GoogleFonts.cairo(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: darkColor,
+                        ),
+                      ),
+                    ),
+                    if (cost == null || cost.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: warningOrange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'يحدد لاحقاً',
+                          style: GoogleFonts.cairo(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: warningOrange,
+                          ),
+                        ),
+                      )
+                    else if (double.tryParse(cost) == 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: successGreen.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'شحن مجاني',
+                          style: GoogleFonts.cairo(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: successGreen,
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: primaryBlue.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${Helpers.formatPrice(double.tryParse(cost) ?? 0)}',
+                          style: GoogleFonts.cairo(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: primaryBlue,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'جميع المحافظات',
+                style: GoogleFonts.cairo(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== Main Build ====================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -584,20 +1430,26 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
           : _errorMessage != null
           ? _buildErrorWidget()
           : _buildOfferContent(),
-      bottomNavigationBar: _isLoading || _errorMessage != null ? null : _buildBottomBar(),
+      bottomNavigationBar:
+      _isLoading || _errorMessage != null ? null : _buildBottomBar(),
     );
   }
 
   Widget _buildOfferContent() {
     final bool hasDiscount = (_offer?['discount_percentage'] ?? 0) > 0;
-    final double finalPrice = double.tryParse(_offer?['final_price']?.toString() ?? '0') ?? 0;
-    final double originalPrice = double.tryParse(_offer?['price']?.toString() ?? '0') ?? 0;
+    final double finalPrice =
+        double.tryParse(_offer?['final_price']?.toString() ?? '0') ?? 0;
+    final double originalPrice =
+        double.tryParse(_offer?['price']?.toString() ?? '0') ?? 0;
     final int totalWattage = _offer?['total_wattage'] ?? 0;
     final int totalCapacity = _offer?['total_capacity'] ?? 0;
-    final double installationPrice = double.tryParse(_offer?['installation_price']?.toString() ?? '0') ?? 0;
+    final double installationPrice =
+        double.tryParse(_offer?['installation_price']?.toString() ?? '0') ?? 0;
     final int views = _offer?['views'] ?? 0;
-    final double rate = double.tryParse(_offer?['rate']?.toString() ?? '0') ?? 0;
+    final double rate =
+        double.tryParse(_offer?['rate']?.toString() ?? '0') ?? 0;
     final double totalPrice = finalPrice * _quantity;
+    final String governorate = _offer?['governorate_offer']?.toString() ?? '';
 
     List<String> images = [];
     if (_offer?['cover_image'] != null) {
@@ -628,7 +1480,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
               ],
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: darkColor, size: 22),
+              icon: const Icon(Icons.arrow_back_rounded,
+                  color: darkColor, size: 22),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -737,12 +1590,12 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     Row(
                       children: [
                         if (rate > 0) ...[
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
@@ -755,7 +1608,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                                const Icon(Icons.star_rounded,
+                                    color: Colors.amber, size: 18),
                                 const SizedBox(width: 4),
                                 Text(
                                   rate.toStringAsFixed(1),
@@ -771,7 +1625,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                         ],
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(15),
@@ -779,7 +1634,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.visibility_rounded, size: 16, color: Colors.grey.shade600),
+                              Icon(Icons.visibility_rounded,
+                                  size: 16, color: Colors.grey.shade600),
                               const SizedBox(width: 4),
                               Text(
                                 Helpers.formatNumber(views),
@@ -791,10 +1647,46 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                             ],
                           ),
                         ),
+                        if (governorate.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF7C3AED).withOpacity(0.1),
+                                  const Color(0xFF7C3AED).withOpacity(0.05),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: const Color(0xFF7C3AED).withOpacity(0.2),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.location_on_rounded,
+                                    size: 16, color: Color(0xFF7C3AED)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  governorate,
+                                  style: GoogleFonts.cairo(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF7C3AED),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const Spacer(),
                         if (hasDiscount)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
@@ -814,7 +1706,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.discount_rounded, color: Colors.white, size: 16),
+                                const Icon(Icons.discount_rounded,
+                                    color: Colors.white, size: 16),
                                 const SizedBox(width: 4),
                                 Text(
                                   'خصم ${_offer!['discount_percentage']}%',
@@ -830,8 +1723,6 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                       ],
                     ),
                     const SizedBox(height: 20),
-
-
                     Text(
                       _offer?['name_ar'] ?? '',
                       style: GoogleFonts.cairo(
@@ -842,8 +1733,6 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                       ),
                     ),
                     const SizedBox(height: 16),
-
-
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -863,14 +1752,13 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                         if (installationPrice > 0)
                           _buildInfoTag(
                             icon: Icons.build_rounded,
-                            label: 'تركيب: ${Helpers.formatPrice(installationPrice)}',
+                            label:
+                            'تركيب: ${Helpers.formatPrice(installationPrice)}',
                             color: Colors.purple,
                           ),
                       ],
                     ),
                     const SizedBox(height: 24),
-
-
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -929,8 +1817,11 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                       ),
                     ),
                     const SizedBox(height: 24),
-
-
+                    // ✅ قسم الشحن مع الأسعار
+                    if (_offer?['has_shipping'] == true) ...[
+                      _buildShippingCard(),
+                      const SizedBox(height: 24),
+                    ],
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
@@ -970,6 +1861,7 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                               ),
                             ),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Material(
                                   color: Colors.transparent,
@@ -990,17 +1882,36 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                                   ),
                                 ),
                                 Container(
-                                  width: 50,
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: Center(
-                                    child: Text(
-                                      '$_quantity',
-                                      style: GoogleFonts.cairo(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: primaryBlue,
-                                      ),
+                                  width: 60,
+                                  height: 48,
+                                  alignment: Alignment.center,
+                                  child: TextFormField(
+                                    controller: _quantityController,
+                                    textAlign: TextAlign.center,
+                                    keyboardType: TextInputType.number,
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryBlue,
                                     ),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                    ),
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(4),
+                                    ],
+                                    onChanged: _setQuantity,
+                                    onTap: () {
+                                      _quantityController.selection =
+                                          TextSelection(
+                                            baseOffset: 0,
+                                            extentOffset:
+                                            _quantityController.text.length,
+                                          );
+                                    },
                                   ),
                                 ),
                                 Material(
@@ -1049,10 +1960,10 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                       ),
                     ),
                     const SizedBox(height: 24),
-
-
-                    if (_offer?['description_ar'] != null && _offer!['description_ar'].isNotEmpty) ...[
-                      _buildSectionTitle('وصف العرض', Icons.description_rounded),
+                    if (_offer?['description_ar'] != null &&
+                        _offer!['description_ar'].isNotEmpty) ...[
+                      _buildSectionTitle(
+                          'وصف العرض', Icons.description_rounded),
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(18),
@@ -1072,149 +1983,57 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                       ),
                       const SizedBox(height: 24),
                     ],
-
-
-                    if (_offer?['specifications'] != null && (_offer!['specifications'] as List).isNotEmpty) ...[
-                      _buildSectionTitle('المواصفات', Icons.list_alt_rounded),
-                      const SizedBox(height: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: cardWhite,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey.shade200),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: (_offer!['specifications'] as List).length,
-                          separatorBuilder: (context, index) => Divider(
-                            height: 1,
-                            color: Colors.grey.shade100,
-                          ),
-                          itemBuilder: (context, index) {
-                            final spec = _offer!['specifications'][index];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      spec['key'] ?? '',
-                                      style: GoogleFonts.cairo(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: mediumGray,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(
-                                      spec['value'] ?? '',
-                                      style: GoogleFonts.cairo(
-                                        fontSize: 14,
-                                        color: darkColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-
-
-                    if (_offer?['components'] != null && (_offer!['components'] as List).isNotEmpty) ...[
+                    if (_offer?['components'] != null &&
+                        (_offer!['components'] as List).isNotEmpty) ...[
                       _buildSectionTitle('المكونات', Icons.settings_rounded),
                       const SizedBox(height: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: cardWhite,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey.shade200),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: (_offer!['components'] as List).length,
-                          separatorBuilder: (context, index) => Divider(
-                            height: 1,
-                            color: Colors.grey.shade100,
+                      ...(_offer!['components'] as List).map((component) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: cardWhite,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
                           ),
-                          itemBuilder: (context, index) {
-                            final component = _offer!['components'][index];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      component['key'] ?? '',
-                                      style: GoogleFonts.cairo(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: mediumGray,
-                                      ),
-                                    ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  component['key'] ?? '',
+                                  style: GoogleFonts.cairo(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: darkColor,
                                   ),
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(
-                                      component['value'] ?? '',
-                                      style: GoogleFonts.cairo(
-                                        fontSize: 14,
-                                        color: darkColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
+                              Text(
+                                component['value'] ?? '',
+                                style: GoogleFonts.cairo(
+                                  fontSize: 13,
+                                  color: primaryBlue,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                       const SizedBox(height: 24),
                     ],
-
-
-                    if (_offer?['products_in_offer'] != null && (_offer!['products_in_offer'] as List).isNotEmpty) ...[
-                      _buildSectionTitle('المنتجات المشمولة', Icons.inventory_2_rounded),
+                    if (_offer?['products_in_offer'] != null &&
+                        (_offer!['products_in_offer'] as List).isNotEmpty) ...[
+                      _buildSectionTitle(
+                          'المنتجات المشمولة', Icons.inventory_2_rounded),
                       const SizedBox(height: 12),
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: (_offer!['products_in_offer'] as List).length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final product = _offer!['products_in_offer'][index];
-                          return _buildProductInOfferCard(product);
-                        },
-                      ),
+                      ...(_offer!['products_in_offer'] as List).map((product) {
+                        return _buildProductInOfferCard(product);
+                      }).toList(),
                       const SizedBox(height: 24),
                     ],
-
-
                     if (_similarOffers.isNotEmpty) ...[
-                      _buildSectionTitle('عروض مشابهة', Icons.recommend_rounded),
+                      _buildSectionTitle(
+                          'عروض مشابهة', Icons.recommend_rounded),
                       const SizedBox(height: 12),
                       SizedBox(
                         height: 300,
@@ -1225,7 +2044,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                             final offer = _similarOffers[index];
                             return TweenAnimationBuilder(
                               tween: Tween<double>(begin: 0.0, end: 1.0),
-                              duration: Duration(milliseconds: 400 + (index * 100)),
+                              duration:
+                              Duration(milliseconds: 400 + (index * 100)),
                               curve: Curves.easeOut,
                               builder: (context, double value, child) {
                                 return Opacity(
@@ -1237,7 +2057,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                                 );
                               },
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                padding:
+                                const EdgeInsets.symmetric(horizontal: 4),
                                 child: OfferCard(
                                   offer: offer,
                                   apiService: widget.apiService,
@@ -1357,7 +2178,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -1467,7 +2289,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
   }
 
   Widget _buildBottomBar() {
-    final double finalPrice = double.tryParse(_offer?['final_price']?.toString() ?? '0') ?? 0;
+    final double finalPrice =
+        double.tryParse(_offer?['final_price']?.toString() ?? '0') ?? 0;
     final double totalPrice = finalPrice * _quantity;
 
     return Container(
@@ -1556,8 +2379,11 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        _isAnalyzing ? 'جاري التحليل...' : 'تحليل بالذكاء الاصطناعي',
-                        style: GoogleFonts.cairo(fontSize: 14, color: darkColor),
+                        _isAnalyzing
+                            ? 'جاري التحليل...'
+                            : 'تحليل بالذكاء الاصطناعي',
+                        style:
+                        GoogleFonts.cairo(fontSize: 14, color: darkColor),
                       ),
                     ],
                   ),
@@ -1582,8 +2408,11 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        _isInComparison ? 'إزالة من المقارنة' : 'إضافة للمقارنة',
-                        style: GoogleFonts.cairo(fontSize: 14, color: darkColor),
+                        _isInComparison
+                            ? 'إزالة من المقارنة'
+                            : 'إضافة للمقارنة',
+                        style:
+                        GoogleFonts.cairo(fontSize: 14, color: darkColor),
                       ),
                     ],
                   ),
@@ -1597,12 +2426,17 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: _isFavorite
-                      ? [Colors.red.withOpacity(0.1), Colors.red.withOpacity(0.05)]
+                      ? [
+                    Colors.red.withOpacity(0.1),
+                    Colors.red.withOpacity(0.05)
+                  ]
                       : [Colors.grey.shade100, Colors.grey.shade200],
                 ),
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(
-                  color: _isFavorite ? Colors.red.withOpacity(0.3) : Colors.grey.shade300,
+                  color: _isFavorite
+                      ? Colors.red.withOpacity(0.3)
+                      : Colors.grey.shade300,
                 ),
               ),
               child: IconButton(
@@ -1620,12 +2454,15 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                   animation: _heartAnimationController,
                   builder: (context, child) {
                     return Transform.scale(
-                      scale: 1.0 + (_heartAnimationController.value * 0.3),
+                      scale:
+                      1.0 + (_heartAnimationController.value * 0.3),
                       child: child,
                     );
                   },
                   child: Icon(
-                    _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    _isFavorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
                     color: _isFavorite ? Colors.red : Colors.grey,
                     size: 26,
                   ),
@@ -1690,7 +2527,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                       ),
                       const SizedBox(width: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.25),
                           borderRadius: BorderRadius.circular(12),
@@ -1806,7 +2644,8 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
                   ),
                 ],
               ),
-              child: Icon(Icons.error_outline_rounded, size: 50, color: Colors.red.shade300),
+              child: Icon(Icons.error_outline_rounded,
+                  size: 50, color: Colors.red.shade300),
             ),
             const SizedBox(height: 20),
             Text(
@@ -1821,13 +2660,16 @@ class _OfferDetailsScreenState extends State<OfferDetailsScreen>
             ElevatedButton.icon(
               onPressed: _fetchOfferDetails,
               icon: const Icon(Icons.refresh_rounded),
-              label: Text('إعادة المحاولة', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+              label: Text('إعادة المحاولة',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
                 elevation: 5,
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15)),
                 shadowColor: primaryBlue.withOpacity(0.5),
               ),
             ),

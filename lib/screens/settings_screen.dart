@@ -11,7 +11,6 @@ import 'package:GeniusHouse/screens/legal/privacy_screen.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -44,7 +43,8 @@ class SettingsScreen extends StatelessWidget {
                 color: Colors.white.withOpacity(0.25),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.settings_rounded, color: Colors.white, size: 22),
+              child: const Icon(Icons.settings_rounded,
+                  color: Colors.white, size: 22),
             ),
             const SizedBox(width: 10),
             Text(
@@ -75,25 +75,14 @@ class SettingsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             _buildSectionHeader('المظهر', Icons.palette_rounded),
             const SizedBox(height: 12),
-
-
             _buildFontSizeCard(context),
-
             const SizedBox(height: 24),
-
-
             _buildSectionHeader('قانوني', Icons.gavel_rounded),
             const SizedBox(height: 12),
-
-
             _buildLegalCard(context),
-
             const SizedBox(height: 24),
-
-
             _buildAppInfoCard(),
           ],
         ),
@@ -130,7 +119,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-
   Widget _buildFontSizeCard(BuildContext context) {
     return Consumer<FontScaleNotifier>(
       builder: (context, fontScaleNotifier, child) {
@@ -151,7 +139,6 @@ class SettingsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               Row(
                 children: [
                   Container(
@@ -196,7 +183,6 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   if (fontScaleNotifier.scale != 1.0)
                     Material(
                       color: Colors.transparent,
@@ -223,10 +209,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                 ],
               ),
-
               const SizedBox(height: 20),
-
-
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -263,13 +246,11 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(height: 20),
-
-
               Row(
                 children: [
-                  Icon(Icons.text_decrease_rounded, size: 22, color: Colors.grey.shade500),
+                  Icon(Icons.text_decrease_rounded,
+                      size: 22, color: Colors.grey.shade500),
                   Expanded(
                     child: SliderTheme(
                       data: SliderThemeData(
@@ -278,7 +259,8 @@ class SettingsScreen extends StatelessWidget {
                         thumbColor: primaryBlue,
                         overlayColor: primaryBlue.withOpacity(0.2),
                         trackHeight: 6,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                        thumbShape:
+                        const RoundSliderThumbShape(enabledThumbRadius: 10),
                       ),
                       child: Slider(
                         value: fontScaleNotifier.scale,
@@ -294,13 +276,11 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Icon(Icons.text_increase_rounded, size: 22, color: Colors.grey.shade500),
+                  Icon(Icons.text_increase_rounded,
+                      size: 22, color: Colors.grey.shade500),
                 ],
               ),
-
               const SizedBox(height: 12),
-
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -375,7 +355,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-
   Widget _buildLegalCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -393,7 +372,6 @@ class SettingsScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-
           _buildLegalItem(
             context,
             icon: Icons.description_rounded,
@@ -408,10 +386,7 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-
           const Divider(height: 24),
-
-
           _buildLegalItem(
             context,
             icon: Icons.privacy_tip_rounded,
@@ -504,7 +479,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-
   Widget _buildAppInfoCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -524,9 +498,7 @@ class SettingsScreen extends StatelessWidget {
         children: [
           _buildInfoRow('الإصدار', 'v1.0.0'),
           const Divider(height: 20),
-          _buildInfoRow('المطور', 'AA-DEV'),
-          const Divider(height: 20),
-          _buildInfoRow('العلامة التجارية', 'GeniusHouse'),
+          _buildInfoRow('العلامة التجارية', 'NEX'),
         ],
       ),
     );
@@ -561,7 +533,8 @@ class SettingsScreen extends StatelessWidget {
       ..showSnackBar(SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            const Icon(Icons.check_circle_rounded,
+                color: Colors.white, size: 18),
             const SizedBox(width: 8),
             Text(message, style: GoogleFonts.cairo(fontSize: 13)),
           ],

@@ -17,7 +17,6 @@ class RatingApiService {
     return authService.token;
   }
 
-  // الحصول على عناصر الفاتورة التي تحتاج تقييم
   Future<Map<String, dynamic>> getRateableItems(int invoiceId) async {
     try {
       final token = await _getToken();
@@ -26,16 +25,13 @@ class RatingApiService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/user/ratings/invoice/$invoiceId/items'),
+        Uri.parse('$baseUrl/api/nex/v1/user/ratings/invoice/$invoiceId/items'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
       );
-
-      print('Get rateable items response: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       final data = jsonDecode(response.body);
       return data;
@@ -45,7 +41,6 @@ class RatingApiService {
     }
   }
 
-  // إرسال تقييم
   Future<Map<String, dynamic>> submitRating({
     required int invoiceId,
     required int itemId,
@@ -69,10 +64,8 @@ class RatingApiService {
         body['review'] = review;
       }
 
-      print('Submitting rating: $body');
-
       final response = await http.post(
-        Uri.parse('$baseUrl/api/v1/user/ratings/store'),
+        Uri.parse('$baseUrl/api/nex/v1/user/ratings/store'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -80,9 +73,6 @@ class RatingApiService {
         },
         body: jsonEncode(body),
       );
-
-      print('Submit rating response: ${response.statusCode}');
-      print('Response body: ${response.body}');
 
       final data = jsonDecode(response.body);
       return data;

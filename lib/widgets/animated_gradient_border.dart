@@ -1,5 +1,5 @@
 // ملف: widgets/animated_gradient_border.dart
-// يمكن استخدامه لتحسين حدود الستوريز
+
 import 'package:flutter/material.dart';
 
 class AnimatedGradientBorder extends StatefulWidget {

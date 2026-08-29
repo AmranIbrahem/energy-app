@@ -50,7 +50,6 @@ class _ProductsListScreenState extends State<ProductsListScreen>
 
   final TextEditingController _searchController = TextEditingController();
 
-  
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -63,7 +62,6 @@ class _ProductsListScreenState extends State<ProductsListScreen>
   late AnimationController _fadeAnimationController;
   late AnimationController _scaleAnimationController;
 
-  
   String _sortBy = 'created_at';
   String _sortOrder = 'desc';
   String _selectedSort = 'الأحدث';
@@ -182,15 +180,18 @@ class _ProductsListScreenState extends State<ProductsListScreen>
           endpoint = '/v1/user/products/sub-category/${widget.subcategorySlug}';
           requiresAuth = true;
         } else {
-          endpoint = '/v1/user/public/products/sub-category/${widget.subcategorySlug}/$_governorate';
+          endpoint =
+          '/v1/user/public/products/sub-category/${widget.subcategorySlug}/$_governorate';
           requiresAuth = false;
         }
-      } else if (widget.categorySlug != null && widget.categorySlug!.isNotEmpty) {
+      } else if (widget.categorySlug != null &&
+          widget.categorySlug!.isNotEmpty) {
         if (widget.authService?.isAuthenticated == true) {
           endpoint = '/v1/user/products/category/${widget.categorySlug}';
           requiresAuth = true;
         } else {
-          endpoint = '/v1/user/public/products/category/${widget.categorySlug}/$_governorate';
+          endpoint =
+          '/v1/user/public/products/category/${widget.categorySlug}/$_governorate';
           requiresAuth = false;
         }
       } else {
@@ -220,57 +221,115 @@ class _ProductsListScreenState extends State<ProductsListScreen>
         queryParams: params,
       );
 
-      if (response.containsKey('data') && mounted) {
-        List<dynamic> newProducts = [];
+      if (mounted) {
+        // ✅ التحقق من نجاح الاستجابة
+        if (response.containsKey('data')) {
+          List<dynamic> newProducts = [];
 
-        if (response['data'].containsKey('products')) {
-          newProducts = response['data']['products'];
-        } else if (response['data'] is List) {
-          newProducts = response['data'];
-        }
+          // استخراج المنتجات من الاستجابة
+          if (response['data'] is Map && response['data'].containsKey('products')) {
+            newProducts = response['data']['products'] ?? [];
+          } else if (response['data'] is List) {
+            newProducts = response['data'];
+          } else if (response['data'] is Map && response['data'].containsKey('data')) {
+            // بعض الـ APIs ترجع data داخل data
+            newProducts = response['data']['data'] ?? [];
+          }
 
-        final pagination = response['data']['pagination'];
+          // ✅ إذا كانت المنتجات فارغة - هذا ليس خطأ، القسم فارغ فقط
+          if (newProducts.isEmpty && !loadMore) {
+            setState(() {
+              _products = [];
+              _isLoading = false;
+              _isLoadingMore = false;
+              _errorMessage = null; // ⬅️ لا نعرض رسالة خطأ
+              _hasMore = false;
+            });
+            return; // ⬅️ نخرج من الدالة
+          }
 
-        if (loadMore) {
-          setState(() {
-            _products.addAll(newProducts);
-            _isLoadingMore = false;
-          });
+          final pagination = response['data'] is Map
+              ? response['data']['pagination']
+              : null;
+
+          if (loadMore) {
+            setState(() {
+              _products.addAll(newProducts);
+              _isLoadingMore = false;
+            });
+          } else {
+            setState(() {
+              _products = newProducts;
+              _isLoading = false;
+            });
+            _fadeAnimationController.forward(from: 0.0);
+            _scaleAnimationController.forward(from: 0.0);
+          }
+
+          // ✅ معالجة التصفح (pagination)
+          if (pagination != null) {
+            final currentPage = pagination['current_page'] ?? _currentPage;
+            final lastPage = pagination['last_page'] ?? 1;
+            setState(() {
+              _hasMore = currentPage < lastPage;
+              if (_hasMore) _currentPage = currentPage + 1;
+            });
+          } else {
+            setState(() {
+              _hasMore = newProducts.length >= AppConstants.defaultPageSize;
+              if (_hasMore) _currentPage++;
+            });
+          }
         } else {
-          setState(() {
-            _products = newProducts;
-            _isLoading = false;
-          });
-          _fadeAnimationController.forward(from: 0.0);
-          _scaleAnimationController.forward(from: 0.0);
-        }
+          // ✅ الاستجابة لا تحتوي على 'data' - قد يكون خطأ حقيقي
+          final message = response['message'] ?? '';
 
-        if (pagination != null) {
-          final currentPage = pagination['current_page'] ?? _currentPage;
-          final lastPage = pagination['last_page'] ?? 1;
-          setState(() {
-            _hasMore = currentPage < lastPage;
-            if (_hasMore) _currentPage = currentPage + 1;
-          });
-        } else {
-          setState(() {
-            _hasMore = newProducts.length >= AppConstants.defaultPageSize;
-            if (_hasMore) _currentPage++;
-          });
+          // ✅ إذا كانت رسالة "لا توجد منتجات" أو "فارغ" - نعتبرها قسم فارغ
+          if (message.contains('لا توجد') ||
+              message.contains('فارغ') ||
+              message.contains('empty') ||
+              message.contains('not found') ||
+              response.containsKey('status') && response['status'] == 404) {
+            setState(() {
+              _products = [];
+              _isLoading = false;
+              _isLoadingMore = false;
+              _errorMessage = null; // ⬅️ لا نعرض خطأ
+              _hasMore = false;
+            });
+          } else {
+            // ✅ خطأ حقيقي
+            setState(() {
+              _isLoading = false;
+              _isLoadingMore = false;
+              _errorMessage = message.isNotEmpty
+                  ? message
+                  : 'حدث خطأ في تحميل المنتجات';
+            });
+          }
         }
-      } else {
-        setState(() {
-          _isLoading = false;
-          _isLoadingMore = false;
-          _errorMessage = response['message'] ?? 'حدث خطأ في تحميل المنتجات';
-        });
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _isLoadingMore = false;
-        _errorMessage = 'حدث خطأ في الاتصال';
-      });
+      if (mounted) {
+        // ✅ إذا كان الخطأ 404 (غير موجود) - القسم فارغ
+        if (e.toString().contains('404') ||
+            e.toString().contains('Not Found')) {
+          setState(() {
+            _products = [];
+            _isLoading = false;
+            _isLoadingMore = false;
+            _errorMessage = null; // ⬅️ لا نعرض خطأ
+            _hasMore = false;
+          });
+        } else {
+          // ✅ خطأ حقيقي في الاتصال
+          setState(() {
+            _isLoading = false;
+            _isLoadingMore = false;
+            _errorMessage = 'حدث خطأ في الاتصال';
+          });
+        }
+      }
     }
   }
 
@@ -292,7 +351,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: lightGray, 
+      backgroundColor: lightGray,
       appBar: AppBar(
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -315,7 +374,8 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                   child: child,
                 );
               },
-              child: const Icon(Icons.shopping_bag_rounded, color: Colors.yellow, size: 24),
+              child: const Icon(Icons.shopping_bag_rounded,
+                  color: Colors.yellow, size: 24),
             ),
             const SizedBox(width: 10),
             Flexible(
@@ -356,7 +416,9 @@ class _ProductsListScreenState extends State<ProductsListScreen>
               icon: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: Icon(
-                  _isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                  _isGridView
+                      ? Icons.view_list_rounded
+                      : Icons.grid_view_rounded,
                   key: ValueKey(_isGridView),
                   color: Colors.white,
                   size: 22,
@@ -385,7 +447,6 @@ class _ProductsListScreenState extends State<ProductsListScreen>
             ),
             child: Column(
               children: [
-                
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 5),
                   child: TextField(
@@ -461,8 +522,6 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                     ),
                   ),
                 ),
-
-                
                 SizedBox(
                   height: 45,
                   child: ListView.builder(
@@ -527,15 +586,21 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                                   Icon(
                                     option['icon'],
                                     size: 14,
-                                    color: isSelected ? Colors.white : Colors.grey.shade600,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.grey.shade600,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     option['label'],
                                     style: GoogleFonts.cairo(
                                       fontSize: 11,
-                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                      color: isSelected ? Colors.white : Colors.grey.shade700,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : Colors.grey.shade700,
                                     ),
                                   ),
                                 ],
@@ -567,7 +632,8 @@ class _ProductsListScreenState extends State<ProductsListScreen>
   Widget _buildGridView() {
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
-        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 &&
+        if (scrollInfo.metrics.pixels >=
+            scrollInfo.metrics.maxScrollExtent - 200 &&
             !_isLoadingMore &&
             _hasMore) {
           _fetchProducts(loadMore: true);
@@ -617,7 +683,8 @@ class _ProductsListScreenState extends State<ProductsListScreen>
   Widget _buildListView() {
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
-        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 &&
+        if (scrollInfo.metrics.pixels >=
+            scrollInfo.metrics.maxScrollExtent - 200 &&
             !_isLoadingMore &&
             _hasMore) {
           _fetchProducts(loadMore: true);
@@ -763,7 +830,8 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                   ),
                 ],
               ),
-              child: Icon(Icons.error_outline_rounded, size: 50, color: Colors.red.shade300),
+              child: Icon(Icons.error_outline_rounded,
+                  size: 50, color: Colors.red.shade300),
             ),
             const SizedBox(height: 20),
             Text(
@@ -778,13 +846,16 @@ class _ProductsListScreenState extends State<ProductsListScreen>
             ElevatedButton.icon(
               onPressed: _fetchProducts,
               icon: const Icon(Icons.refresh_rounded),
-              label: Text('إعادة المحاولة', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+              label: Text('إعادة المحاولة',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
                 elevation: 5,
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15)),
                 shadowColor: primaryBlue.withOpacity(0.5),
               ),
             ),
@@ -795,70 +866,183 @@ class _ProductsListScreenState extends State<ProductsListScreen>
   }
 
   Widget _buildEmptyWidget() {
+    // ✅ تحديد رسالة مخصصة حسب نوع القسم
+    String emptyMessage;
+    String emptyTitle;
+    IconData emptyIcon;
+
+    if (_searchQuery.isNotEmpty) {
+      emptyTitle = 'لا توجد نتائج';
+      emptyMessage = 'لا توجد منتجات تطابق بحثك "${_searchQuery}"\nحاول استخدام كلمات بحث مختلفة';
+      emptyIcon = Icons.search_off_rounded;
+    } else if (widget.isSubCategory) {
+      emptyTitle = 'القسم فارغ';
+      emptyMessage = 'لا توجد منتجات في هذا القسم الفرعي حالياً\nسيتم إضافة منتجات قريباً';
+      emptyIcon = Icons.inventory_2_rounded;
+    } else if (widget.categorySlug != null) {
+      emptyTitle = 'القسم فارغ';
+      emptyMessage = 'لا توجد منتجات في هذا القسم حالياً\nيرجى تصفح الأقسام الأخرى';
+      emptyIcon = Icons.category_rounded;
+    } else {
+      emptyTitle = 'لا توجد منتجات';
+      emptyMessage = 'لا توجد منتجات متاحة حالياً\nحاول مرة أخرى لاحقاً';
+      emptyIcon = Icons.shopping_bag_rounded;
+    }
+
     return Center(
-      child: TweenAnimationBuilder(
-        tween: Tween<double>(begin: 0.0, end: 1.0),
-        duration: const Duration(milliseconds: 800),
-        builder: (context, double value, child) {
-          return Opacity(
-            opacity: value,
-            child: Transform.scale(
-              scale: 0.8 + (0.2 * value),
-              child: child,
-            ),
-          );
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: 1.0 + (_pulseAnimationController.value * 0.1),
-                  child: child,
-                );
-              },
-              child: Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cardWhite,
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryBlue.withOpacity(0.1),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: TweenAnimationBuilder(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 800),
+          builder: (context, double value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.scale(
+                scale: 0.8 + (0.2 * value),
+                child: child,
+              ),
+            );
+          },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // أيقونة مع أنيميشن نبضي
+              AnimatedBuilder(
+                animation: _pulseAnimationController,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: 1.0 + (_pulseAnimationController.value * 0.05),
+                    child: child,
+                  );
+                },
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        primaryBlue.withOpacity(0.05),
+                        secondaryBlue.withOpacity(0.1),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryBlue.withOpacity(0.08),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: primaryBlue.withOpacity(0.1),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    emptyIcon,
+                    size: 70,
+                    color: primaryBlue.withOpacity(0.3),
+                  ),
                 ),
-                child: Icon(
-                  Icons.shopping_bag_rounded,
-                  size: 70,
-                  color: primaryBlue.withOpacity(0.5),
+              ),
+
+              const SizedBox(height: 32),
+
+              // العنوان
+              Text(
+                emptyTitle,
+                style: GoogleFonts.cairo(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: darkColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 12),
+
+              // الرسالة التفصيلية
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: primaryBlue.withOpacity(0.03),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: primaryBlue.withOpacity(0.08),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  emptyMessage,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.cairo(
+                    fontSize: 15,
+                    color: mediumGray,
+                    height: 1.6,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'لا توجد منتجات',
-              style: GoogleFonts.cairo(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: darkColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'لا توجد منتجات في هذا القسم حالياً',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.cairo(
-                fontSize: 15,
-                color: mediumGray,
-              ),
-            ),
-          ],
+
+              // زر مسح البحث (يظهر فقط عند البحث)
+              if (_searchQuery.isNotEmpty) ...[
+                const SizedBox(height: 28),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                    _fetchProducts();
+                  },
+                  icon: const Icon(Icons.clear_all_rounded, size: 20),
+                  label: Text(
+                    'مسح البحث وعرض الكل',
+                    style: GoogleFonts.cairo(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    elevation: 5,
+                    shadowColor: primaryBlue.withOpacity(0.4),
+                  ),
+                ),
+              ],
+
+              // زر العودة للأقسام الرئيسية
+              if (!_searchQuery.isNotEmpty && widget.categorySlug != null) ...[
+                const SizedBox(height: 20),
+                TextButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(
+                    Icons.arrow_back_rounded,
+                    color: primaryBlue.withOpacity(0.7),
+                    size: 20,
+                  ),
+                  label: Text(
+                    'العودة للأقسام الرئيسية',
+                    style: GoogleFonts.cairo(
+                      color: primaryBlue.withOpacity(0.7),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

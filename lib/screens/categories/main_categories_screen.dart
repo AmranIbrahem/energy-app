@@ -70,7 +70,6 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
     super.dispose();
   }
 
-  
   Future<void> _fetchAllCategories() async {
     setState(() {
       _isLoading = true;
@@ -79,7 +78,7 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
 
     try {
       final response = await widget.apiService.get(
-        '/v1/user/public/categories/main', 
+        '/v1/user/public/categories/main',
         requiresAuth: false,
       );
 
@@ -107,9 +106,9 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
     final filteredCategories = _searchQuery.isEmpty
         ? _categories
         : _categories.where((category) {
-      final name = category['name_ar']?.toString().toLowerCase() ?? '';
-      return name.contains(_searchQuery.toLowerCase());
-    }).toList();
+            final name = category['name_ar']?.toString().toLowerCase() ?? '';
+            return name.contains(_searchQuery.toLowerCase());
+          }).toList();
 
     return Scaffold(
       backgroundColor: lightGray,
@@ -135,7 +134,8 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                   child: child,
                 );
               },
-              child: const Icon(Icons.grid_view_rounded, color: Colors.yellow, size: 24),
+              child: const Icon(Icons.grid_view_rounded,
+                  color: Colors.yellow, size: 24),
             ),
             const SizedBox(width: 10),
             Text(
@@ -163,7 +163,9 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
               icon: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: Icon(
-                  _isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                  _isGridView
+                      ? Icons.view_list_rounded
+                      : Icons.grid_view_rounded,
                   key: ValueKey(_isGridView),
                   color: Colors.white,
                   size: 22,
@@ -227,28 +229,28 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                 ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? Container(
-                  margin: const EdgeInsets.all(6),
-                  child: IconButton(
-                    icon: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        size: 14,
-                        color: Colors.red,
-                      ),
-                    ),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {
-                        _searchQuery = '';
-                      });
-                    },
-                  ),
-                )
+                        margin: const EdgeInsets.all(6),
+                        child: IconButton(
+                          icon: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              size: 14,
+                              color: Colors.red,
+                            ),
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                          },
+                        ),
+                      )
                     : null,
                 filled: true,
                 fillColor: lightGray,
@@ -275,32 +277,31 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
       body: _isLoading
           ? _buildShimmerLoading()
           : _errorMessage != null
-          ? _buildErrorWidget()
-          : _categories.isEmpty
-          ? _buildEmptyState()
-          : filteredCategories.isEmpty
-          ? _buildNoResultsState()
-          : AnimatedSwitcher(
-        duration: const Duration(milliseconds: 500),
-        switchInCurve: Curves.easeInOut,
-        switchOutCurve: Curves.easeInOut,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              scale: animation,
-              child: child,
-            ),
-          );
-        },
-        child: _isGridView
-            ? _buildGridView(filteredCategories)
-            : _buildListView(filteredCategories),
-      ),
+              ? _buildErrorWidget()
+              : _categories.isEmpty
+                  ? _buildEmptyState()
+                  : filteredCategories.isEmpty
+                      ? _buildNoResultsState()
+                      : AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 500),
+                          switchInCurve: Curves.easeInOut,
+                          switchOutCurve: Curves.easeInOut,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: ScaleTransition(
+                                scale: animation,
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: _isGridView
+                              ? _buildGridView(filteredCategories)
+                              : _buildListView(filteredCategories),
+                        ),
     );
   }
 
-  
   Widget _buildShimmerLoading() {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
@@ -326,7 +327,6 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
     );
   }
 
-  
   Widget _buildErrorWidget() {
     return Center(
       child: Column(
@@ -339,7 +339,8 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
               shape: BoxShape.circle,
               color: Colors.red.shade50,
             ),
-            child: Icon(Icons.error_outline_rounded, size: 40, color: Colors.red.shade400),
+            child: Icon(Icons.error_outline_rounded,
+                size: 40, color: Colors.red.shade400),
           ),
           const SizedBox(height: 16),
           Text(
@@ -354,7 +355,8 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
@@ -362,6 +364,7 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
       ),
     );
   }
+
   Widget _buildGridView(List<dynamic> categories) {
     return GridView.builder(
       key: const ValueKey('grid'),
@@ -432,7 +435,7 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
         },
         child: Container(
           decoration: BoxDecoration(
-            color: cardWhite, 
+            color: cardWhite,
             borderRadius: BorderRadius.circular(25),
             boxShadow: [
               BoxShadow(
@@ -464,7 +467,6 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    
                     Hero(
                       tag: 'category_${category['id']}',
                       child: CachedNetworkImage(
@@ -509,8 +511,6 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                         ),
                       ),
                     ),
-
-                    
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -525,15 +525,12 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                         ),
                       ),
                     ),
-
-                    
                     Padding(
                       padding: const EdgeInsets.all(14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          
                           Text(
                             name,
                             style: GoogleFonts.cairo(
@@ -552,8 +549,6 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
-
-                          
                           if (description.isNotEmpty)
                             Text(
                               description,
@@ -566,8 +561,6 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                               overflow: TextOverflow.ellipsis,
                             ),
                           const SizedBox(height: 10),
-
-                          
                           Row(
                             children: [
                               _buildStatChip(
@@ -586,13 +579,12 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                         ],
                       ),
                     ),
-
-                    
                     Positioned(
                       top: 10,
                       right: 10,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [primaryBlue, secondaryBlue],
@@ -695,7 +687,6 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
               },
               child: Row(
                 children: [
-                  
                   Hero(
                     tag: 'category_list_${category['id']}',
                     child: Container(
@@ -751,8 +742,6 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                       ),
                     ),
                   ),
-
-                  
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(14),
@@ -802,8 +791,6 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                       ),
                     ),
                   ),
-
-                  
                   Container(
                     margin: const EdgeInsets.only(right: 10),
                     padding: const EdgeInsets.all(8),
@@ -888,7 +875,7 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
-        color: lightGray, 
+        color: lightGray,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: Colors.grey.shade200,
@@ -943,7 +930,7 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
               height: 110,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: cardWhite, 
+                color: cardWhite,
                 boxShadow: [
                   BoxShadow(
                     color: primaryBlue.withOpacity(0.08),
@@ -1011,7 +998,7 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                 height: 110,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: cardWhite, 
+                  color: cardWhite,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.orange.withOpacity(0.15),
@@ -1055,14 +1042,17 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
               icon: const Icon(Icons.clear_rounded, size: 18),
               label: Text(
                 'مسح البحث',
-                style: GoogleFonts.cairo(fontWeight: FontWeight.w600, fontSize: 13),
+                style: GoogleFonts.cairo(
+                    fontWeight: FontWeight.w600, fontSize: 13),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
                 elevation: 5,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 shadowColor: primaryBlue.withOpacity(0.5),
               ),
             ),

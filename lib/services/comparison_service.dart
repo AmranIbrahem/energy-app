@@ -18,7 +18,6 @@ class ComparisonService {
   int get productsCount => _products.length;
   int get offersCount => _offers.length;
 
-  // تحميل بيانات المقارنة من التخزين المحلي
   Future<void> loadComparisonData() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -33,21 +32,17 @@ class ComparisonService {
     }
   }
 
-  // حفظ بيانات المقارنة
   Future<void> _saveComparisonData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('comparison_products', jsonEncode(_products));
     await prefs.setString('comparison_offers', jsonEncode(_offers));
   }
 
-  // إضافة منتج للمقارنة
   Future<bool> addProduct(Map<String, dynamic> product) async {
-    // التحقق من عدم التكرار
     if (_products.any((p) => p['id'] == product['id'])) {
       return false;
     }
 
-    // الحد الأقصى 4 منتجات
     if (_products.length >= 4) {
       return false;
     }
@@ -70,14 +65,11 @@ class ComparisonService {
     return true;
   }
 
-  // إضافة عرض للمقارنة
   Future<bool> addOffer(Map<String, dynamic> offer) async {
-    // التحقق من عدم التكرار
     if (_offers.any((o) => o['id'] == offer['id'])) {
       return false;
     }
 
-    // الحد الأقصى 4 عروض
     if (_offers.length >= 4) {
       return false;
     }
@@ -101,43 +93,36 @@ class ComparisonService {
     return true;
   }
 
-  // إزالة منتج من المقارنة
   Future<void> removeProduct(int productId) async {
     _products.removeWhere((p) => p['id'] == productId);
     await _saveComparisonData();
   }
 
-  // إزالة عرض من المقارنة
   Future<void> removeOffer(int offerId) async {
     _offers.removeWhere((o) => o['id'] == offerId);
     await _saveComparisonData();
   }
 
-  // مسح جميع المنتجات من المقارنة
   Future<void> clearProducts() async {
     _products.clear();
     await _saveComparisonData();
   }
 
-  // مسح جميع العروض من المقارنة
   Future<void> clearOffers() async {
     _offers.clear();
     await _saveComparisonData();
   }
 
-  // مسح الكل
   Future<void> clearAll() async {
     _products.clear();
     _offers.clear();
     await _saveComparisonData();
   }
 
-  // التحقق من وجود منتج في المقارنة
   bool isProductInComparison(int productId) {
     return _products.any((p) => p['id'] == productId);
   }
 
-  // التحقق من وجود عرض في المقارنة
   bool isOfferInComparison(int offerId) {
     return _offers.any((o) => o['id'] == offerId);
   }

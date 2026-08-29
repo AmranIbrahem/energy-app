@@ -15,18 +15,16 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ التعامل مع القيم null
     final String name = category['name_ar']?.toString() ?? '';
     final String imageUrl = category['image']?.toString() ?? '';
 
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 80,  // ✅ تصغير العرض قليلاً
+        width: 80,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Image
             Container(
               width: 60,
               height: 60,
@@ -45,28 +43,27 @@ class CategoryCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(30),
                 child: imageUrl.isNotEmpty
                     ? CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Shimmer.fromColors(
-                    baseColor: Colors.grey.shade300,
-                    highlightColor: Colors.grey.shade100,
-                    child: Container(color: Colors.grey.shade300),
-                  ),
-                  errorWidget: (context, url, error) => Icon(
-                    Icons.category,
-                    size: 30,
-                    color: const Color(0xFF4CAF50),
-                  ),
-                )
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Shimmer.fromColors(
+                          baseColor: Colors.grey.shade300,
+                          highlightColor: Colors.grey.shade100,
+                          child: Container(color: Colors.grey.shade300),
+                        ),
+                        errorWidget: (context, url, error) => Icon(
+                          Icons.category,
+                          size: 30,
+                          color: const Color(0xFF4CAF50),
+                        ),
+                      )
                     : Icon(
-                  Icons.category,
-                  size: 30,
-                  color: const Color(0xFF4CAF50),
-                ),
+                        Icons.category,
+                        size: 30,
+                        color: const Color(0xFF4CAF50),
+                      ),
               ),
             ),
             const SizedBox(height: 6),
-            // Name
             Flexible(
               child: Text(
                 name,

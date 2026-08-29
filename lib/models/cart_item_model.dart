@@ -1,4 +1,7 @@
 // lib/models/cart_item_model.dart
+
+import 'dart:convert';
+
 class CartItemModel {
   final int id;
   final String name;
@@ -10,11 +13,13 @@ class CartItemModel {
   int quantity;
   final double? discountPercentage;
 
-
   final String itemType;
   final List<Map<String, dynamic>>? productsInOffer;
   final int? totalWattage;
   final int? totalCapacity;
+
+  // ✅ إضافة بيانات الشحن
+  final List<Map<String, dynamic>>? shippingCities;
 
   CartItemModel({
     required this.id,
@@ -30,12 +35,52 @@ class CartItemModel {
     this.productsInOffer,
     this.totalWattage,
     this.totalCapacity,
+    this.shippingCities,
   });
 
   double get totalPrice => finalPrice * quantity;
 
-
   bool get isOffer => itemType == 'offer';
+
+  // ✅ دالة للحصول على سعر الشحن لمدينة معينة
+  double? getShippingCostForCity(String? governorate) {
+    if (governorate == null || shippingCities == null || shippingCities!.isEmpty) {
+      return null;
+    }
+
+    for (var cityData in shippingCities!) {
+      final city = cityData['city']?.toString() ?? '';
+      if (city == governorate) {
+        final cost = cityData['cost']?.toString();
+        if (cost == null || cost.isEmpty) return null; // غير محدد
+        return double.tryParse(cost);
+      }
+    }
+    return null; // المدينة غير موجودة في القائمة
+  }
+
+  // ✅ هل الشحن متاح لهذا العنصر
+  bool get hasShippingInfo =>
+      shippingCities != null && shippingCities!.isNotEmpty;
+
+  // ✅ هل الشحن مجاني لمدينة معينة
+  bool isFreeShippingForCity(String? governorate) {
+    final cost = getShippingCostForCity(governorate);
+    return cost != null && cost == 0;
+  }
+
+  // ✅ هل الشحن غير محدد لمدينة معينة
+  bool isShippingPendingForCity(String? governorate) {
+    if (governorate == null || !hasShippingInfo) return false;
+    final cost = getShippingCostForCity(governorate);
+    return cost == null;
+  }
+
+  // ✅ هل الشحن محسوب لمدينة معينة
+  bool isShippingCalculatedForCity(String? governorate) {
+    final cost = getShippingCostForCity(governorate);
+    return cost != null && cost > 0;
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -52,6 +97,7 @@ class CartItemModel {
       'products_in_offer': productsInOffer,
       'total_wattage': totalWattage,
       'total_capacity': totalCapacity,
+      'shipping_cities': shippingCities,
     };
   }
 
@@ -72,15 +118,48 @@ class CartItemModel {
           : null,
       totalWattage: json['total_wattage'],
       totalCapacity: json['total_capacity'],
+      shippingCities: json['shipping_cities'] != null
+          ? List<Map<String, dynamic>>.from(json['shipping_cities'])
+          : null,
     );
   }
 
+  // ✅ دالة مساعدة لتحويل shipping_cities إلى الصيغة الصحيحة
+  static List<Map<String, dynamic>>? _parseShippingCities(dynamic rawCities) {
+    if (rawCities == null) return null;
 
-  factory CartItemModel.fromOffer(Map<String, dynamic> offer, {int quantity = 1}) {
-    final double price = double.tryParse(offer['price']?.toString() ?? '0') ?? 0;
-    final double finalPrice = double.tryParse(offer['final_price']?.toString() ?? '0') ?? 0;
+    List<dynamic> citiesData = [];
+    if (rawCities is List) {
+      citiesData = rawCities;
+    } else if (rawCities is String) {
+      try {
+        citiesData = jsonDecode(rawCities) as List;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return citiesData.map((cityData) {
+      if (cityData is String) {
+        return {'city': cityData, 'cost': null};
+      }
+      if (cityData is Map) {
+        return {
+          'city': cityData['city']?.toString() ?? '',
+          'cost': cityData['cost']?.toString(),
+        };
+      }
+      return {'city': '', 'cost': null};
+    }).toList();
+  }
+
+  factory CartItemModel.fromOffer(Map<String, dynamic> offer,
+      {int quantity = 1}) {
+    final double price =
+        double.tryParse(offer['price']?.toString() ?? '0') ?? 0;
+    final double finalPrice =
+        double.tryParse(offer['final_price']?.toString() ?? '0') ?? 0;
     final int stock = offer['stock'] ?? -1;
-
 
     List<Map<String, dynamic>> productsInOffer = [];
     if (offer['products_in_offer'] != null) {
@@ -110,13 +189,16 @@ class CartItemModel {
       productsInOffer: productsInOffer,
       totalWattage: offer['total_wattage'],
       totalCapacity: offer['total_capacity'],
+      shippingCities: _parseShippingCities(offer['shipping_cities']),
     );
   }
 
-
-  factory CartItemModel.fromProduct(Map<String, dynamic> product, {int quantity = 1}) {
-    final double price = double.tryParse(product['price']?.toString() ?? '0') ?? 0;
-    final double finalPrice = double.tryParse(product['final_price']?.toString() ?? '0') ?? 0;
+  factory CartItemModel.fromProduct(Map<String, dynamic> product,
+      {int quantity = 1}) {
+    final double price =
+        double.tryParse(product['price']?.toString() ?? '0') ?? 0;
+    final double finalPrice =
+        double.tryParse(product['final_price']?.toString() ?? '0') ?? 0;
     final int stock = product['stock'] ?? 0;
 
     return CartItemModel(
@@ -130,6 +212,7 @@ class CartItemModel {
       quantity: quantity,
       discountPercentage: product['discount_percentage']?.toDouble(),
       itemType: 'product',
+      shippingCities: _parseShippingCities(product['shipping_cities']),
     );
   }
 }

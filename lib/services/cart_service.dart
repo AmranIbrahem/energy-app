@@ -1,4 +1,5 @@
 // lib/services/cart_service.dart
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -12,6 +13,9 @@ class CartService extends ChangeNotifier {
 
   List<CartItemModel> _items = [];
   List<CartItemModel> get items => List.unmodifiable(_items);
+
+  // ✅ محافظة المستخدم - يتم تعيينها من الخارج
+  String? userGovernorate;
 
   int get itemCount => _items.length;
 
@@ -41,6 +45,61 @@ class CartService extends ChangeNotifier {
 
   double get totalDiscount {
     return originalTotalPrice - totalPrice;
+  }
+
+  // ✅ إجمالي رسوم الشحن المحسوبة
+  double get calculatedShippingCost {
+    double total = 0;
+    for (var item in _items) {
+      final cost = item.getShippingCostForCity(userGovernorate);
+      if (cost != null && cost > 0) {
+        total += cost;
+      }
+    }
+    return total;
+  }
+
+  // ✅ عدد العناصر التي رسوم شحنها غير محددة
+  int get pendingShippingItemsCount {
+    int count = 0;
+    for (var item in _items) {
+      if (item.isShippingPendingForCity(userGovernorate)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  // ✅ عدد العناصر التي الشحن لها مجاني
+  int get freeShippingItemsCount {
+    int count = 0;
+    for (var item in _items) {
+      if (item.isFreeShippingForCity(userGovernorate)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  // ✅ عدد العناصر التي الشحن لها محسوب
+  int get calculatedShippingItemsCount {
+    int count = 0;
+    for (var item in _items) {
+      if (item.isShippingCalculatedForCity(userGovernorate)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  // ✅ الإجمالي النهائي مع الشحن
+  double get totalPriceWithShipping {
+    return totalPrice + calculatedShippingCost;
+  }
+
+  // ✅ هل يوجد أي عنصر بشحن غير محدد
+  bool get hasPendingShipping {
+    return pendingShippingItemsCount > 0;
   }
 
   Future<void> loadCart() async {
@@ -112,7 +171,6 @@ class CartService extends ChangeNotifier {
     _saveCart();
   }
 
-  // ✅ التعديل هنا - أضف async و Future<void>
   Future<void> clearCart() async {
     _items.clear();
     await _saveCart();

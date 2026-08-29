@@ -12,7 +12,6 @@ class TextAdService {
     required this.authService,
   });
 
-  // جلب الإعلانات النصية النشطة
   Future<List<Map<String, dynamic>>> getActiveTextAds() async {
     try {
       final response = await http.get(
@@ -35,7 +34,6 @@ class TextAdService {
     }
   }
 
-  // جلب الإعلانات للـ Carousel مع تحديد العدد
   Future<List<Map<String, dynamic>>> getCarouselTextAds({int limit = 5}) async {
     try {
       final response = await http.get(

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:lottie/lottie.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart' hide FadeInAnimation;
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'
+    hide FadeInAnimation;
 import 'package:GeniusHouse/utils/constants.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
@@ -33,7 +34,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late final AnimationController _floatingController;
   int _currentPage = 0;
 
-
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -46,11 +46,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       animationPath: 'assets/animations/solar-panel.json',
       title: 'طاقة شمسية',
       subtitle: 'لمنزلك',
-      description: 'وفر حتى 70% من فواتير الكهرباء مع أحدث تقنيات الطاقة الشمسية',
+      description:
+          'وفر حتى 70% من فواتير الكهرباء مع أحدث تقنيات الطاقة الشمسية',
       color: primaryBlue,
       secondaryColor: secondaryBlue,
       gradientColors: [primaryBlue, secondaryBlue],
       icon: Icons.solar_power_rounded,
+    ),
+    OnboardingModel(
+      animationPath: 'assets/animations/smart_home.json',
+      title: 'أجهزة منزلية',
+      subtitle: 'ذكية ومتطورة',
+      description:
+          'مجموعة واسعة من الأجهزة الكهربائية الحديثة لتجعل حياتك أكثر راحة وكفاءة.',
+      color: primaryBlue,
+      secondaryColor: secondaryBlue,
+      gradientColors: [primaryBlue, secondaryBlue],
+      icon: Icons.home_repair_service_rounded,
     ),
     OnboardingModel(
       animationPath: 'assets/animations/successful-food-delivery.json',
@@ -137,7 +149,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _skipToEnd() {
     _pageController.animateToPage(
-      2,
+      _onboardingData.length - 1,
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeOutCubic,
     );
@@ -170,20 +182,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return Scaffold(
       body: Stack(
         children: [
-
           _buildAnimatedBackground(),
-
-
           _buildParticleEffect(),
-
-
           SafeArea(
             child: Column(
               children: [
-
                 _buildTopBar(),
-
-
                 Expanded(
                   child: PageView.builder(
                     controller: _pageController,
@@ -223,8 +227,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     },
                   ),
                 ),
-
-
                 _buildBottomSection(),
               ],
             ),
@@ -244,7 +246,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           decoration: BoxDecoration(
             gradient: RadialGradient(
               center: Alignment(
-                _currentPage == 0 ? -0.4 : _currentPage == 1 ? 0 : 0.4,
+                _currentPage == 0
+                    ? -0.4
+                    : _currentPage == 1
+                        ? 0
+                        : 0.4,
                 -0.4,
               ),
               radius: 1.3,
@@ -264,7 +270,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildParticleEffect() {
     return IgnorePointer(
       child: AnimatedBuilder(
-        animation: Listenable.merge([_particleController, _colorTransitionController]),
+        animation:
+            Listenable.merge([_particleController, _colorTransitionController]),
         builder: (context, child) {
           return CustomPaint(
             painter: ParticlePainter(
@@ -284,7 +291,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-
           TweenAnimationBuilder(
             tween: Tween<double>(begin: 0, end: 1),
             duration: const Duration(milliseconds: 800),
@@ -293,7 +299,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               return Transform.scale(
                 scale: value,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [primaryBlue, secondaryBlue],
@@ -312,7 +319,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
@@ -326,9 +332,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         ),
                       ),
                       const SizedBox(width: 10),
-
                       Text(
-                        'GeniusHouse',
+                        'NEX',
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -342,8 +347,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               );
             },
           ),
-
-
           if (_currentPage < _onboardingData.length - 1)
             TweenAnimationBuilder(
               tween: Tween<double>(begin: 0, end: 1),
@@ -360,7 +363,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       onTap: _skipToEnd,
                       borderRadius: BorderRadius.circular(25),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -418,12 +422,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: FadeInAnimation(child: widget),
             ),
             children: [
-
               _buildPageIndicator(),
-
               const SizedBox(height: 24),
-
-
               if (_currentPage == _onboardingData.length - 1) ...[
                 _buildGetStartedButton(),
                 const SizedBox(height: 12),
@@ -502,7 +502,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -516,7 +517,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                  const Icon(Icons.arrow_forward_rounded,
+                      color: Colors.white, size: 20),
                 ],
               ),
             ),
@@ -557,15 +559,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.rocket_launch_rounded, color: Colors.white, size: 22),
+                  const Icon(Icons.rocket_launch_rounded,
+                      color: Colors.white, size: 22),
                   const SizedBox(width: 10),
                   Text(
-                    'ابدأ مع GeniusHouse',
+                    'ابدأ مع NEX',
                     style: GoogleFonts.cairo(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -600,7 +604,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             child: TextButton(
               onPressed: _goToLogin,
               style: TextButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -625,7 +630,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 }
 
-
 class OnboardingModel {
   final String animationPath;
   final String title;
@@ -647,7 +651,6 @@ class OnboardingModel {
     required this.icon,
   });
 }
-
 
 class OnboardingPageContent extends StatelessWidget {
   final OnboardingModel data;
@@ -679,20 +682,11 @@ class OnboardingPageContent extends StatelessWidget {
             ),
             children: [
               const SizedBox(height: 10),
-
-
               _buildAnimatedIllustration(),
-
               const SizedBox(height: 35),
-
-
               _buildTitleSection(),
-
               const SizedBox(height: 20),
-
-
               _buildDescription(),
-
               const SizedBox(height: 30),
             ],
           ),
@@ -818,7 +812,6 @@ class OnboardingPageContent extends StatelessWidget {
   }
 }
 
-
 class ParticlePainter extends CustomPainter {
   final double progress;
   final Color color;
@@ -832,7 +825,6 @@ class ParticlePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final random = math.Random(42);
 
-
     final largePaint = Paint()
       ..color = color.withOpacity(0.08)
       ..style = PaintingStyle.fill;
@@ -844,7 +836,6 @@ class ParticlePainter extends CustomPainter {
       canvas.drawCircle(Offset(x, y), radius, largePaint);
     }
 
-
     final smallPaint = Paint()
       ..color = color.withOpacity(0.15)
       ..style = PaintingStyle.fill;
@@ -854,7 +845,6 @@ class ParticlePainter extends CustomPainter {
       final y = ((i * 37 + progress * size.height * 0.4) % size.height);
       canvas.drawCircle(Offset(x, y), 1.2, smallPaint);
     }
-
 
     final glowPaint = Paint()
       ..color = color.withOpacity(0.04)

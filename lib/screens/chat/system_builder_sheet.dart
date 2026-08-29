@@ -3,13 +3,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:GeniusHouse/services/api_service.dart';
 
 class SystemBuilderSheet extends StatefulWidget {
   final Function(String message) onSend;
+  final ApiService apiService; // ✅ جديد
 
   const SystemBuilderSheet({
     super.key,
     required this.onSend,
+    required this.apiService, // ✅ جديد
   });
 
   @override
@@ -21,10 +24,11 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
   final List<DeviceGroup> _groups = [];
   final TextEditingController _deviceNameController = TextEditingController();
   final TextEditingController _devicePowerController = TextEditingController();
-  final TextEditingController _deviceDayHoursController = TextEditingController();
-  final TextEditingController _deviceNightHoursController = TextEditingController();
+  final TextEditingController _deviceDayHoursController =
+  TextEditingController();
+  final TextEditingController _deviceNightHoursController =
+  TextEditingController();
   final TextEditingController _groupNameController = TextEditingController();
-
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
@@ -36,28 +40,15 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
   static const Color dayColor = Color(0xFFF59E0B);
   static const Color nightColor = Color(0xFF6366F1);
 
-  final List<Map<String, dynamic>> _suggestedDevices = [
-    {'name': 'مكيف 1 طن', 'power': 1200, 'icon': Icons.ac_unit_rounded},
-    {'name': 'مكيف 1.5 طن', 'power': 1800, 'icon': Icons.ac_unit_rounded},
-    {'name': 'مكيف 2 طن', 'power': 2400, 'icon': Icons.ac_unit_rounded},
-    {'name': 'ثلاجة', 'power': 200, 'icon': Icons.kitchen_rounded},
-    {'name': 'فريزر', 'power': 300, 'icon': Icons.kitchen_rounded},
-    {'name': 'غسالة', 'power': 500, 'icon': Icons.local_laundry_service_rounded},
-    {'name': 'ميكرويف', 'power': 1000, 'icon': Icons.microwave_rounded},
-    {'name': 'تلفزيون LED', 'power': 100, 'icon': Icons.tv_rounded},
-    {'name': 'لابتوب', 'power': 65, 'icon': Icons.laptop_rounded},
-    {'name': 'كمبيوتر مكتبي', 'power': 300, 'icon': Icons.desktop_windows_rounded},
-    {'name': 'راوتر انترنت', 'power': 10, 'icon': Icons.router_rounded},
-    {'name': 'شاحن موبايل', 'power': 20, 'icon': Icons.phone_android_rounded},
-    {'name': 'سخان كهربائي', 'power': 1500, 'icon': Icons.water_drop_rounded},
-    {'name': 'مروحة', 'power': 60, 'icon': Icons.air_rounded},
-    {'name': 'مكنسة كهربائية', 'power': 800, 'icon': Icons.cleaning_services_rounded},
-    {'name': 'مكواة', 'power': 1200, 'icon': Icons.iron_rounded},
-    {'name': 'إضاءة غرفة', 'power': 50, 'icon': Icons.lightbulb_rounded},
-    {'name': 'إضاءة منزل كامل', 'power': 200, 'icon': Icons.light_rounded},
-    {'name': 'مضخة ماء 1HP', 'power': 750, 'icon': Icons.water_rounded},
-    {'name': 'مضخة ماء 2HP', 'power': 1500, 'icon': Icons.water_rounded},
-  ];
+  // ✅ قائمة الأجهزة من الـ API
+  List<dynamic> _suggestedDevices = [];
+  bool _isLoadingDevices = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDeviceTemplates();
+  }
 
   @override
   void dispose() {
@@ -67,6 +58,84 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
     _deviceNightHoursController.dispose();
     _groupNameController.dispose();
     super.dispose();
+  }
+
+  // ✅ جلب الأجهزة من الـ API
+  Future<void> _fetchDeviceTemplates() async {
+    setState(() => _isLoadingDevices = true);
+    try {
+      final response = await widget.apiService.get(
+        '/v1/user/public/device-templates',
+        requiresAuth: false,
+      );
+
+      if (mounted) {
+        final data = response['data'];
+
+        List<dynamic> devices = [];
+
+        // محاولة استخراج الأجهزة بطرق مختلفة
+        if (data is Map) {
+          if (data.containsKey('devices')) {
+            devices = List<dynamic>.from(data['devices'] ?? []);
+          } else if (data.containsKey('data') && data['data'] is Map) {
+            devices = List<dynamic>.from(data['data']['devices'] ?? []);
+          } else if (data.containsKey('data') && data['data'] is List) {
+            devices = List<dynamic>.from(data['data']);
+          }
+        } else if (data is List) {
+          devices = data;
+        }
+
+        setState(() {
+          _suggestedDevices = devices;
+          _isLoadingDevices = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingDevices = false);
+      }
+    }
+  }
+  // ✅ تحويل اسم الأيقونة من النص إلى IconData
+  IconData _getIconFromString(String iconName) {
+    switch (iconName) {
+      case 'ac_unit':
+        return Icons.ac_unit_rounded;
+      case 'kitchen':
+        return Icons.kitchen_rounded;
+      case 'local_laundry_service':
+        return Icons.local_laundry_service_rounded;
+      case 'microwave':
+        return Icons.microwave_rounded;
+      case 'tv':
+        return Icons.tv_rounded;
+      case 'laptop':
+        return Icons.laptop_rounded;
+      case 'desktop_windows':
+        return Icons.desktop_windows_rounded;
+      case 'router':
+        return Icons.router_rounded;
+      case 'phone_android':
+        return Icons.phone_android_rounded;
+      case 'water_drop':
+        return Icons.water_drop_rounded;
+      case 'air':
+        return Icons.air_rounded;
+      case 'cleaning_services':
+        return Icons.cleaning_services_rounded;
+      case 'iron':
+        return Icons.iron_rounded;
+      case 'lightbulb':
+        return Icons.lightbulb_rounded;
+      case 'light':
+        return Icons.light_rounded;
+      case 'water':
+        return Icons.water_rounded;
+      default:
+        return Icons.devices_rounded;
+    }
   }
 
   void _addDevice() {
@@ -90,7 +159,8 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
     final nightHours = double.tryParse(nightHoursText) ?? 0;
 
     if (dayHours == 0 && nightHours == 0) {
-      _showSnackBar('الرجاء إدخال ساعات التشغيل في النهار أو الليل', Colors.orange);
+      _showSnackBar(
+          'الرجاء إدخال ساعات التشغيل في النهار أو الليل', Colors.orange);
       return;
     }
 
@@ -109,20 +179,27 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
     });
   }
 
+  // ✅ عند الضغط على جهاز شائع - يملأ الحقول تلقائياً
   void _addSuggestedDevice(Map<String, dynamic> device) {
     HapticFeedback.lightImpact();
     setState(() {
-      _deviceNameController.text = device['name'];
-      _devicePowerController.text = device['power'].toString();
-      _deviceDayHoursController.text = '1';
-      _deviceNightHoursController.text = '0';
+      _deviceNameController.text = device['name_ar'] ?? '';
+      _devicePowerController.text = (device['power_watts'] ?? 0).toString();
+      _deviceDayHoursController.text =
+          (device['default_day_hours'] ?? 1).toString();
+      _deviceNightHoursController.text =
+          (device['default_night_hours'] ?? 0).toString();
     });
+
+    _showSnackBar(
+      'تم تعبئة بيانات "${device['name_ar']}" - اضغط "إضافة الجهاز" للتأكيد',
+      primaryBlue,
+    );
   }
 
   void _removeDevice(int index) {
     HapticFeedback.mediumImpact();
     setState(() {
-
       for (var group in _groups) {
         group.deviceIndices.remove(index);
 
@@ -136,7 +213,6 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
     });
   }
 
-
   void _showCreateGroupDialog({int? editGroupIndex}) {
     final isEditing = editGroupIndex != null;
     List<int> selectedIndices = [];
@@ -146,7 +222,6 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
       _groupNameController.text = _groups[editGroupIndex].name;
     } else {
       _groupNameController.clear();
-
       _groupNameController.text = 'مجموعة ${_groups.length + 1}';
     }
 
@@ -169,11 +244,13 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                   decoration: InputDecoration(
                     hintText: 'اسم المجموعة',
                     hintStyle: GoogleFonts.cairo(fontSize: 13),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('اختر الأجهزة:', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                Text('اختر الأجهزة:',
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 if (_devices.isEmpty)
                   Padding(
@@ -197,29 +274,35 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                         }
                       });
                     },
-                    title: Text(device.name, style: GoogleFonts.cairo(fontSize: 13)),
+                    title: Text(device.name,
+                        style: GoogleFonts.cairo(fontSize: 13)),
                     subtitle: Row(
                       children: [
                         Text(
                           '${device.power.toStringAsFixed(0)} واط',
-                          style: GoogleFonts.cairo(fontSize: 11, color: mediumGray),
+                          style: GoogleFonts.cairo(
+                              fontSize: 11, color: mediumGray),
                         ),
                         if (device.dayHours > 0) ...[
                           const SizedBox(width: 8),
-                          Icon(Icons.wb_sunny_rounded, size: 12, color: dayColor),
+                          Icon(Icons.wb_sunny_rounded,
+                              size: 12, color: dayColor),
                           const SizedBox(width: 2),
                           Text(
                             '${device.dayHours.toStringAsFixed(1)}س',
-                            style: GoogleFonts.cairo(fontSize: 10, color: dayColor),
+                            style: GoogleFonts.cairo(
+                                fontSize: 10, color: dayColor),
                           ),
                         ],
                         if (device.nightHours > 0) ...[
                           const SizedBox(width: 8),
-                          Icon(Icons.nights_stay_rounded, size: 12, color: nightColor),
+                          Icon(Icons.nights_stay_rounded,
+                              size: 12, color: nightColor),
                           const SizedBox(width: 2),
                           Text(
                             '${device.nightHours.toStringAsFixed(1)}س',
-                            style: GoogleFonts.cairo(fontSize: 10, color: nightColor),
+                            style: GoogleFonts.cairo(
+                                fontSize: 10, color: nightColor),
                           ),
                         ],
                       ],
@@ -242,7 +325,8 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                   Navigator.pop(context);
                   _removeGroup(editGroupIndex);
                 },
-                child: Text('حذف المجموعة', style: GoogleFonts.cairo(color: Colors.red)),
+                child: Text('حذف المجموعة',
+                    style: GoogleFonts.cairo(color: Colors.red)),
               ),
             ElevatedButton(
               onPressed: () {
@@ -251,13 +335,16 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                   return;
                 }
                 if (selectedIndices.length < 2) {
-                  _showSnackBar('الرجاء اختيار جهازين على الأقل', Colors.orange);
+                  _showSnackBar(
+                      'الرجاء اختيار جهازين على الأقل', Colors.orange);
                   return;
                 }
                 setState(() {
                   if (isEditing) {
-                    _groups[editGroupIndex].name = _groupNameController.text.trim();
-                    _groups[editGroupIndex].deviceIndices = List.from(selectedIndices);
+                    _groups[editGroupIndex].name =
+                        _groupNameController.text.trim();
+                    _groups[editGroupIndex].deviceIndices =
+                        List.from(selectedIndices);
                   } else {
                     _groups.add(DeviceGroup(
                       name: _groupNameController.text.trim(),
@@ -268,16 +355,20 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                 Navigator.pop(context);
                 HapticFeedback.mediumImpact();
                 _showSnackBar(
-                  isEditing ? 'تم تعديل المجموعة بنجاح' : 'تم إنشاء المجموعة بنجاح',
+                  isEditing
+                      ? 'تم تعديل المجموعة بنجاح'
+                      : 'تم إنشاء المجموعة بنجاح',
                   Colors.green,
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(isEditing ? 'حفظ التعديلات' : 'إنشاء', style: GoogleFonts.cairo()),
+              child: Text(isEditing ? 'حفظ التعديلات' : 'إنشاء',
+                  style: GoogleFonts.cairo()),
             ),
           ],
         ),
@@ -305,7 +396,6 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
     buffer.writeln('أريد بناء منظومة طاقة شمسية للأجهزة التالية:');
     buffer.writeln();
 
-
     buffer.writeln('📋 قائمة الأجهزة:');
     for (int i = 0; i < _devices.length; i++) {
       final device = _devices[i];
@@ -318,23 +408,26 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
       buffer.writeln('${i + 1}. ${device.name}:');
       buffer.writeln('   - القدرة: ${device.power.toStringAsFixed(0)} واط');
       if (device.dayHours > 0) {
-        buffer.writeln('   - ساعات النهار: ${device.dayHours.toStringAsFixed(1)} ساعة (${dayWattHours.toStringAsFixed(0)} واط/ساعة)');
+        buffer.writeln(
+            '   - ساعات النهار: ${device.dayHours.toStringAsFixed(1)} ساعة (${dayWattHours.toStringAsFixed(0)} واط/ساعة)');
       }
       if (device.nightHours > 0) {
-        buffer.writeln('   - ساعات الليل: ${device.nightHours.toStringAsFixed(1)} ساعة (${nightWattHours.toStringAsFixed(0)} واط/ساعة)');
+        buffer.writeln(
+            '   - ساعات الليل: ${device.nightHours.toStringAsFixed(1)} ساعة (${nightWattHours.toStringAsFixed(0)} واط/ساعة)');
       }
       buffer.writeln();
     }
 
-
     buffer.writeln('📊 الإحصائيات:');
     buffer.writeln('- عدد الأجهزة: ${_devices.length} جهاز');
     buffer.writeln('- إجمالي القدرة: ${totalPower.toStringAsFixed(0)} واط');
-    buffer.writeln('- استهلاك النهار: ${totalDayWattHours.toStringAsFixed(0)} واط/ساعة');
-    buffer.writeln('- استهلاك الليل: ${totalNightWattHours.toStringAsFixed(0)} واط/ساعة');
-    buffer.writeln('- إجمالي الاستهلاك اليومي: ${(totalDayWattHours + totalNightWattHours).toStringAsFixed(0)} واط/ساعة');
+    buffer.writeln(
+        '- استهلاك النهار: ${totalDayWattHours.toStringAsFixed(0)} واط/ساعة');
+    buffer.writeln(
+        '- استهلاك الليل: ${totalNightWattHours.toStringAsFixed(0)} واط/ساعة');
+    buffer.writeln(
+        '- إجمالي الاستهلاك اليومي: ${(totalDayWattHours + totalNightWattHours).toStringAsFixed(0)} واط/ساعة');
     buffer.writeln();
-
 
     if (_groups.isNotEmpty) {
       buffer.writeln('🔗 مجموعات الأجهزة المتزامنة:');
@@ -343,16 +436,19 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
         double groupPower = 0;
         for (var index in group.deviceIndices) {
           if (index < _devices.length) {
-            buffer.writeln('  - ${_devices[index].name} (${_devices[index].power.toStringAsFixed(0)} واط)');
+            buffer.writeln(
+                '  - ${_devices[index].name} (${_devices[index].power.toStringAsFixed(0)} واط)');
             groupPower += _devices[index].power;
           }
         }
-        buffer.writeln('  إجمالي قدرة المجموعة: ${groupPower.toStringAsFixed(0)} واط');
+        buffer.writeln(
+            '  إجمالي قدرة المجموعة: ${groupPower.toStringAsFixed(0)} واط');
         buffer.writeln();
       }
     }
 
-    buffer.writeln('ما هي المنظومة المناسبة لاحتياجاتي؟ مع حساب عدد الألواح والبطاريات المطلوبة والانفرتر.');
+    buffer.writeln(
+        'ما هي المنظومة المناسبة لاحتياجاتي؟ مع حساب عدد الألواح والبطاريات المطلوبة والانفرتر.');
 
     widget.onSend(buffer.toString());
   }
@@ -362,9 +458,11 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
       SnackBar(
         content: Row(
           children: [
-            Icon(color == Colors.red ? Icons.error_rounded : Icons.info_rounded, color: Colors.white, size: 18),
+            Icon(color == Colors.red ? Icons.error_rounded : Icons.info_rounded,
+                color: Colors.white, size: 18),
             const SizedBox(width: 8),
-            Expanded(child: Text(message, style: GoogleFonts.cairo(fontSize: 13))),
+            Expanded(
+                child: Text(message, style: GoogleFonts.cairo(fontSize: 13))),
           ],
         ),
         backgroundColor: color,
@@ -382,11 +480,11 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
         color: cardWhite,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(30), topRight: Radius.circular(30)),
       ),
       child: Column(
         children: [
-
           Container(
             padding: const EdgeInsets.all(20),
             decoration: const BoxDecoration(
@@ -395,7 +493,8 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+              borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30), topRight: Radius.circular(30)),
             ),
             child: Row(
               children: [
@@ -405,7 +504,8 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                     color: Colors.white.withOpacity(0.25),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.solar_power_rounded, color: Colors.white, size: 24),
+                  child: const Icon(Icons.solar_power_rounded,
+                      color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -413,9 +513,14 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('بناء المنظومة الشمسية',
-                          style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                          style: GoogleFonts.cairo(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
                       Text('أضف أجهزتك مع توزيع ساعات النهار والليل',
-                          style: GoogleFonts.cairo(fontSize: 11, color: Colors.white.withOpacity(0.85))),
+                          style: GoogleFonts.cairo(
+                              fontSize: 11,
+                              color: Colors.white.withOpacity(0.85))),
                     ],
                   ),
                 ),
@@ -430,122 +535,151 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                      child: const Icon(Icons.close_rounded,
+                          color: Colors.white, size: 20),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-
-
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   Text('أجهزة شائعة',
-                      style: GoogleFonts.cairo(fontSize: 15, fontWeight: FontWeight.bold, color: darkColor)),
+                      style: GoogleFonts.cairo(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: darkColor)),
                   const SizedBox(height: 10),
-                  SizedBox(
-                    height: 100,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _suggestedDevices.length,
-                      itemBuilder: (context, index) {
-                        final device = _suggestedDevices[index];
-                        return GestureDetector(
-                          onTap: () => _addSuggestedDevice(device),
-                          child: Container(
-                            width: 90,
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              color: lightGray,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(device['icon'], size: 28, color: primaryBlue),
-                                const SizedBox(height: 6),
-                                Text(device['name'],
+                  // ✅ عرض الأجهزة من الـ API
+                  if (_isLoadingDevices)
+                    Container(
+                      height: 100,
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          color: primaryBlue,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _suggestedDevices.length,
+                        itemBuilder: (context, index) {
+                          final device = _suggestedDevices[index];
+                          final iconName = device['icon'] ?? 'devices';
+                          return GestureDetector(
+                            onTap: () => _addSuggestedDevice(device),
+                            child: Container(
+                              width: 90,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                color: lightGray,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(_getIconFromString(iconName),
+                                      size: 28, color: primaryBlue),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    device['name_ar'] ?? '',
                                     textAlign: TextAlign.center,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.cairo(fontSize: 10, fontWeight: FontWeight.w600, color: darkColor)),
-                                const SizedBox(height: 2),
-                                Text('${device['power']} واط',
-                                    style: GoogleFonts.cairo(fontSize: 9, color: mediumGray)),
-                              ],
+                                    style: GoogleFonts.cairo(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: darkColor),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text('${device['power_watts']} واط',
+                                      style: GoogleFonts.cairo(
+                                          fontSize: 9, color: mediumGray)),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                  ),
-
                   const SizedBox(height: 20),
-
-
                   Text('إضافة جهاز',
-                      style: GoogleFonts.cairo(fontSize: 15, fontWeight: FontWeight.bold, color: darkColor)),
+                      style: GoogleFonts.cairo(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: darkColor)),
                   const SizedBox(height: 12),
-
-
                   TextField(
                     controller: _deviceNameController,
                     style: GoogleFonts.cairo(fontSize: 13, color: darkColor),
                     decoration: InputDecoration(
                       hintText: 'اسم الجهاز (مثال: مكيف، ثلاجة...)',
-                      hintStyle: GoogleFonts.cairo(fontSize: 13, color: Colors.grey.shade400),
-                      prefixIcon: Icon(Icons.devices_rounded, color: primaryBlue, size: 20),
+                      hintStyle: GoogleFonts.cairo(
+                          fontSize: 13, color: Colors.grey.shade400),
+                      prefixIcon: Icon(Icons.devices_rounded,
+                          color: primaryBlue, size: 20),
                       filled: true,
                       fillColor: lightGray,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
                     ),
                   ),
                   const SizedBox(height: 10),
-
-
                   TextField(
                     controller: _devicePowerController,
                     keyboardType: TextInputType.number,
                     style: GoogleFonts.cairo(fontSize: 13, color: darkColor),
                     decoration: InputDecoration(
                       hintText: 'القدرة (واط)',
-                      hintStyle: GoogleFonts.cairo(fontSize: 13, color: Colors.grey.shade400),
-                      prefixIcon: Icon(Icons.bolt_rounded, color: primaryBlue, size: 20),
+                      hintStyle: GoogleFonts.cairo(
+                          fontSize: 13, color: Colors.grey.shade400),
+                      prefixIcon: Icon(Icons.bolt_rounded,
+                          color: primaryBlue, size: 20),
                       filled: true,
                       fillColor: lightGray,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
                     ),
                   ),
                   const SizedBox(height: 10),
-
-
                   Row(
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _deviceDayHoursController,
                           keyboardType: TextInputType.number,
-                          style: GoogleFonts.cairo(fontSize: 13, color: darkColor),
+                          style:
+                          GoogleFonts.cairo(fontSize: 13, color: darkColor),
                           decoration: InputDecoration(
                             hintText: 'ساعات النهار ☀️',
-                            hintStyle: GoogleFonts.cairo(fontSize: 12, color: Colors.grey.shade400),
-                            prefixIcon: Icon(Icons.wb_sunny_rounded, color: dayColor, size: 20),
+                            hintStyle: GoogleFonts.cairo(
+                                fontSize: 12, color: Colors.grey.shade400),
+                            prefixIcon: Icon(Icons.wb_sunny_rounded,
+                                color: dayColor, size: 20),
                             filled: true,
                             fillColor: lightGray,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                               borderSide: BorderSide.none,
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
                           ),
                         ),
                       ),
@@ -554,63 +688,74 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                         child: TextField(
                           controller: _deviceNightHoursController,
                           keyboardType: TextInputType.number,
-                          style: GoogleFonts.cairo(fontSize: 13, color: darkColor),
+                          style:
+                          GoogleFonts.cairo(fontSize: 13, color: darkColor),
                           decoration: InputDecoration(
                             hintText: 'ساعات الليل 🌙',
-                            hintStyle: GoogleFonts.cairo(fontSize: 12, color: Colors.grey.shade400),
-                            prefixIcon: Icon(Icons.nights_stay_rounded, color: nightColor, size: 20),
+                            hintStyle: GoogleFonts.cairo(
+                                fontSize: 12, color: Colors.grey.shade400),
+                            prefixIcon: Icon(Icons.nights_stay_rounded,
+                                color: nightColor, size: 20),
                             filled: true,
                             fillColor: lightGray,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                               borderSide: BorderSide.none,
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
                           ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-
-
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: _addDevice,
                       icon: const Icon(Icons.add_rounded, size: 18),
                       label: Text('إضافة الجهاز',
-                          style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600)),
+                          style: GoogleFonts.cairo(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryBlue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
                         elevation: 3,
                         shadowColor: primaryBlue.withOpacity(0.3),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
-
                   if (_devices.isNotEmpty) ...[
                     Row(
                       children: [
                         Text('الأجهزة المضافة',
-                            style: GoogleFonts.cairo(fontSize: 15, fontWeight: FontWeight.bold, color: darkColor)),
+                            style: GoogleFonts.cairo(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: darkColor)),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [primaryBlue.withOpacity(0.08), secondaryBlue.withOpacity(0.04)],
+                              colors: [
+                                primaryBlue.withOpacity(0.08),
+                                secondaryBlue.withOpacity(0.04)
+                              ],
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text('${_devices.length} أجهزة',
-                              style: GoogleFonts.cairo(fontSize: 11, color: primaryBlue, fontWeight: FontWeight.w600)),
+                              style: GoogleFonts.cairo(
+                                  fontSize: 11,
+                                  color: primaryBlue,
+                                  fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
@@ -626,7 +771,11 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                           color: cardWhite,
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: Colors.grey.shade200),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6)],
+                          boxShadow: [
+                            BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 6)
+                          ],
                         ),
                         child: Row(
                           children: [
@@ -635,14 +784,19 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                               height: 36,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [primaryBlue.withOpacity(0.1), secondaryBlue.withOpacity(0.05)],
+                                  colors: [
+                                    primaryBlue.withOpacity(0.1),
+                                    secondaryBlue.withOpacity(0.05)
+                                  ],
                                 ),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Center(
                                 child: Text('${index + 1}',
                                     style: GoogleFonts.cairo(
-                                        fontSize: 14, fontWeight: FontWeight.bold, color: primaryBlue)),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryBlue)),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -652,34 +806,44 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                                 children: [
                                   Text(device.name,
                                       style: GoogleFonts.cairo(
-                                          fontSize: 13, fontWeight: FontWeight.w600, color: darkColor)),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: darkColor)),
                                   const SizedBox(height: 4),
                                   Text('${device.power.toStringAsFixed(0)} واط',
-                                      style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
+                                      style: GoogleFonts.cairo(
+                                          fontSize: 11, color: mediumGray)),
                                   const SizedBox(height: 2),
                                   Row(
                                     children: [
                                       if (device.dayHours > 0)
                                         Row(
                                           children: [
-                                            Icon(Icons.wb_sunny_rounded, size: 12, color: dayColor),
+                                            Icon(Icons.wb_sunny_rounded,
+                                                size: 12, color: dayColor),
                                             const SizedBox(width: 3),
                                             Text(
                                               '${device.dayHours.toStringAsFixed(1)}س نهار (${dayWattHours.toStringAsFixed(0)} و.س)',
-                                              style: GoogleFonts.cairo(fontSize: 10, color: dayColor),
+                                              style: GoogleFonts.cairo(
+                                                  fontSize: 10,
+                                                  color: dayColor),
                                             ),
                                           ],
                                         ),
-                                      if (device.dayHours > 0 && device.nightHours > 0)
+                                      if (device.dayHours > 0 &&
+                                          device.nightHours > 0)
                                         const SizedBox(width: 8),
                                       if (device.nightHours > 0)
                                         Row(
                                           children: [
-                                            Icon(Icons.nights_stay_rounded, size: 12, color: nightColor),
+                                            Icon(Icons.nights_stay_rounded,
+                                                size: 12, color: nightColor),
                                             const SizedBox(width: 3),
                                             Text(
                                               '${device.nightHours.toStringAsFixed(1)}س ليل (${nightWattHours.toStringAsFixed(0)} و.س)',
-                                              style: GoogleFonts.cairo(fontSize: 10, color: nightColor),
+                                              style: GoogleFonts.cairo(
+                                                  fontSize: 10,
+                                                  color: nightColor),
                                             ),
                                           ],
                                         ),
@@ -699,7 +863,10 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                                     color: Colors.red.withOpacity(0.08),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 16),
+                                  child: const Icon(
+                                      Icons.delete_outline_rounded,
+                                      color: Colors.red,
+                                      size: 16),
                                 ),
                               ),
                             ),
@@ -708,15 +875,15 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                       );
                     }),
                   ],
-
                   const SizedBox(height: 20),
-
-
                   if (_devices.length >= 2) ...[
                     Row(
                       children: [
                         Text('مجموعات الأجهزة المتزامنة',
-                            style: GoogleFonts.cairo(fontSize: 15, fontWeight: FontWeight.bold, color: darkColor)),
+                            style: GoogleFonts.cairo(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: darkColor)),
                         const Spacer(),
                         Material(
                           color: Colors.transparent,
@@ -724,19 +891,25 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                             onTap: () => _showCreateGroupDialog(),
                             borderRadius: BorderRadius.circular(10),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: accentBlue.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: accentBlue.withOpacity(0.3)),
+                                border: Border.all(
+                                    color: accentBlue.withOpacity(0.3)),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.group_add_rounded, size: 16, color: primaryBlue),
+                                  Icon(Icons.group_add_rounded,
+                                      size: 16, color: primaryBlue),
                                   const SizedBox(width: 4),
                                   Text('إضافة مجموعة',
-                                      style: GoogleFonts.cairo(fontSize: 11, color: primaryBlue, fontWeight: FontWeight.w600)),
+                                      style: GoogleFonts.cairo(
+                                          fontSize: 11,
+                                          color: primaryBlue,
+                                          fontWeight: FontWeight.w600)),
                                 ],
                               ),
                             ),
@@ -751,13 +924,16 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                         decoration: BoxDecoration(
                           color: lightGray,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.grey.shade200, style: BorderStyle.solid),
+                          border: Border.all(
+                              color: Colors.grey.shade200,
+                              style: BorderStyle.solid),
                         ),
                         child: Center(
                           child: Text(
                             'لم تقم بإنشاء مجموعات بعد. اضغط على "إضافة مجموعة" لتحديد الأجهزة التي تعمل معاً',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.cairo(fontSize: 11, color: mediumGray),
+                            style: GoogleFonts.cairo(
+                                fontSize: 11, color: mediumGray),
                           ),
                         ),
                       ),
@@ -770,15 +946,21 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                         }
                       }
                       return GestureDetector(
-                        onTap: () => _showCreateGroupDialog(editGroupIndex: index),
+                        onTap: () =>
+                            _showCreateGroupDialog(editGroupIndex: index),
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: cardWhite,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: accentBlue.withOpacity(0.3)),
-                            boxShadow: [BoxShadow(color: accentBlue.withOpacity(0.05), blurRadius: 6)],
+                            border:
+                            Border.all(color: accentBlue.withOpacity(0.3)),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: accentBlue.withOpacity(0.05),
+                                  blurRadius: 6)
+                            ],
                           ),
                           child: Row(
                             children: [
@@ -787,12 +969,16 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                                 height: 36,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [accentBlue.withOpacity(0.2), accentBlue.withOpacity(0.1)],
+                                    colors: [
+                                      accentBlue.withOpacity(0.2),
+                                      accentBlue.withOpacity(0.1)
+                                    ],
                                   ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Center(
-                                  child: Icon(Icons.link_rounded, size: 18, color: primaryBlue),
+                                  child: Icon(Icons.link_rounded,
+                                      size: 18, color: primaryBlue),
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -805,31 +991,41 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                                         Expanded(
                                           child: Text(group.name,
                                               style: GoogleFonts.cairo(
-                                                  fontSize: 13, fontWeight: FontWeight.w600, color: darkColor)),
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: darkColor)),
                                         ),
-                                        Icon(Icons.edit_rounded, size: 14, color: accentBlue),
+                                        Icon(Icons.edit_rounded,
+                                            size: 14, color: accentBlue),
                                       ],
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '${group.deviceIndices.length} أجهزة - إجمالي القدرة: ${groupPower.toStringAsFixed(0)} واط',
-                                      style: GoogleFonts.cairo(fontSize: 10, color: mediumGray),
+                                      style: GoogleFonts.cairo(
+                                          fontSize: 10, color: mediumGray),
                                     ),
                                     const SizedBox(height: 4),
                                     Wrap(
                                       spacing: 4,
                                       runSpacing: 2,
-                                      children: group.deviceIndices.map((deviceIndex) {
+                                      children: group.deviceIndices
+                                          .map((deviceIndex) {
                                         if (deviceIndex < _devices.length) {
                                           return Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: accentBlue.withOpacity(0.08),
-                                              borderRadius: BorderRadius.circular(8),
+                                              color:
+                                              accentBlue.withOpacity(0.08),
+                                              borderRadius:
+                                              BorderRadius.circular(8),
                                             ),
                                             child: Text(
                                               _devices[deviceIndex].name,
-                                              style: GoogleFonts.cairo(fontSize: 10, color: primaryBlue),
+                                              style: GoogleFonts.cairo(
+                                                  fontSize: 10,
+                                                  color: primaryBlue),
                                             ),
                                           );
                                         }
@@ -850,7 +1046,10 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                                       color: Colors.red.withOpacity(0.08),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 16),
+                                    child: const Icon(
+                                        Icons.delete_outline_rounded,
+                                        color: Colors.red,
+                                        size: 16),
                                   ),
                                 ),
                               ),
@@ -864,14 +1063,17 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
               ),
             ),
           ),
-
-
           if (_devices.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: cardWhite,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))],
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2))
+                ],
               ),
               child: SafeArea(
                 child: SizedBox(
@@ -880,12 +1082,14 @@ class _SystemBuilderSheetState extends State<SystemBuilderSheet> {
                     onPressed: _buildAndSendMessage,
                     icon: const Icon(Icons.send_rounded, size: 20),
                     label: Text('إرسال للمساعد الذكي',
-                        style: GoogleFonts.cairo(fontSize: 15, fontWeight: FontWeight.bold)),
+                        style: GoogleFonts.cairo(
+                            fontSize: 15, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryBlue,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
                       elevation: 3,
                       shadowColor: primaryBlue.withOpacity(0.4),
                     ),

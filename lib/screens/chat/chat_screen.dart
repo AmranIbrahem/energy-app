@@ -1,15 +1,22 @@
 // lib/screens/chat/chat_screen.dart
 
+import 'dart:io';
+
+import 'package:GeniusHouse/screens/chat/message_bubble.dart';
+import 'package:GeniusHouse/screens/chat/system_builder_sheet.dart';
+import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
+import 'package:GeniusHouse/screens/products/product_details_screen.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/screens/chat/message_bubble.dart';
-import 'package:GeniusHouse/screens/chat/system_builder_sheet.dart'; 
-import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
-import 'package:GeniusHouse/screens/products/product_details_screen.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:GeniusHouse/services/permission_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final AuthService authService;
@@ -25,14 +32,22 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen>
-    with TickerProviderStateMixin {
+class _ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
+  // ✅ التسجيل الصوتي
+  final FlutterSoundRecorder _audioRecorder = FlutterSoundRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  File? _recordedAudioFile;
+  bool _isRecording = false;
+  Duration _recordingDuration = Duration.zero;
+
   List<Map<String, dynamic>> _messages = [];
   List<String> _suggestedQuestions = [];
+  List<File> _selectedImages = [];
+  bool _showImageGrid = false;
 
   bool _isLoading = true;
   bool _isSending = false;
@@ -50,7 +65,6 @@ class _ChatScreenState extends State<ChatScreen>
   static const double _minFontScale = 0.7;
   static const double _maxFontScale = 2.0;
 
-  
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentBlue = Color(0xFF60A5FA);
@@ -114,7 +128,237 @@ class _ChatScreenState extends State<ChatScreen>
     _focusNode.dispose();
     _typingAnimationController.dispose();
     _pulseAnimationController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
+  }
+
+  // ✅ طلب صلاحية الميكروفون
+  Future<bool> _requestMicrophonePermission() async {
+    return await PermissionService.requestMicrophone();
+  }
+
+  // ✅ بدء التسجيل
+// ✅ بدء التسجيل مع طلب الصلاحية
+  Future<void> _startRecording() async {
+    try {
+      // ✅ أولاً: التحقق من صلاحية الميكروفون وطلبها إذا لزم
+      final hasPermission = await _requestMicrophonePermission();
+
+      if (!hasPermission) {
+        // ✅ إذا رفض المستخدم الصلاحية
+        _showPermissionDeniedDialog();
+        return;
+      }
+
+      // ✅ إذا تم منح الصلاحية - ابدأ التسجيل
+      await _audioRecorder.openRecorder();
+
+      final tempDir = await getTemporaryDirectory();
+      final filePath = '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+
+      await _audioRecorder.startRecorder(
+        toFile: filePath,
+        codec: Codec.pcm16WAV,
+        numChannels: 1,
+        sampleRate: 44100,
+      );
+
+      setState(() {
+        _isRecording = true;
+      });
+
+      // ✅ رسالة تأكيد بدء التسجيل
+      HapticFeedback.mediumImpact();
+
+    } catch (e) {
+      debugPrint('❌ Error starting recording: $e');
+      _showErrorSnackBar('فشل بدء التسجيل');
+    }
+  }
+
+  // ✅ دالة عرض نافذة عند رفض صلاحية الميكروفون
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          title: Column(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.mic_off_rounded,
+                  color: Colors.orange.shade700,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'صلاحية الميكروفون مطلوبة',
+                style: GoogleFonts.cairo(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: darkColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Text(
+            'يحتاج التطبيق إلى الوصول إلى الميكروفون لإرسال الرسائل الصوتية.\n\nيمكنك تفعيل الصلاحية من إعدادات التطبيق.',
+            style: GoogleFonts.cairo(
+              fontSize: 14,
+              color: mediumGray,
+              height: 1.6,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'إلغاء',
+                style: GoogleFonts.cairo(
+                  color: mediumGray,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                // ✅ فتح إعدادات التطبيق
+                await PermissionService.openAppSettings();
+              },
+              icon: const Icon(Icons.settings_rounded, size: 18),
+              label: Text(
+                'فتح الإعدادات',
+                style: GoogleFonts.cairo(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ✅ إيقاف التسجيل
+  Future<void> _stopRecording() async {
+    try {
+      final path = await _audioRecorder.stopRecorder();
+      await _audioRecorder.closeRecorder();
+
+      print('📁 Stopped recording at: $path');
+
+      if (path != null && path.isNotEmpty) {
+        final file = File(path);
+
+        if (!await file.exists()) {
+          print('❌ File not exists!');
+          setState(() => _isRecording = false);
+          _showErrorSnackBar('الملف غير موجود');
+          return;
+        }
+
+        print('📁 File size: ${await file.length()} bytes');
+
+        setState(() {
+          _recordedAudioFile = file;
+          _isRecording = false;
+        });
+
+        _sendVoiceMessage();
+      } else {
+        print('❌ Path is null');
+        setState(() => _isRecording = false);
+        _showErrorSnackBar('فشل التسجيل');
+      }
+    } catch (e) {
+      print('❌ Stop error: $e');
+      setState(() => _isRecording = false);
+      _showErrorSnackBar('فشل إيقاف التسجيل');
+    }
+  }
+
+  // ✅ إرسال رسالة صوتية
+  Future<void> _sendVoiceMessage() async {
+    if (_recordedAudioFile == null || _isSending) return;
+
+    HapticFeedback.mediumImpact();
+
+    setState(() {
+      _isSending = true;
+      _isAiTyping = true;
+      _suggestedQuestions = [];
+    });
+
+    try {
+      final response = await widget.apiService.sendVoiceMessage(
+        audioFile: _recordedAudioFile!,
+        message: _messageController.text.trim(),
+        requiresAuth: true,
+      );
+
+      if (response['status'] == 'success' && mounted) {
+        setState(() {
+          _isAiTyping = false;
+          _isSending = false;
+
+          // إضافة رسالة المستخدم (الصوت)
+          _messages.add({
+            'me': true,
+            'role': 'user',
+            'content': response['data']['transcribed_text'] ?? '',
+            'timestamp': DateTime.now().toIso8601String(),
+            'type': 'voice',
+            'audio_path': response['data']['audio_path'],
+            'audio_url': response['data']['audio_url'],
+          });
+
+          // إضافة رد المساعد
+          _messages.add({
+            'me': false,
+            'role': 'assistant',
+            'content': response['data']['message'],
+            'timestamp': DateTime.now().toIso8601String(),
+            'type': 'voice_response',
+            'data': null,
+          });
+        });
+
+        _recordedAudioFile = null;
+        _messageController.clear();
+        _scrollToBottom();
+      } else {
+        setState(() {
+          _isSending = false;
+          _isAiTyping = false;
+        });
+        _showErrorSnackBar(response['message'] ?? 'حدث خطأ في إرسال الصوت');
+      }
+    } catch (e) {
+      setState(() {
+        _isSending = false;
+        _isAiTyping = false;
+      });
+      _showErrorSnackBar('حدث خطأ في الاتصال');
+    }
   }
 
   void _resetFontScale() {
@@ -141,9 +385,11 @@ class _ChatScreenState extends State<ChatScreen>
       ..showSnackBar(SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.text_fields_rounded, color: Colors.white, size: 18),
+            const Icon(Icons.text_fields_rounded,
+                color: Colors.white, size: 18),
             const SizedBox(width: 8),
-            Text('حجم الخط: $sizeLabel ($percentage%)', style: GoogleFonts.cairo(fontSize: 13)),
+            Text('حجم الخط: $sizeLabel ($percentage%)',
+                style: GoogleFonts.cairo(fontSize: 13)),
           ],
         ),
         backgroundColor: primaryBlue,
@@ -192,11 +438,13 @@ class _ChatScreenState extends State<ChatScreen>
           }
 
           _hasMore = pagination?['has_more'] ?? false;
-          _currentOffset = pagination?['next_offset'] ?? _currentOffset + currentLimit;
+          _currentOffset =
+              pagination?['next_offset'] ?? _currentOffset + currentLimit;
 
           if (_messages.isNotEmpty && !loadMore) {
             final lastMessage = _messages.last;
-            if (!(lastMessage['me'] ?? false) && lastMessage.containsKey('data')) {
+            if (!(lastMessage['me'] ?? false) &&
+                lastMessage.containsKey('data')) {
               _suggestedQuestions = List<String>.from(
                 lastMessage['data']?['suggested_questions'] ?? [],
               );
@@ -235,18 +483,65 @@ class _ChatScreenState extends State<ChatScreen>
     });
   }
 
+  // ✅ دالة اختيار الصور
+  Future<void> _pickImages() async {
+    final ImagePicker picker = ImagePicker();
+    final List<XFile>? images = await picker.pickMultiImage(
+      imageQuality: 70,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+
+    if (images != null && images.isNotEmpty) {
+      setState(() {
+        _selectedImages = images.map((xFile) => File(xFile.path)).toList();
+        _showImageGrid = true;
+      });
+    }
+  }
+
+  // ✅ دالة إزالة صورة من الشبكة
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+      if (_selectedImages.isEmpty) {
+        _showImageGrid = false;
+      }
+    });
+  }
+
+  // ✅ دالة تبديل عرض شبكة الصور
+  void _toggleImagePicker() {
+    if (_selectedImages.isNotEmpty) {
+      setState(() {
+        _selectedImages.clear();
+        _showImageGrid = false;
+      });
+    } else {
+      _pickImages();
+    }
+  }
+
   Future<void> _sendMessage({String? customMessage}) async {
     final message = customMessage ?? _messageController.text.trim();
-    if (message.isEmpty || _isSending) return;
+    final hasImages = _selectedImages.isNotEmpty;
+
+    if (message.isEmpty && !hasImages) return;
+    if (_isSending) return;
 
     HapticFeedback.mediumImpact();
+
+    final List<String> imagePaths =
+    _selectedImages.map((file) => file.path).toList();
+    final List<File> imagesCopy = List<File>.from(_selectedImages);
 
     final userMessage = {
       'me': true,
       'role': 'user',
-      'content': message,
+      'content': message.isEmpty ? '📷 أرسل صورة' : message,
       'timestamp': DateTime.now().toIso8601String(),
-      'type': 'text',
+      'type': hasImages ? 'image_text' : 'text',
+      'images': imagePaths,
     };
 
     setState(() {
@@ -255,17 +550,29 @@ class _ChatScreenState extends State<ChatScreen>
       _isSending = true;
       _isAiTyping = true;
       _suggestedQuestions = [];
+      _selectedImages.clear();
+      _showImageGrid = false;
     });
 
     _scrollToBottom();
     _focusNode.unfocus();
 
     try {
-      final response = await widget.apiService.post(
-        '/v1/user/chat/send',
-        requiresAuth: true,
-        data: {'message': message},
-      );
+      Map<String, dynamic> response;
+
+      if (hasImages) {
+        response = await widget.apiService.sendMessageWithImages(
+          message: message,
+          images: imagesCopy,
+          requiresAuth: true,
+        );
+      } else {
+        response = await widget.apiService.post(
+          '/v1/user/chat/send',
+          requiresAuth: true,
+          data: {'message': message},
+        );
+      }
 
       setState(() => _isAiTyping = false);
 
@@ -375,6 +682,7 @@ class _ChatScreenState extends State<ChatScreen>
           Navigator.pop(context);
           _sendMessage(customMessage: message);
         },
+        apiService: widget.apiService,
       ),
     );
   }
@@ -392,17 +700,23 @@ class _ChatScreenState extends State<ChatScreen>
                 color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.delete_rounded, color: Colors.red.shade700, size: 24),
+              child: Icon(Icons.delete_rounded,
+                  color: Colors.red.shade700, size: 24),
             ),
             const SizedBox(width: 12),
-            Text('مسح المحادثة', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: darkColor)),
+            Text('مسح المحادثة',
+                style: GoogleFonts.cairo(
+                    fontWeight: FontWeight.bold, color: darkColor)),
           ],
         ),
-        content: Text('هل أنت متأكد من مسح جميع رسائل المحادثة؟', style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
+        content: Text('هل أنت متأكد من مسح جميع رسائل المحادثة؟',
+            style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('إلغاء', style: GoogleFonts.cairo(fontWeight: FontWeight.w600, color: mediumGray)),
+            child: Text('إلغاء',
+                style: GoogleFonts.cairo(
+                    fontWeight: FontWeight.w600, color: mediumGray)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -410,9 +724,11 @@ class _ChatScreenState extends State<ChatScreen>
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('مسح', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+            child: Text('مسح',
+                style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -421,7 +737,8 @@ class _ChatScreenState extends State<ChatScreen>
     if (confirm == true) {
       setState(() => _isLoading = true);
       try {
-        final response = await widget.apiService.delete('/v1/user/chat/clear', requiresAuth: true);
+        final response = await widget.apiService
+            .delete('/v1/user/chat/clear', requiresAuth: true);
         if (response['status'] == 'success' && mounted) {
           setState(() {
             _messages = [];
@@ -430,6 +747,10 @@ class _ChatScreenState extends State<ChatScreen>
             _hasMore = false;
             _isLoading = false;
             _isAiTyping = false;
+            _selectedImages.clear();
+            _showImageGrid = false;
+            _recordedAudioFile = null;
+            _isRecording = false;
           });
           _showSuccessSnackBar('تم مسح المحادثة بنجاح');
         } else {
@@ -475,7 +796,8 @@ class _ChatScreenState extends State<ChatScreen>
       ..showSnackBar(SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            const Icon(Icons.check_circle_rounded,
+                color: Colors.white, size: 20),
             const SizedBox(width: 10),
             Expanded(child: Text(message, style: GoogleFonts.cairo())),
           ],
@@ -494,7 +816,11 @@ class _ChatScreenState extends State<ChatScreen>
       SnackBar(
         content: Row(
           children: [
-            const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
+            const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2)),
             const SizedBox(width: 10),
             Text('جاري حساب احتياجاتك...', style: GoogleFonts.cairo()),
           ],
@@ -515,7 +841,8 @@ class _ChatScreenState extends State<ChatScreen>
       SnackBar(
         content: Row(
           children: [
-            Icon(Icons.check_circle_rounded, color: Colors.green.shade400, size: 20),
+            Icon(Icons.check_circle_rounded,
+                color: Colors.green.shade400, size: 20),
             const SizedBox(width: 8),
             Text('تم نسخ النص', style: GoogleFonts.cairo()),
           ],
@@ -604,15 +931,22 @@ class _ChatScreenState extends State<ChatScreen>
                   color: Colors.white.withOpacity(0.25),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 24),
+                child: const Icon(Icons.auto_awesome_rounded,
+                    color: Colors.white, size: 24),
               ),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('المساعد الذكي', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text('نظام الطاقة الشمسية', style: GoogleFonts.cairo(fontSize: 11, color: Colors.white.withOpacity(0.85))),
+                Text('المساعد الذكي',
+                    style: GoogleFonts.cairo(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
+                Text('نظام الطاقة الشمسية',
+                    style: GoogleFonts.cairo(
+                        fontSize: 11, color: Colors.white.withOpacity(0.85))),
               ],
             ),
           ],
@@ -627,7 +961,8 @@ class _ChatScreenState extends State<ChatScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.text_fields_rounded, color: Colors.white, size: 20),
+                icon: const Icon(Icons.text_fields_rounded,
+                    color: Colors.white, size: 20),
                 onPressed: _resetFontScale,
                 tooltip: 'إعادة تعيين حجم الخط',
               ),
@@ -640,7 +975,8 @@ class _ChatScreenState extends State<ChatScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 22),
+                icon: const Icon(Icons.delete_outline_rounded,
+                    color: Colors.white, size: 22),
                 onPressed: _clearChat,
               ),
             ),
@@ -653,7 +989,9 @@ class _ChatScreenState extends State<ChatScreen>
           : Column(
         children: [
           Expanded(
-            child: _messages.isEmpty ? _buildEmptyState() : _buildMessagesList(),
+            child: _messages.isEmpty
+                ? _buildEmptyState()
+                : _buildMessagesList(),
           ),
           if (_suggestedQuestions.isNotEmpty && !_isSending)
             _buildSuggestedQuestions(),
@@ -667,7 +1005,8 @@ class _ChatScreenState extends State<ChatScreen>
     return GestureDetector(
       onScaleUpdate: (details) {
         setState(() {
-          _fontScale = (_fontScale * details.scale).clamp(_minFontScale, _maxFontScale);
+          _fontScale =
+              (_fontScale * details.scale).clamp(_minFontScale, _maxFontScale);
         });
       },
       onScaleEnd: (_) {
@@ -677,7 +1016,8 @@ class _ChatScreenState extends State<ChatScreen>
         controller: _scrollController,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         cacheExtent: 300,
-        itemCount: _messages.length + (_hasMore ? 1 : 0) + (_isAiTyping ? 1 : 0),
+        itemCount:
+        _messages.length + (_hasMore ? 1 : 0) + (_isAiTyping ? 1 : 0),
         itemBuilder: (context, index) {
           if (_hasMore && index == 0) {
             return _buildLoadMoreButton();
@@ -691,12 +1031,29 @@ class _ChatScreenState extends State<ChatScreen>
 
           if (messageIndex < _messages.length) {
             final message = _messages[messageIndex];
+
+            List<String> imageList = [];
+            if (message['images'] != null && message['images'] is List) {
+              imageList = List<String>.from(message['images']);
+            } else if (message['image_path'] != null &&
+                message['image_path'] is String) {
+              final imageUrl = message['image_url'] ?? message['image_path'];
+              if (imageUrl is String && imageUrl.isNotEmpty) {
+                imageList = [imageUrl];
+              }
+            }
+
+            // ✅ استخراج audio_url
+            final audioUrl = message['audio_url'] ?? message['audio_path'];
+
             return MessageBubble(
               isUser: message['me'] ?? false,
               content: message['content'] ?? '',
               timestamp: _formatTimestamp(message['timestamp'] ?? ''),
               data: message['data'],
               type: message['type'] ?? 'text',
+              images: imageList,
+              audioUrl: audioUrl is String ? audioUrl : null,
               fontScale: _fontScale,
               apiService: widget.apiService,
               authService: widget.authService,
@@ -722,13 +1079,18 @@ class _ChatScreenState extends State<ChatScreen>
               ? SizedBox(
             width: 22,
             height: 22,
-            child: CircularProgressIndicator(color: primaryBlue, strokeWidth: 2),
+            child: CircularProgressIndicator(
+                color: primaryBlue, strokeWidth: 2),
           )
               : Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryBlue.withOpacity(0.08), secondaryBlue.withOpacity(0.04)],
+                colors: [
+                  primaryBlue.withOpacity(0.08),
+                  secondaryBlue.withOpacity(0.04)
+                ],
               ),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: primaryBlue.withOpacity(0.15)),
@@ -736,7 +1098,8 @@ class _ChatScreenState extends State<ChatScreen>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.arrow_upward_rounded, size: 14, color: primaryBlue),
+                const Icon(Icons.arrow_upward_rounded,
+                    size: 14, color: primaryBlue),
                 const SizedBox(width: 6),
                 Text(
                   'تحميل الرسائل السابقة',
@@ -765,11 +1128,15 @@ class _ChatScreenState extends State<ChatScreen>
             height: 34,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)],
+                colors: [
+                  primaryBlue.withOpacity(0.12),
+                  secondaryBlue.withOpacity(0.06)
+                ],
               ),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.auto_awesome_rounded, color: primaryBlue, size: 18),
+            child: const Icon(Icons.auto_awesome_rounded,
+                color: primaryBlue, size: 18),
           ),
           const SizedBox(width: 8),
           Container(
@@ -777,7 +1144,9 @@ class _ChatScreenState extends State<ChatScreen>
             decoration: BoxDecoration(
               color: cardWhite,
               borderRadius: BorderRadius.circular(18),
-              boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.04), blurRadius: 5)],
+              boxShadow: [
+                BoxShadow(color: primaryBlue.withOpacity(0.04), blurRadius: 5)
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -814,85 +1183,308 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
+  // ✅ شريط الإدخال مع دعم الصور والصوت
   Widget _buildInputBar() {
+    return Column(
+      children: [
+        if (_showImageGrid && _selectedImages.isNotEmpty) _buildImageGrid(),
+
+        // ✅ مؤشر التسجيل
+        if (_isRecording) _buildRecordingIndicator(),
+
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: cardWhite,
+            boxShadow: [
+              BoxShadow(color: primaryBlue.withOpacity(0.06), blurRadius: 10)
+            ],
+          ),
+          child: SafeArea(
+            child: _isRecording
+                ? _buildRecordingStopButton()  // ✅ إذا يسجل → زر إيقاف
+                : Row(  // ✅ إذا ما يسجل → الأزرار العادية
+              children: [
+                // زر الميكروفون
+// زر الميكروفون - مع طلب الصلاحية
+                GestureDetector(
+                  onLongPressStart: (_) async {
+                    // ✅ طلب الصلاحية أولاً عند الضغط المطول
+                    final hasPermission = await _requestMicrophonePermission();
+
+                    if (hasPermission) {
+                      // ✅ إذا تم منح الصلاحية - ابدأ التسجيل مباشرة
+                      await _startRecording();
+                    } else {
+                      // ✅ إذا رفض المستخدم - عرض نافذة مخصصة
+                      _showPermissionDeniedDialog();
+                    }
+                  },
+                  onLongPressEnd: (_) async {
+                    // ✅ إيقاف التسجيل فقط إذا كان قيد التشغيل
+                    if (_isRecording) {
+                      await _stopRecording();
+                    }
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _isRecording ? Colors.red.withOpacity(0.1) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _isRecording ? Icons.mic_rounded : Icons.mic_none_rounded,
+                      color: _isRecording ? Colors.red : Colors.grey.shade600,
+                      size: 24,
+                    ),
+                  ),
+                ),                const SizedBox(width: 4),
+
+                // زر الصور
+                GestureDetector(
+                  onTap: _toggleImagePicker,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _selectedImages.isNotEmpty
+                          ? primaryBlue.withOpacity(0.1)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _selectedImages.isNotEmpty
+                          ? Icons.close_rounded
+                          : Icons.photo_library_rounded,
+                      color: _selectedImages.isNotEmpty
+                          ? primaryBlue
+                          : Colors.grey.shade600,
+                      size: 24,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+
+                // حقل النص
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: lightGray,
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      focusNode: _focusNode,
+                      style: GoogleFonts.cairo(
+                          fontSize: 14 * _fontScale, color: darkColor),
+                      maxLines: 3,
+                      minLines: 1,
+                      decoration: InputDecoration(
+                        hintText: _selectedImages.isNotEmpty
+                            ? 'أضف وصفاً للصورة (اختياري)...'
+                            : 'اكتب استفسارك...',
+                        hintStyle: GoogleFonts.cairo(
+                            fontSize: 14 * _fontScale,
+                            color: Colors.grey.shade400),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // زر المصمم
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        colors: [Color(0xFFFF9800), Color(0xFFF57C00)]),
+                    shape: BoxShape.circle,
+                  ),
+                  child: InkWell(
+                    onTap: _openSystemBuilder,
+                    borderRadius: BorderRadius.circular(30),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      child: const Icon(Icons.solar_power_rounded,
+                          color: Colors.white, size: 22),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // زر الإرسال
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        colors: [primaryBlue, secondaryBlue]),
+                    shape: BoxShape.circle,
+                  ),
+                  child: InkWell(
+                    onTap: _isSending ? null : () => _sendMessage(),
+                    borderRadius: BorderRadius.circular(30),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      child: _isSending
+                          ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                          : const Icon(Icons.send_rounded,
+                          color: Colors.white, size: 20),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+// ✅ زر إيقاف التسجيل
+  Widget _buildRecordingStopButton() {
+    return Row(
+      children: [
+        // زر إيقاف التسجيل
+        GestureDetector(
+          onTap: _stopRecording,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withOpacity(0.3),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.stop_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'إيقاف التسجيل',
+                  style: GoogleFonts.cairo(
+                    fontSize: 14,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  // ✅ مؤشر التسجيل
+  Widget _buildRecordingIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.red.withOpacity(0.05),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'جاري التسجيل...',
+            style: GoogleFonts.cairo(
+              fontSize: 12,
+              color: Colors.red,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          AnimatedBuilder(
+            animation: _pulseAnimationController,
+            builder: (context, child) {
+              return Row(
+                children: List.generate(5, (index) {
+                  final height = 10.0 + (_pulseAnimationController.value * 20) * (index % 2 == 0 ? 1 : 0.5);
+                  return Container(
+                    width: 3,
+                    height: height,
+                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ شبكة عرض الصور المختارة
+  Widget _buildImageGrid() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: cardWhite,
-        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.06), blurRadius: 10)],
-      ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
+      height: 120,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _selectedImages.length,
+        itemBuilder: (context, index) {
+          final image = _selectedImages[index];
+          return Stack(
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
-                  color: lightGray,
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(
+                    image: FileImage(image),
+                    fit: BoxFit.cover,
+                  ),
                   border: Border.all(color: Colors.grey.shade200),
                 ),
-                child: TextField(
-                  controller: _messageController,
-                  focusNode: _focusNode,
-                  style: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: darkColor),
-                  maxLines: 3,
-                  minLines: 1,
-                  decoration: InputDecoration(
-                    hintText: 'اكتب استفسارك...',
-                    hintStyle: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: Colors.grey.shade400),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  onSubmitted: (_) => _sendMessage(),
-                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFFF9800), Color(0xFFF57C00)]),
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: const Color(0xFFFF9800).withOpacity(0.3), blurRadius: 8)],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _openSystemBuilder,
-                  borderRadius: BorderRadius.circular(30),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () => _removeImage(index),
                   child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(shape: BoxShape.circle),
-                    child: const Icon(Icons.solar_power_rounded, color: Colors.white, size: 22),
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [primaryBlue, secondaryBlue]),
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.3), blurRadius: 8)],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _isSending ? null : () => _sendMessage(),
-                  borderRadius: BorderRadius.circular(30),
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(shape: BoxShape.circle),
-                    child: _isSending
-                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -916,17 +1508,24 @@ class _ChatScreenState extends State<ChatScreen>
               child: GestureDetector(
                 onTap: () => _sendSuggestedQuestion(question),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [primaryBlue.withOpacity(0.06), secondaryBlue.withOpacity(0.03)],
+                      colors: [
+                        primaryBlue.withOpacity(0.06),
+                        secondaryBlue.withOpacity(0.03)
+                      ],
                     ),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: primaryBlue.withOpacity(0.12)),
                   ),
                   child: Text(
                     question,
-                    style: GoogleFonts.cairo(fontSize: 11 * _fontScale, color: primaryBlue, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.cairo(
+                        fontSize: 11 * _fontScale,
+                        color: primaryBlue,
+                        fontWeight: FontWeight.w600),
                     maxLines: 1,
                   ),
                 ),
@@ -957,14 +1556,20 @@ class _ChatScreenState extends State<ChatScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [primaryBlue.withOpacity(0.1), secondaryBlue.withOpacity(0.05)],
+                  colors: [
+                    primaryBlue.withOpacity(0.1),
+                    secondaryBlue.withOpacity(0.05)
+                  ],
                 ),
               ),
-              child: const CircularProgressIndicator(color: primaryBlue, strokeWidth: 2.5),
+              child: const CircularProgressIndicator(
+                  color: primaryBlue, strokeWidth: 2.5),
             ),
           ),
           const SizedBox(height: 16),
-          Text('جاري تحميل المحادثة...', style: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: mediumGray)),
+          Text('جاري تحميل المحادثة...',
+              style: GoogleFonts.cairo(
+                  fontSize: 14 * _fontScale, color: mediumGray)),
         ],
       ),
     );
@@ -982,19 +1587,24 @@ class _ChatScreenState extends State<ChatScreen>
               shape: BoxShape.circle,
               color: Colors.red.shade50,
             ),
-            child: Icon(Icons.error_outline_rounded, size: 35, color: Colors.red.shade300),
+            child: Icon(Icons.error_outline_rounded,
+                size: 35, color: Colors.red.shade300),
           ),
           const SizedBox(height: 16),
-          Text(_errorMessage!, style: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: mediumGray)),
+          Text(_errorMessage!,
+              style: GoogleFonts.cairo(
+                  fontSize: 14 * _fontScale, color: mediumGray)),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: _fetchChatHistory,
             icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: Text('إعادة المحاولة', style: GoogleFonts.cairo(fontSize: 14 * _fontScale)),
+            label: Text('إعادة المحاولة',
+                style: GoogleFonts.cairo(fontSize: 14 * _fontScale)),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ],
@@ -1023,24 +1633,35 @@ class _ChatScreenState extends State<ChatScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
-                  colors: [primaryBlue.withOpacity(0.08), secondaryBlue.withOpacity(0.04)],
+                  colors: [
+                    primaryBlue.withOpacity(0.08),
+                    secondaryBlue.withOpacity(0.04)
+                  ],
                 ),
               ),
-              child: const Icon(Icons.auto_awesome_rounded, size: 50, color: primaryBlue),
+              child: const Icon(Icons.auto_awesome_rounded,
+                  size: 50, color: primaryBlue),
             ),
           ),
           const SizedBox(height: 20),
           Text('المساعد الذكي للطاقة الشمسية',
-              style: GoogleFonts.cairo(fontSize: 20 * _fontScale, fontWeight: FontWeight.bold, color: darkColor)),
+              style: GoogleFonts.cairo(
+                  fontSize: 20 * _fontScale,
+                  fontWeight: FontWeight.bold,
+                  color: darkColor)),
           const SizedBox(height: 8),
           Text('اسألني عن أي شيء يتعلق بالطاقة الشمسية',
-              style: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: mediumGray)),
+              style: GoogleFonts.cairo(
+                  fontSize: 14 * _fontScale, color: mediumGray)),
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryBlue.withOpacity(0.04), secondaryBlue.withOpacity(0.02)],
+                colors: [
+                  primaryBlue.withOpacity(0.04),
+                  secondaryBlue.withOpacity(0.02)
+                ],
               ),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: primaryBlue.withOpacity(0.1)),
@@ -1074,7 +1695,9 @@ class _ChatScreenState extends State<ChatScreen>
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade200),
         ),
-        child: Text(text, style: GoogleFonts.cairo(fontSize: 12 * _fontScale, color: darkColor)),
+        child: Text(text,
+            style:
+            GoogleFonts.cairo(fontSize: 12 * _fontScale, color: darkColor)),
       ),
     );
   }
