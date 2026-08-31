@@ -1659,5 +1659,180 @@ class ApiService {
     }
   }
 
+  // ═══════════════════════════════════════════
+  // ✅ Lighting Support Chat APIs (دعم الإنارة والديكور)
+  // ═══════════════════════════════════════════
+
+  /// ✅ بدء جلسة دعم الإنارة للضيف
+  Future<Map<String, dynamic>> startGuestLightingSupportSession() async {
+    try {
+      return await post(
+        '/v1/user/public/lighting-support/start',
+        requiresAuth: false,
+        data: {},
+      );
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في بدء جلسة الدعم: $e'};
+    }
+  }
+
+  /// ✅ إرسال رسالة نصية لدعم الإنارة
+  Future<Map<String, dynamic>> sendLightingSupportMessage({
+    required String message,
+    bool requiresAuth = true,
+    String? sessionId,
+    String? governorate,
+  }) async {
+    try {
+      final response = await post(
+        requiresAuth
+            ? '/v1/user/lighting-support/send'
+            : '/v1/user/public/lighting-support/send',
+        requiresAuth: requiresAuth,
+        data: {
+          'message': message,
+          if (!requiresAuth && sessionId != null) 'session_id': sessionId,
+          if (!requiresAuth && governorate != null) 'governorate': governorate,
+        },
+      );
+      return response;
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في إرسال الرسالة: $e'};
+    }
+  }
+
+  /// ✅ إرسال صورة لدعم الإنارة
+  Future<Map<String, dynamic>> sendLightingSupportImage({
+    required File imageFile,
+    String message = '',
+    bool requiresAuth = true,
+    String? sessionId,
+    String? governorate,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse(
+          requiresAuth
+              ? '${AppConstants.baseUrl}/v1/user/lighting-support/send-image'
+              : '${AppConstants.baseUrl}/v1/user/public/lighting-support/send-image',
+        ),
+      );
+
+      if (requiresAuth && _token != null) {
+        request.headers['Authorization'] = 'Bearer $_token';
+      }
+
+      if (message.isNotEmpty) {
+        request.fields['message'] = message;
+      }
+
+      if (!requiresAuth) {
+        if (sessionId != null) request.fields['session_id'] = sessionId;
+        if (governorate != null) request.fields['governorate'] = governorate;
+      }
+
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path),
+      );
+
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+      final response = http.Response(responseBody, streamedResponse.statusCode);
+
+      return _handleResponse(response);
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في إرسال الصورة: $e'};
+    }
+  }
+
+  /// ✅ إرسال رسالة صوتية لدعم الإنارة
+  Future<Map<String, dynamic>> sendLightingSupportVoice({
+    required File audioFile,
+    bool requiresAuth = true,
+    String? sessionId,
+    String? governorate,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse(
+          requiresAuth
+              ? '${AppConstants.baseUrl}/v1/user/lighting-support/send-voice'
+              : '${AppConstants.baseUrl}/v1/user/public/lighting-support/send-voice',
+        ),
+      );
+
+      if (requiresAuth && _token != null) {
+        request.headers['Authorization'] = 'Bearer $_token';
+      }
+
+      if (!requiresAuth) {
+        if (sessionId != null) request.fields['session_id'] = sessionId;
+        if (governorate != null) request.fields['governorate'] = governorate;
+      }
+
+      final bytes = await audioFile.readAsBytes();
+
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'audio',
+          bytes,
+          filename: 'voice.wav',
+          contentType: MediaType('audio', 'wav'),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+      final response = http.Response(responseBody, streamedResponse.statusCode);
+
+      return _handleResponse(response);
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في إرسال الصوت: $e'};
+    }
+  }
+
+  /// ✅ جلب تاريخ محادثة دعم الإنارة
+  Future<Map<String, dynamic>> getLightingSupportHistory({
+    bool requiresAuth = true,
+    String? sessionId,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      final endpoint = requiresAuth
+          ? '/v1/user/lighting-support/history?limit=$limit&offset=$offset'
+          : '/v1/user/public/lighting-support/history?session_id=$sessionId&limit=$limit&offset=$offset';
+
+      return await get(endpoint, requiresAuth: requiresAuth);
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في جلب المحادثة: $e'};
+    }
+  }
+
+  /// ✅ مسح محادثة دعم الإنارة
+  Future<Map<String, dynamic>> clearLightingSupportConversation({
+    bool requiresAuth = true,
+    String? sessionId,
+  }) async {
+    try {
+      if (requiresAuth) {
+        return await delete(
+          '/v1/user/lighting-support/clear',
+          requiresAuth: true,
+        );
+      } else {
+        return await post(
+          '/v1/user/public/lighting-support/clear',
+          requiresAuth: false,
+          data: {'session_id': sessionId},
+        );
+      }
+    } catch (e) {
+      return {'error': true, 'message': 'خطأ في مسح المحادثة: $e'};
+    }
+  }
+
 
 }

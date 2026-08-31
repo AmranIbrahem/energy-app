@@ -237,4 +237,18 @@ class StorageService {
     await _preferences.remove('guest_appliance_support_session_id');
   }
 
+
+  // ✅ Lighting Support Chat Session ID
+  Future<void> saveGuestLightingSupportSessionId(String sessionId) async {
+    await _preferences.setString('guest_lighting_support_session_id', sessionId);
+  }
+
+  String? getGuestLightingSupportSessionId() {
+    return _preferences.getString('guest_lighting_support_session_id');
+  }
+
+  Future<void> clearGuestLightingSupportSessionId() async {
+    await _preferences.remove('guest_lighting_support_session_id');
+  }
+  
 }

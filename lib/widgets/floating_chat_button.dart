@@ -20,7 +20,8 @@ import '../screens/chat/guest_support_solar_chat_screen.dart';
 import '../screens/chat/support_solar_chat_screen.dart';
 import '../screens/chat/appliance_support_chat_screen.dart';
 import '../screens/chat/guest_appliance_support_chat_screen.dart';
-
+import '../screens/chat/lighting_support_chat_screen.dart';
+import '../screens/chat/guest_lighting_support_chat_screen.dart';
 
 class FloatingChatButton extends StatefulWidget {
   final AuthService? authService;
@@ -289,11 +290,6 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet>
       'subtitle': 'جد أكثر الأجهزة توفيراً',
       'image': 'assets/images/homeappliancesillustration.png'
     },
-    {
-      'title': 'الصيانة والاستشارات',
-      'subtitle': 'اطلب فني أو استشارة',
-      'image': 'assets/images/maintenanceillustration.png'
-    },
   ];
 
   late AnimationController _animationController;
@@ -399,14 +395,24 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet>
 
     if (index == 0) {
       _showSolarOptionsSheet();
+    } else if (index == 1) {
+      // ✅ الإنارة والديكور
+      _showLightingOptionsSheet();
     } else if (index == 2) {
       // ✅ الأجهزة الكهربائية
       _showApplianceOptionsSheet();
-    } else {
-      _showComingSoonSnackBar(context);
     }
   }
 
+  void _showLightingOptionsSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => LightingOptionsSheet(
+          authService: widget.authService, isGuest: widget.isGuest),
+    );
+  }
   void _showSolarOptionsSheet() {
     showModalBottomSheet(
       context: context,
@@ -437,6 +443,250 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet>
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+}
+
+
+// ✅ شاشة خيارات الإنارة والديكور
+class LightingOptionsSheet extends StatefulWidget {
+  final AuthService? authService;
+  final bool isGuest;
+
+  const LightingOptionsSheet(
+      {super.key, this.authService, required this.isGuest});
+
+  @override
+  State<LightingOptionsSheet> createState() => _LightingOptionsSheetState();
+}
+
+class _LightingOptionsSheetState extends State<LightingOptionsSheet>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+
+  final List<Map<String, dynamic>> _lightingOptions = [
+    {
+      'title': 'تصميم الإضاءة الذكية',
+      'subtitle': 'صور غرفتك والذكاء يضيف الإضاءة الصحيحة',
+      'icon': Icons.auto_fix_high_rounded,
+      'gradient': [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+      'buttonText': 'قريباً',
+      'enabled': false
+    },
+    {
+      'title': 'الدعم التقني للإنارة',
+      'subtitle': 'تواصل مع فريق الدعم الفني المتخصص',
+      'icon': Icons.support_agent_rounded,
+      'gradient': [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+      'buttonText': 'ابدأ المحادثة',
+      'enabled': true
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 600))
+      ..forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.55,
+      decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(30), topRight: Radius.circular(30))),
+      child: Column(
+        children: [
+          Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Icon(Icons.arrow_back_rounded,
+                          color: Colors.grey.shade700, size: 22)),
+                ),
+                const SizedBox(width: 12),
+                Text('خدمات الإنارة والديكور',
+                    style: GoogleFonts.cairo(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF111827))),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              itemCount: _lightingOptions.length,
+              itemBuilder: (context, index) {
+                final option = _lightingOptions[index];
+                final animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+                  CurvedAnimation(
+                      parent: _animationController,
+                      curve: Interval(index * 0.15, index * 0.15 + 0.5,
+                          curve: Curves.easeOut)),
+                );
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                        begin: const Offset(0, 0.2), end: Offset.zero)
+                        .animate(animation),
+                    child: _buildLightingOptionCard(option, index),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLightingOptionCard(Map<String, dynamic> option, int index) {
+    final gradient = option['gradient'] as List<Color>;
+    final enabled = option['enabled'] as bool;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: enabled ? Colors.grey.shade200 : Colors.grey.shade100,
+            width: 1.5),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: enabled
+                      ? gradient
+                      : [Colors.grey.shade300, Colors.grey.shade400]),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child:
+            Icon(option['icon'] as IconData, color: Colors.white, size: 30),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(option['title'] as String,
+                    style: GoogleFonts.cairo(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF111827))),
+                const SizedBox(height: 4),
+                Text(option['subtitle'] as String,
+                    style: GoogleFonts.cairo(
+                        fontSize: 12, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: enabled ? () => _handleLightingOptionTap(index) : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: enabled
+                    ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: gradient)
+                    : null,
+                color: enabled ? null : Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: Text(option['buttonText'] as String,
+                  style: GoogleFonts.cairo(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: enabled ? Colors.white : Colors.grey.shade500)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleLightingOptionTap(int index) {
+    Navigator.pop(context);
+
+    switch (index) {
+      case 0:
+      // ✅ تصميم الإضاءة الذكية - قريباً
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('هذه الميزة قادمة قريباً!', style: GoogleFonts.cairo()), backgroundColor: Colors.orange, behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 2)),
+        );
+        break;
+      case 1:
+      // ✅ الدعم التقني للإنارة
+        if (widget.isGuest) {
+          _openGuestLightingSupport();
+        } else {
+          _openLightingSupport();
+        }
+        break;
+    }
+  }
+
+  void _openLightingSupport() {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => LightingSupportChatScreen(
+                authService: widget.authService!,
+                apiService: ApiService(
+                    storageService: widget.authService!.storageService))));
+  }
+
+  void _openGuestLightingSupport() {
+    final storageService =
+        widget.authService?.storageService ?? StorageService();
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => GuestLightingSupportChatScreen(
+                apiService: ApiService(storageService: storageService),
+                storageService: storageService,
+                initialGovernorate: storageService.getGuestGovernorate())));
   }
 }
 
@@ -1155,7 +1405,8 @@ class CategoryCard extends StatelessWidget {
               child: Center(
                 child: Text(
                   category['title'] == 'الطاقة الشمسية' ||
-                          category['title'] == 'الأجهزة الكهربائية'
+                      category['title'] == 'الأجهزة الكهربائية' ||
+                      category['title'] == 'الإنارة والديكور'
                       ? 'ابدأ'
                       : 'قريباً',
                   style: GoogleFonts.cairo(
