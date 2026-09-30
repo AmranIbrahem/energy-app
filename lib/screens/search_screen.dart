@@ -1,6 +1,7 @@
 // lib/screens/search/search_screen.dart
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:GeniusHouse/services/api_service.dart';
@@ -76,9 +77,13 @@ class _SearchScreenState extends State<SearchScreen>
   bool _isProcessingAudio = false;
   bool _isSpeechAvailable = false;
   bool _isInitializingSpeech = false;
+  bool _isMicPressed = false;
   double _recordingProgress = 0.0;
   Timer? _recordingTimer;
+  Timer? _micLongPressTimer;
   String? _lastRecognizedText;
+  String _selectedLocaleId = 'ar-SY';
+  bool _resolveLocaleAttempted = false;
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
@@ -137,11 +142,14 @@ class _SearchScreenState extends State<SearchScreen>
 
   @override
   void dispose() {
+    try {
+      _speech.cancel();
+      _speech.stop();
+    } catch (_) {}
+    _recordingTimer?.cancel();
+    _micLongPressTimer?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
-    _recordingTimer?.cancel();
-    _speech.stop();
-    _speech.cancel();
     _pulseController.dispose();
     _fadeController.dispose();
     _slideController.dispose();
@@ -156,13 +164,15 @@ class _SearchScreenState extends State<SearchScreen>
       _isSpeechAvailable = await _speech.initialize(
         onStatus: _onSpeechStatus,
         onError: _onSpeechError,
+        debugLogging: false,
       );
 
-      if (mounted) {
-        setState(() {});
-        if (!_isSpeechAvailable) {
-        } else {}
+      if (_isSpeechAvailable && !_resolveLocaleAttempted) {
+        _selectedLocaleId = await _resolveBestLocale();
+        _resolveLocaleAttempted = true;
       }
+
+      if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
         setState(() => _isSpeechAvailable = false);
@@ -172,17 +182,38 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
+  Future<String> _resolveBestLocale() async {
+    try {
+      final locales = await _speech.locales();
+      final available =
+      locales.map((l) => l.localeId.replaceAll('_', '-')).toSet();
+
+      const preferred = ['ar-SY', 'ar-SA', 'ar-EG', 'ar-AE', 'ar-JO', 'ar'];
+      for (final loc in preferred) {
+        if (available.contains(loc)) return loc.replaceAll('-', '_');
+      }
+
+      final anyArabic = available.firstWhere(
+            (l) => l.startsWith('ar'),
+        orElse: () => '',
+      );
+      if (anyArabic.isNotEmpty) return anyArabic.replaceAll('-', '_');
+
+      return 'ar-SY';
+    } catch (_) {
+      return 'ar-SY';
+    }
+  }
+
   void _onSpeechStatus(String status) {
     if (!mounted) return;
 
     if (status == 'done' || status == 'notListening') {
-      setState(() {
-        _isRecording = false;
-        _isProcessingAudio = false;
-      });
-      _recordingTimer?.cancel();
+      if (_isRecording && !_isProcessingAudio && !_isMicPressed) {
+        _stopRecordingAndSearch();
+      }
     } else if (status == 'listening') {
-      setState(() => _isRecording = true);
+      if (!_isRecording) setState(() => _isRecording = true);
     }
   }
 
@@ -192,14 +223,15 @@ class _SearchScreenState extends State<SearchScreen>
     setState(() {
       _isRecording = false;
       _isProcessingAudio = false;
+      _isMicPressed = false;
     });
     _recordingTimer?.cancel();
+    _micLongPressTimer?.cancel();
 
-    String message;
     final errorMsg = error.errorMsg.toLowerCase();
+    String message;
 
     if (errorMsg.contains('recognizernotavailable') ||
-        errorMsg.contains('recognizer_not_available') ||
         errorMsg.contains('not available') ||
         errorMsg.contains('notavailable')) {
       message = 'خاصية التعرف على الكلام غير متاحة على هذا الجهاز.\n'
@@ -212,26 +244,20 @@ class _SearchScreenState extends State<SearchScreen>
         errorMsg.contains('microphone') ||
         errorMsg.contains('mic')) {
       message = 'حدث خطأ في التقاط الصوت.\nتأكد من عمل الميكروفون.';
-    } else if (errorMsg.contains('permission') ||
-        errorMsg.contains('permissions') ||
-        errorMsg.contains('denied')) {
+    } else if (errorMsg.contains('permission') || errorMsg.contains('denied')) {
       message =
-          'صلاحية الميكروفون غير ممنوحة.\nيرجى منح الصلاحية من الإعدادات.';
+      'صلاحية الميكروفون غير ممنوحة.\nيرجى منح الصلاحية من الإعدادات.';
     } else if (errorMsg.contains('network') ||
         errorMsg.contains('internet') ||
-        errorMsg.contains('timeout') ||
         errorMsg.contains('connection')) {
       message =
-          'انقطع الاتصال بالإنترنت.\nخدمة التعرف على الكلام تحتاج اتصالاً بالإنترنت.';
-    } else if (errorMsg.contains('timeout') ||
-        errorMsg.contains('speech_timeout')) {
+      'انقطع الاتصال بالإنترنت.\nخدمة التعرف على الكلام تحتاج اتصالاً بالإنترنت.';
+    } else if (errorMsg.contains('timeout')) {
       message = 'انتهت مهلة الاستماع.\nاضغط على الميكروفون وحاول مرة أخرى.';
     } else if (errorMsg.contains('busy') || errorMsg.contains('already')) {
-      message =
-          'خدمة التعرف على الكلام مشغولة حالياً.\nحاول مرة أخرى بعد قليل.';
+      message = 'خدمة التعرف على الكلام مشغولة حالياً.\nحاول مرة أخرى بعد قليل.';
     } else {
-      message =
-          'تعذر تحويل الصوت إلى نص.\nيرجى المحاولة مرة أخرى.\n(${error.errorMsg})';
+      message = 'تعذر تحويل الصوت إلى نص.\nيرجى المحاولة مرة أخرى.';
     }
 
     _showSnackBar(message, dangerRed);
@@ -240,16 +266,15 @@ class _SearchScreenState extends State<SearchScreen>
   Future<bool> _requestMicrophonePermission() async {
     try {
       final status = await Permission.microphone.request();
-      if (status == PermissionStatus.granted) {
-        return true;
-      } else if (status == PermissionStatus.permanentlyDenied) {
+      if (status == PermissionStatus.granted) return true;
+
+      if (status == PermissionStatus.permanentlyDenied) {
         _showPermissionDialog();
         return false;
-      } else {
-        _showSnackBar('يرجى منح إذن الوصول إلى الميكروفون', warningOrange);
-        return false;
       }
-    } catch (e) {
+      _showSnackBar('يرجى منح إذن الوصول إلى الميكروفون', warningOrange);
+      return false;
+    } catch (_) {
       return false;
     }
   }
@@ -284,9 +309,9 @@ class _SearchScreenState extends State<SearchScreen>
         ),
         content: Text(
           'يحتاج التطبيق إلى الوصول إلى الميكروفون لاستخدام خاصية البحث الصوتي.\n\n'
-          'يمكنك تفعيل الصلاحية من إعدادات التطبيق.',
+              'يمكنك تفعيل الصلاحية من إعدادات التطبيق.',
           style:
-              GoogleFonts.cairo(fontSize: 14, color: mediumGray, height: 1.6),
+          GoogleFonts.cairo(fontSize: 14, color: mediumGray, height: 1.6),
         ),
         actions: [
           TextButton(
@@ -315,26 +340,69 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
+  void _onMicPointerDown() {
+    if (_isRecording || _isProcessingAudio) return;
+
+    HapticFeedback.selectionClick();
+    setState(() => _isMicPressed = true);
+
+    _micLongPressTimer?.cancel();
+    _micLongPressTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted && _isMicPressed) {
+        _startRecording();
+      }
+    });
+  }
+
+  void _onMicPointerUp() {
+    _micLongPressTimer?.cancel();
+
+    if (!_isMicPressed) return;
+
+    setState(() => _isMicPressed = false);
+
+    if (_isRecording) {
+      _stopRecordingAndSearch();
+    }
+  }
+
+  void _onMicPointerCancel() {
+    _micLongPressTimer?.cancel();
+
+    if (!_isMicPressed) return;
+
+    setState(() => _isMicPressed = false);
+
+    if (_isRecording) {
+      _cancelRecording();
+    }
+  }
+
   Future<void> _startRecording() async {
     if (_isRecording || _isProcessingAudio) return;
 
     try {
       final hasPermission = await _requestMicrophonePermission();
-      if (!hasPermission) return;
+      if (!hasPermission) {
+        setState(() => _isMicPressed = false);
+        return;
+      }
 
       if (!_isSpeechAvailable) {
-        _showSnackBar('جاري فحص خاصية التعرف على الكلام...', warningOrange);
         await _initSpeechToText();
 
         if (!_isSpeechAvailable) {
+          setState(() => _isMicPressed = false);
           _showSnackBar(
-            'عذراً، جهازك لا يدعم خاصية التعرف على الكلام.\n'
-            'تأكد من تثبيت تطبيق Google وتفعيل اللغة العربية في الإعدادات.',
+            'جهازك لا يدعم التعرف على الكلام.\n'
+                'تأكد من تثبيت تطبيق Google وتفعيل اللغة العربية.',
             dangerRed,
           );
           return;
         }
       }
+
+      HapticFeedback.mediumImpact();
 
       setState(() {
         _isRecording = true;
@@ -347,23 +415,31 @@ class _SearchScreenState extends State<SearchScreen>
 
       await _speech.listen(
         onResult: _onSpeechResult,
-        listenFor: const Duration(seconds: 15),
-        pauseFor: const Duration(seconds: 3),
+        onSoundLevelChange: _onSoundLevelChange,
+        listenFor: const Duration(seconds: 30),
+        pauseFor: const Duration(seconds: 5),
         partialResults: true,
-        cancelOnError: true,
+        cancelOnError: false,
         listenMode: stt.ListenMode.dictation,
-        localeId: 'ar_SY',
+        localeId: _selectedLocaleId,
       );
     } catch (e) {
       if (mounted) {
         setState(() {
           _isRecording = false;
           _isProcessingAudio = false;
+          _isMicPressed = false;
         });
         _recordingTimer?.cancel();
         _showSnackBar('فشل بدء التسجيل الصوتي. حاول مرة أخرى.', dangerRed);
       }
     }
+  }
+
+  void _onSoundLevelChange(double level) {
+    if (!mounted || !_isRecording) return;
+    final normalized = ((level + 2) / 12).clamp(0.0, 1.0);
+    setState(() => _recordingProgress = normalized);
   }
 
   void _onSpeechResult(SpeechRecognitionResult result) {
@@ -372,78 +448,113 @@ class _SearchScreenState extends State<SearchScreen>
     if (result.recognizedWords.isNotEmpty) {
       setState(() {
         _lastRecognizedText = result.recognizedWords;
+        if (!result.finalResult) {
+          _searchController.text = result.recognizedWords;
+        }
       });
-    }
-    if (result.finalResult && result.recognizedWords.isNotEmpty) {
-      final recognizedText = result.recognizedWords.trim();
-
-      setState(() {
-        _searchController.text = recognizedText;
-        _searchQuery = recognizedText;
-        _isRecording = false;
-        _isProcessingAudio = false;
-      });
-
-      _recordingTimer?.cancel();
-      _speech.stop();
-
-      if (recognizedText.isNotEmpty) {
-        _showSnackBar('تم التعرف على: "$recognizedText"', successGreen);
-        _search();
-      }
     }
   }
 
-  Future<void> _stopRecording() async {
+  String _processVoiceCommand(String text) {
+    var cleaned = text.trim();
+
+    const prefixes = [
+      'ابحث لي عن ',
+      'ابحث عن ',
+      'ابحث ',
+      'دور على ',
+      'دور لي على ',
+      'أريد ',
+      'اريد ',
+      'أرغب في ',
+      'ارغب في ',
+      'أبحث عن ',
+      'ابحثي عن ',
+      'بحث عن ',
+    ];
+
+    for (final p in prefixes) {
+      if (cleaned.startsWith(p)) {
+        cleaned = cleaned.substring(p.length).trim();
+        break;
+      }
+    }
+
+    return cleaned;
+  }
+
+  Future<void> _stopRecordingAndSearch() async {
     if (!_isRecording) return;
 
+    HapticFeedback.lightImpact();
+
+    setState(() {
+      _isProcessingAudio = true;
+      _isRecording = false;
+      _isMicPressed = false;
+    });
+
+    _recordingTimer?.cancel();
+    _micLongPressTimer?.cancel();
+
     try {
-      setState(() {
-        _isProcessingAudio = true;
-        _isRecording = false;
-      });
-
-      _recordingTimer?.cancel();
       await _speech.stop();
+    } catch (_) {}
 
-      if (_lastRecognizedText != null && _lastRecognizedText!.isNotEmpty) {
-        setState(() {
-          _searchController.text = _lastRecognizedText!;
-          _searchQuery = _lastRecognizedText!;
-        });
-        _search();
-      } else {
-        _showSnackBar(
-            'لم يتم التعرف على أي كلام. حاول مرة أخرى.', warningOrange);
-      }
+    await Future.delayed(const Duration(milliseconds: 350));
 
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          setState(() => _isProcessingAudio = false);
-        }
-      });
-    } catch (e) {
+    if (!mounted) return;
+
+    final rawText = _lastRecognizedText?.trim() ?? '';
+
+    if (rawText.isEmpty) {
       setState(() {
-        _isRecording = false;
         _isProcessingAudio = false;
+        _recordingProgress = 0.0;
       });
+      _showSnackBar('لم يتم التعرف على أي كلام. حاول مرة أخرى.', warningOrange);
+      return;
     }
+
+    final processed = _processVoiceCommand(rawText);
+
+    if (processed.isEmpty) {
+      setState(() {
+        _isProcessingAudio = false;
+        _recordingProgress = 0.0;
+      });
+      _showSnackBar('لم يتم التعرف على أي كلام. حاول مرة أخرى.', warningOrange);
+      return;
+    }
+
+    setState(() {
+      _isProcessingAudio = false;
+      _recordingProgress = 0.0;
+      _searchController.text = processed;
+      _searchQuery = processed;
+    });
+
+    _saveRecentSearch(processed);
+    _search();
   }
 
   Future<void> _cancelRecording() async {
+    HapticFeedback.heavyImpact();
+    _recordingTimer?.cancel();
+    _micLongPressTimer?.cancel();
+
     try {
-      _recordingTimer?.cancel();
       await _speech.cancel();
-      if (mounted) {
-        setState(() {
-          _isRecording = false;
-          _isProcessingAudio = false;
-          _recordingProgress = 0.0;
-          _lastRecognizedText = null;
-        });
-      }
-    } catch (e) {
-      //
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() {
+        _isRecording = false;
+        _isProcessingAudio = false;
+        _isMicPressed = false;
+        _recordingProgress = 0.0;
+        _lastRecognizedText = null;
+      });
     }
   }
 
@@ -451,17 +562,10 @@ class _SearchScreenState extends State<SearchScreen>
     _recordingTimer?.cancel();
     _recordingTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (mounted && _isRecording) {
-        setState(() {
-          _recordingProgress += 0.01;
-          if (_recordingProgress >= 1.0) {
-            _recordingProgress = 0.0;
+          if (!mounted || !_isRecording) {
+            timer.cancel();
           }
         });
-      } else {
-        timer.cancel();
-      }
-    });
   }
 
   void _showSnackBar(String message, [Color? color]) {
@@ -476,10 +580,10 @@ class _SearchScreenState extends State<SearchScreen>
               color == successGreen
                   ? Icons.check_circle_rounded
                   : color == warningOrange
-                      ? Icons.warning_rounded
-                      : color == dangerRed
-                          ? Icons.error_rounded
-                          : Icons.info_rounded,
+                  ? Icons.warning_rounded
+                  : color == dangerRed
+                  ? Icons.error_rounded
+                  : Icons.info_rounded,
               color: Colors.white,
               size: 20,
             ),
@@ -514,9 +618,7 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   void _clearRecentSearches() {
-    setState(() {
-      _recentSearches.clear();
-    });
+    setState(() => _recentSearches.clear());
   }
 
   Future<void> _search({bool loadMore = false}) async {
@@ -560,13 +662,11 @@ class _SearchScreenState extends State<SearchScreen>
       if (_maxPrice != null && _maxPrice! > 0) {
         params['max_price'] = _maxPrice;
       }
-
       if (_selectedGovernorates.isNotEmpty) {
         params['governorate'] = _selectedGovernorates.join(',');
       }
 
       String endpoint;
-
       if (widget.authService?.isAuthenticated == true) {
         endpoint = '/v1/user/products/search';
       } else {
@@ -780,7 +880,8 @@ class _SearchScreenState extends State<SearchScreen>
                                 suffixIcon: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (_searchController.text.isNotEmpty)
+                                    if (_searchController.text.isNotEmpty &&
+                                        !_isRecording)
                                       IconButton(
                                         icon: const Icon(Icons.clear_rounded,
                                             color: Colors.white70, size: 20),
@@ -789,28 +890,8 @@ class _SearchScreenState extends State<SearchScreen>
                                           setState(() => _searchQuery = '');
                                         },
                                       ),
-                                    IconButton(
-                                      icon: _isRecording
-                                          ? Icon(Icons.stop_rounded,
-                                              color: Colors.red.shade300,
-                                              size: 24)
-                                          : _isProcessingAudio
-                                              ? const SizedBox(
-                                                  width: 18,
-                                                  height: 18,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                          color: Colors.white))
-                                              : const Icon(Icons.mic_rounded,
-                                                  color: Colors.white70,
-                                                  size: 20),
-                                      onPressed: _isRecording
-                                          ? _stopRecording
-                                          : (_isProcessingAudio
-                                              ? null
-                                              : _startRecording),
-                                    ),
+                                    _buildMicButton(),
+                                    const SizedBox(width: 4),
                                   ],
                                 ),
                                 filled: true,
@@ -865,29 +946,29 @@ class _SearchScreenState extends State<SearchScreen>
                                         option['value'], option['label']),
                                     child: AnimatedContainer(
                                       duration:
-                                          const Duration(milliseconds: 300),
+                                      const Duration(milliseconds: 300),
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 8),
                                       decoration: BoxDecoration(
                                         gradient: isSelected
                                             ? const LinearGradient(colors: [
-                                                primaryBlue,
-                                                secondaryBlue
-                                              ])
+                                          primaryBlue,
+                                          secondaryBlue
+                                        ])
                                             : LinearGradient(colors: [
-                                                Colors.white.withOpacity(0.2),
-                                                Colors.white.withOpacity(0.1)
-                                              ]),
+                                          Colors.white.withOpacity(0.2),
+                                          Colors.white.withOpacity(0.1)
+                                        ]),
                                         borderRadius: BorderRadius.circular(20),
                                         boxShadow: isSelected
                                             ? [
-                                                BoxShadow(
-                                                  color: primaryBlue
-                                                      .withOpacity(0.3),
-                                                  blurRadius: 8,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ]
+                                          BoxShadow(
+                                            color: primaryBlue
+                                                .withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
                                             : null,
                                       ),
                                       child: Row(
@@ -930,16 +1011,16 @@ class _SearchScreenState extends State<SearchScreen>
                 child: _isLoading
                     ? _buildShimmerLoading()
                     : _errorMessage != null
-                        ? _buildErrorWidget()
-                        : _products.isEmpty &&
-                                _searchQuery.isEmpty &&
-                                _selectedGovernorates.isEmpty
-                            ? _buildInitialWidget()
-                            : _products.isEmpty
-                                ? _buildEmptyWidget()
-                                : _isGridView
-                                    ? _buildGridView()
-                                    : _buildListView(),
+                    ? _buildErrorWidget()
+                    : _products.isEmpty &&
+                    _searchQuery.isEmpty &&
+                    _selectedGovernorates.isEmpty
+                    ? _buildInitialWidget()
+                    : _products.isEmpty
+                    ? _buildEmptyWidget()
+                    : _isGridView
+                    ? _buildGridView()
+                    : _buildListView(),
               ),
             ],
           ),
@@ -947,14 +1028,63 @@ class _SearchScreenState extends State<SearchScreen>
         floatingActionButton: _showFilters
             ? null
             : FloatingActionButton.extended(
-                onPressed: () => _showFiltersSheet(),
-                backgroundColor: primaryBlue,
-                foregroundColor: Colors.white,
-                icon: const Icon(Icons.filter_list_rounded),
-                label: Text('فلترة',
-                    style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
-                elevation: 5,
-              ),
+          onPressed: () => _showFiltersSheet(),
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.filter_list_rounded),
+          label: Text('فلترة',
+              style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+          elevation: 5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMicButton() {
+    return Listener(
+      onPointerDown: (_) => _onMicPointerDown(),
+      onPointerUp: (_) => _onMicPointerUp(),
+      onPointerCancel: (_) => _onMicPointerCancel(),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: _isRecording
+              ? Colors.red.withOpacity(0.85)
+              : _isMicPressed
+              ? Colors.white.withOpacity(0.45)
+              : Colors.white.withOpacity(0.18),
+          boxShadow: _isRecording
+              ? [
+            BoxShadow(
+              color: Colors.red.withOpacity(0.5),
+              blurRadius: 12,
+              spreadRadius: 1,
+            ),
+          ]
+              : null,
+        ),
+        child: _isProcessingAudio
+            ? const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white,
+          ),
+        )
+            : Icon(
+          _isRecording
+              ? Icons.mic_rounded
+              : _isMicPressed
+              ? Icons.mic_rounded
+              : Icons.mic_none_rounded,
+          color: Colors.white,
+          size: 22,
+        ),
       ),
     );
   }
@@ -1094,7 +1224,7 @@ class _SearchScreenState extends State<SearchScreen>
               },
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected ? purple.withOpacity(0.1) : lightGray,
                   borderRadius: BorderRadius.circular(20),
@@ -1117,7 +1247,7 @@ class _SearchScreenState extends State<SearchScreen>
                         style: GoogleFonts.cairo(
                           fontSize: 12,
                           fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                           color: isSelected ? purple : mediumGray,
                         )),
                   ],
@@ -1146,7 +1276,7 @@ class _SearchScreenState extends State<SearchScreen>
                 decoration: InputDecoration(
                   labelText: 'الحد الأدنى',
                   labelStyle:
-                      GoogleFonts.cairo(fontSize: 12, color: mediumGray),
+                  GoogleFonts.cairo(fontSize: 12, color: mediumGray),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
@@ -1160,7 +1290,7 @@ class _SearchScreenState extends State<SearchScreen>
                 decoration: InputDecoration(
                   labelText: 'الحد الأعلى',
                   labelStyle:
-                      GoogleFonts.cairo(fontSize: 12, color: mediumGray),
+                  GoogleFonts.cairo(fontSize: 12, color: mediumGray),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
@@ -1190,10 +1320,10 @@ class _SearchScreenState extends State<SearchScreen>
               onTap: () => setState(() => _minRate = option['value']),
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color:
-                      isSelected ? warningOrange.withOpacity(0.1) : lightGray,
+                  isSelected ? warningOrange.withOpacity(0.1) : lightGray,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                       color: isSelected ? warningOrange : Colors.grey.shade300,
@@ -1210,7 +1340,7 @@ class _SearchScreenState extends State<SearchScreen>
                         style: GoogleFonts.cairo(
                           fontSize: 12,
                           fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                           color: isSelected ? warningOrange : mediumGray,
                         )),
                   ],
@@ -1225,10 +1355,10 @@ class _SearchScreenState extends State<SearchScreen>
 
   Widget _buildRecordingIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
-        border: Border(bottom: BorderSide(color: Colors.red.withOpacity(0.3))),
+        color: Colors.red.withOpacity(0.08),
+        border: Border(bottom: BorderSide(color: Colors.red.withOpacity(0.25))),
       ),
       child: Row(
         children: [
@@ -1239,8 +1369,8 @@ class _SearchScreenState extends State<SearchScreen>
               child: child,
             ),
             child: Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.red.withOpacity(0.2),
@@ -1253,12 +1383,12 @@ class _SearchScreenState extends State<SearchScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('جاري التسجيل... تحدث الآن',
+                Text('امسك للتحدث... ارفع إصبعك للبحث',
                     style: GoogleFonts.cairo(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                         color: darkColor)),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 if (_lastRecognizedText != null &&
                     _lastRecognizedText!.isNotEmpty)
                   Text(_lastRecognizedText!,
@@ -1268,16 +1398,10 @@ class _SearchScreenState extends State<SearchScreen>
                           fontStyle: FontStyle.italic),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: _recordingProgress,
-                    backgroundColor: Colors.red.withOpacity(0.2),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
-                    minHeight: 4,
-                  ),
-                ),
+                if (_lastRecognizedText != null &&
+                    _lastRecognizedText!.isNotEmpty)
+                  const SizedBox(height: 6),
+                _buildWaveform(),
               ],
             ),
           ),
@@ -1290,11 +1414,36 @@ class _SearchScreenState extends State<SearchScreen>
     );
   }
 
+  Widget _buildWaveform() {
+    return SizedBox(
+      height: 24,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: List.generate(20, (i) {
+          final waveFactor =
+              (math.sin((i / 20) * math.pi * 2) + 1) / 2;
+          final h = 4.0 + (_recordingProgress * 20 * waveFactor);
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 100),
+            margin: const EdgeInsets.symmetric(horizontal: 1.5),
+            width: 2.5,
+            height: h.clamp(4.0, 24.0),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.5 + (_recordingProgress * 0.5)),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
   Widget _buildGridView() {
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
         if (scrollInfo.metrics.pixels >=
-                scrollInfo.metrics.maxScrollExtent - 200 &&
+            scrollInfo.metrics.maxScrollExtent - 200 &&
             !_isLoadingMore &&
             _hasMore) {
           _search(loadMore: true);
@@ -1321,7 +1470,7 @@ class _SearchScreenState extends State<SearchScreen>
               child: Transform.translate(
                 offset: Offset(0, 30 * (1 - value)),
                 child:
-                    Transform.scale(scale: 0.9 + (0.1 * value), child: child),
+                Transform.scale(scale: 0.9 + (0.1 * value), child: child),
               ),
             ),
             child: ProductCard(
@@ -1339,7 +1488,7 @@ class _SearchScreenState extends State<SearchScreen>
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
         if (scrollInfo.metrics.pixels >=
-                scrollInfo.metrics.maxScrollExtent - 200 &&
+            scrollInfo.metrics.maxScrollExtent - 200 &&
             !_isLoadingMore &&
             _hasMore) {
           _search(loadMore: true);
@@ -1416,7 +1565,7 @@ class _SearchScreenState extends State<SearchScreen>
                     fontWeight: FontWeight.bold,
                     color: darkColor)),
             const SizedBox(height: 8),
-            Text('اكتب اسم المنتج أو استخدم البحث الصوتي',
+            Text('اضغط مطولاً على الميكروفون للتحدث',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
           ],
@@ -1517,7 +1666,7 @@ class _SearchScreenState extends State<SearchScreen>
                 foregroundColor: Colors.white,
                 elevation: 5,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15)),
                 shadowColor: primaryBlue.withOpacity(0.5),
@@ -1560,36 +1709,36 @@ class _SearchScreenState extends State<SearchScreen>
       child: Center(
         child: _isLoadingMore
             ? Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) => Transform.scale(
-                      scale: 1.0 + (_pulseController.value * 0.2),
-                      child: child,
-                    ),
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            primaryBlue.withOpacity(0.15),
-                            secondaryBlue.withOpacity(0.08)
-                          ],
-                        ),
-                      ),
-                      child: const CircularProgressIndicator(
-                          color: primaryBlue, strokeWidth: 3),
-                    ),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, child) => Transform.scale(
+                scale: 1.0 + (_pulseController.value * 0.2),
+                child: child,
+              ),
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      primaryBlue.withOpacity(0.15),
+                      secondaryBlue.withOpacity(0.08)
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text('جاري تحميل المزيد...',
-                      style:
-                          GoogleFonts.cairo(fontSize: 13, color: mediumGray)),
-                ],
-              )
+                ),
+                child: const CircularProgressIndicator(
+                    color: primaryBlue, strokeWidth: 3),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('جاري تحميل المزيد...',
+                style:
+                GoogleFonts.cairo(fontSize: 13, color: mediumGray)),
+          ],
+        )
             : const SizedBox.shrink(),
       ),
     );

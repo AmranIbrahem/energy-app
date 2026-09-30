@@ -60,7 +60,7 @@ class _LightingVisualizationScreenState
   String? _generatedImageUrl;
   String? _generatedImageRef;
   String? _genError;
-  int _remainingAttempts = 2;
+  int _remainingAttempts = 1;
   int _genCount = 0;
   List<String> _missingImages = [];
 
@@ -624,7 +624,7 @@ class _LightingVisualizationScreenState
             Expanded(
               child: Text(
                 _remainingAttempts <= 0
-                    ? 'تم استنفاد الحد الأقصى لتوليد الصور (محاولتان)'
+                    ? 'تم استنفاد الحد الأقصى لتوليد الصور (محاولة واحدة)'
                     : 'لا يمكن توليد الصورة — تأكد من رفع صورة الغرفة واعتماد الخطة',
                 style: GoogleFonts.cairo(
                   fontSize: 12.5,
@@ -772,7 +772,7 @@ class _LightingVisualizationScreenState
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'المحاولات المتبقية: $_remainingAttempts من 2',
+                      'المحاولات المتبقية: $_remainingAttempts  من 1',
                       style: GoogleFonts.cairo(
                         fontSize: 11,
                         color: Colors.grey.shade600,
