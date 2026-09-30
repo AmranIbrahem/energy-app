@@ -804,13 +804,6 @@ class _HomeScreenState extends State<HomeScreen>
         },
       },
       {
-        'id': 'system_builder',
-        'icon': Icons.design_services_rounded,
-        'label': 'تصميم منظومة',
-        'color': const Color(0xFF3B82F6),
-        'onTap': _navigateToSystemBuilder,
-      },
-      {
         'id': 'workshop',
         'icon': Icons.handyman_rounded,
         'label': 'طلب ورشة تركيب',
