@@ -1,3 +1,38 @@
+# NEX
+
+**Smart energy & electrical solutions mobile application**
+
+NEX brings solar system design, smart lighting, electrical appliances, and AI-powered diagnostics into one seamless experience. Design a complete solar system step by step, calculate savings, diagnose faults from error codes or symptoms, and shop products and offers — all from your phone.
+
+## Features
+
+- **Solar System Builder** — Pick panels, inverters, batteries, cables, and protection boards with live cost calculation, AI compatibility analysis, prepaid discounts, and multi-method payment (cash / bank transfer / wallet).
+- **Solar Design Wizard** — A 6-step guided flow (place type → location → devices → hours → simultaneity → results) that produces economic, balanced, and premium plans with AI explanations and budget assessment.
+- **Smart Lighting Design** — Profile any room, get 3 tailored plans, distribute fixtures, re-check adequacy, confirm the attempt, and generate an AI visualization of the room (up to 2 attempts).
+- **AI Diagnosis System** — A 12-state diagnostic state machine for inverter error codes and symptoms, covering manufacturers (Deye, Voltronic, Felicity, USFULL, INVT), device trees, safety stops, and workshop handoff.
+- **AI Chat Assistants** — Solar consultant, appliance maintenance, lighting support, and human support channels — with text, image, and voice messages, real-time updates via Pusher, and paginated history.
+- **Appliance Services** — Compatibility check with your solar system, inverter savings calculator, smart maintenance chat, and an automatic operating schedule (morning / afternoon / evening / night).
+- **Maintenance & Workshop** — Request installation or maintenance with workshop type, worker picker, available time slots, urgency level, image attachments, and an OpenStreetMap location picker.
+- **Engineer Consultation** — Choose a domain (electricity / solar / lighting) and chat with a specialized engineer through a unified auth-aware channel.
+- **Commerce** — Browse products and offers, filter by governorate, compare up to 4 items, favorites, dual currency (USD / SYP), per-city shipping, coupons, and full checkout.
+- **Company Dashboard** — Manage main/sub categories, 8 product types (battery, inverter, cable, breaker, solar panel, lighting unit, home appliance, general), offers, supplier orders, and platform commission.
+- **Smart Notifications** — Firebase Cloud Messaging + local notifications, cart reminders, and a unified reminder dialog for cart items and system builder drafts.
+- **Personalization** — Arabic-first (Cairo font) with RTL layout, font scale control, currency preference (USD/SYP), entry hub vs. direct entry, and full light theme.
+- **Guest Mode** — Browse, diagnose, chat, design, and check compatibility without an account — with session persistence and governorate selection across 14 Syrian governorates.
+
+---
+
+<div align="center">
+
+![Flutter](https://img.shields.io/badge/Flutter-3.x-blue?style=for-the-badge&logo=flutter)
+![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?style=for-the-badge&logo=dart)
+
+**NEX Mobile — Models · Services · Widgets · Screens**
+
+</div>
+
+---
+
 # 📦 Models - Flutter Mobile App
 
 <div align="center">
