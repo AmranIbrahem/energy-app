@@ -1,10 +1,14 @@
 // lib/screens/solar_systems/add_solar_system_screen.dart
+
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
+import 'dart:ui' as ui;
+
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/solar_system_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AddSolarSystemScreen extends StatefulWidget {
   final AuthService authService;
@@ -31,6 +35,10 @@ class _AddSolarSystemScreenState extends State<AddSolarSystemScreen>
   static const Color mediumGray = Color(0xFF4B5563);
   static const Color lightGray = Color(0xFFF3F4F6);
   static const Color cardWhite = Color(0xFFFFFFFF);
+  static const Color successGreen = Color(0xFF10B981);
+  static const Color warningOrange = Color(0xFFF59E0B);
+  static const Color purple = Color(0xFF7C3AED);
+  static const Color teal = Color(0xFF14B8A6);
 
   late AnimationController _pulseAnimationController;
   late AnimationController _progressAnimationController;
@@ -384,6 +392,7 @@ class _AddSolarSystemScreenState extends State<AddSolarSystemScreen>
       await _submitAnimationController.forward();
 
       setState(() => _isLoading = true);
+      HapticFeedback.mediumImpact();
 
       final result = await _solarSystemService.addSolarSystem(
         installationDate: _installationDate,
@@ -452,186 +461,266 @@ class _AddSolarSystemScreenState extends State<AddSolarSystemScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFEFF6FF), Color(0xFFF5F7FA)],
             ),
           ),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                    scale: 1.0 + (_pulseAnimationController.value * 0.1),
-                    child: child);
-              },
-              child: const Icon(Icons.add_circle_outline_rounded,
-                  color: Colors.yellow, size: 26),
-            ),
-            const SizedBox(width: 10),
-            Text('إضافة منظومة جديدة',
-                style: GoogleFonts.cairo(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
-          ],
-        ),
-        elevation: 0,
-        centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12)),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-      ),
-      body: _isLoading
-          ? _buildLoadingState()
-          : Column(
-              children: [
-                _buildProgressBar(),
-                Expanded(
-                  child: Form(
-                    key: _formKey,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      child: Row(
                         children: [
-                          _buildSectionHeader('معلومات أساسية',
-                              Icons.info_outline_rounded, Colors.blue, 0),
-                          const SizedBox(height: 15),
-                          _buildDatePicker(),
-                          const SizedBox(height: 15),
-                          _buildSwitchTile(),
-                          const SizedBox(height: 15),
-                          _buildTextField(
-                              'أعطال سابقة (اختياري)',
-                              Icons.report_problem_outlined,
-                              (value) => _previousIssues = value,
-                              maxLines: 2),
-                          const SizedBox(height: 15),
-                          _buildTextField('ملاحظات (اختياري)',
-                              Icons.notes_rounded, (value) => _notes = value,
-                              maxLines: 2),
-                          const SizedBox(height: 30),
-                          _buildSectionHeader('الألواح الشمسية',
-                              Icons.solar_power_rounded, Colors.orange, 1),
-                          const SizedBox(height: 15),
-                          _buildNumberField(
-                              'عدد الألواح', Icons.grid_view_rounded, (value) {
-                            _panelsCount = value;
-                            _updateFormProgress();
-                          }),
-                          const SizedBox(height: 15),
-                          _buildNumberField(
-                              'قدرة اللوح (واط)', Icons.bolt_rounded, (value) {
-                            _panelWattage = value.toDouble();
-                            _updateFormProgress();
-                          }),
-                          const SizedBox(height: 15),
-                          _buildTextField(
-                              'ماركة الألواح (اختياري)',
-                              Icons.branding_watermark_outlined,
-                              (value) => _panelBrand = value),
-                          const SizedBox(height: 15),
-                          _buildImagePicker('صورة الألواح', _panelImage,
-                              (file) => setState(() => _panelImage = file)),
-                          const SizedBox(height: 30),
-                          _buildSectionHeader('الانفرتر', Icons.memory_rounded,
-                              Colors.purple, 2),
-                          const SizedBox(height: 15),
-                          _buildTextField(
-                              'نوع الانفرتر', Icons.settings_rounded, (value) {
-                            _inverterType = value;
-                            _updateFormProgress();
-                          }),
-                          const SizedBox(height: 15),
-                          _buildNumberField(
-                              'قدرة الانفرتر (واط)', Icons.power_rounded,
-                              (value) {
-                            _inverterPower = value.toDouble();
-                            _updateFormProgress();
-                          }),
-                          const SizedBox(height: 15),
-                          _buildNumberField(
-                              'عدد الانفرتر',
-                              Icons.numbers_rounded,
-                              (value) => _inverterCount = value),
-                          const SizedBox(height: 15),
-                          _buildTextField(
-                              'ماركة الانفرتر (اختياري)',
-                              Icons.branding_watermark_outlined,
-                              (value) => _inverterBrand = value),
-                          const SizedBox(height: 15),
-                          _buildImagePicker('صورة الانفرتر', _inverterImage,
-                              (file) => setState(() => _inverterImage = file)),
-                          const SizedBox(height: 30),
-                          _buildSectionHeader(
-                              'البطاريات',
-                              Icons.battery_charging_full_rounded,
-                              Colors.green,
-                              3),
-                          const SizedBox(height: 15),
-                          _buildNumberField(
-                              'عدد البطاريات', Icons.grid_view_rounded,
-                              (value) {
-                            _batteriesCount = value;
-                            _updateFormProgress();
-                          }),
-                          const SizedBox(height: 15),
-                          _buildNumberField(
-                              'سعة البطارية (أمبير/س)', Icons.storage_rounded,
-                              (value) {
-                            _batteryCapacity = value.toDouble();
-                            _updateFormProgress();
-                          }),
-                          const SizedBox(height: 15),
-                          _buildTextField(
-                              'نوع البطارية (اختياري)',
-                              Icons.category_rounded,
-                              (value) => _batteryType = value),
-                          const SizedBox(height: 15),
-                          _buildTextField(
-                              'ماركة البطارية (اختياري)',
-                              Icons.branding_watermark_outlined,
-                              (value) => _batteryBrand = value),
-                          const SizedBox(height: 15),
-                          _buildImagePicker('صورة البطاريات', _batteryImage,
-                              (file) => setState(() => _batteryImage = file)),
-                          const SizedBox(height: 30),
-                          _buildSectionHeader('ملاحظات إضافية',
-                              Icons.note_add_rounded, Colors.teal, 4),
-                          const SizedBox(height: 15),
-                          _buildTextField(
-                              'تفاصيل إضافية (اختياري)',
-                              Icons.description_rounded,
-                              (value) => _detailsNotes = value,
-                              maxLines: 4),
-                          const SizedBox(height: 30),
-                          _buildSubmitButton(),
-                          const SizedBox(height: 40),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back_rounded,
+                                  color: Colors.white),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AnimatedBuilder(
+                                    animation: _pulseAnimationController,
+                                    builder: (context, child) =>
+                                        Transform.scale(
+                                      scale: 1.0 +
+                                          (_pulseAnimationController.value *
+                                              0.1),
+                                      child: child,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.25),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                          Icons.solar_power_rounded,
+                                          color: Colors.white,
+                                          size: 22),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'إضافة منظومة جديدة',
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 48),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? _buildLoadingState()
+                    : Column(
+                        children: [
+                          _buildProgressBar(),
+                          Expanded(
+                            child: Form(
+                              key: _formKey,
+                              child: TweenAnimationBuilder(
+                                tween: Tween<double>(begin: 0.0, end: 1.0),
+                                duration: const Duration(milliseconds: 600),
+                                builder: (context, value, child) => Opacity(
+                                  opacity: value,
+                                  child: Transform.translate(
+                                    offset: Offset(0, 20 * (1 - value)),
+                                    child: child,
+                                  ),
+                                ),
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _buildSectionHeader(
+                                          'معلومات أساسية',
+                                          Icons.info_outline_rounded,
+                                          Colors.blue,
+                                          0),
+                                      const SizedBox(height: 15),
+                                      _buildDatePicker(),
+                                      const SizedBox(height: 15),
+                                      _buildSwitchTile(),
+                                      const SizedBox(height: 15),
+                                      _buildTextField(
+                                          'أعطال سابقة (اختياري)',
+                                          Icons.report_problem_outlined,
+                                          (value) => _previousIssues = value,
+                                          maxLines: 2),
+                                      const SizedBox(height: 15),
+                                      _buildTextField(
+                                          'ملاحظات (اختياري)',
+                                          Icons.notes_rounded,
+                                          (value) => _notes = value,
+                                          maxLines: 2),
+                                      const SizedBox(height: 30),
+                                      _buildSectionHeader(
+                                          'الألواح الشمسية',
+                                          Icons.solar_power_rounded,
+                                          Colors.orange,
+                                          1),
+                                      const SizedBox(height: 15),
+                                      _buildNumberField('عدد الألواح',
+                                          Icons.grid_view_rounded, (value) {
+                                        _panelsCount = value;
+                                        _updateFormProgress();
+                                      }),
+                                      const SizedBox(height: 15),
+                                      _buildNumberField('قدرة اللوح (واط)',
+                                          Icons.bolt_rounded, (value) {
+                                        _panelWattage = value.toDouble();
+                                        _updateFormProgress();
+                                      }),
+                                      const SizedBox(height: 15),
+                                      _buildTextField(
+                                          'ماركة الألواح (اختياري)',
+                                          Icons.branding_watermark_outlined,
+                                          (value) => _panelBrand = value),
+                                      const SizedBox(height: 15),
+                                      _buildImagePicker(
+                                          'صورة الألواح',
+                                          _panelImage,
+                                          (file) => setState(
+                                              () => _panelImage = file)),
+                                      const SizedBox(height: 30),
+                                      _buildSectionHeader(
+                                          'الانفرتر',
+                                          Icons.memory_rounded,
+                                          Colors.purple,
+                                          2),
+                                      const SizedBox(height: 15),
+                                      _buildTextField('نوع الانفرتر',
+                                          Icons.settings_rounded, (value) {
+                                        _inverterType = value;
+                                        _updateFormProgress();
+                                      }),
+                                      const SizedBox(height: 15),
+                                      _buildNumberField('قدرة الانفرتر (واط)',
+                                          Icons.power_rounded, (value) {
+                                        _inverterPower = value.toDouble();
+                                        _updateFormProgress();
+                                      }),
+                                      const SizedBox(height: 15),
+                                      _buildNumberField(
+                                          'عدد الانفرتر',
+                                          Icons.numbers_rounded,
+                                          (value) => _inverterCount = value),
+                                      const SizedBox(height: 15),
+                                      _buildTextField(
+                                          'ماركة الانفرتر (اختياري)',
+                                          Icons.branding_watermark_outlined,
+                                          (value) => _inverterBrand = value),
+                                      const SizedBox(height: 15),
+                                      _buildImagePicker(
+                                          'صورة الانفرتر',
+                                          _inverterImage,
+                                          (file) => setState(
+                                              () => _inverterImage = file)),
+                                      const SizedBox(height: 30),
+                                      _buildSectionHeader(
+                                          'البطاريات',
+                                          Icons.battery_charging_full_rounded,
+                                          Colors.green,
+                                          3),
+                                      const SizedBox(height: 15),
+                                      _buildNumberField('عدد البطاريات',
+                                          Icons.grid_view_rounded, (value) {
+                                        _batteriesCount = value;
+                                        _updateFormProgress();
+                                      }),
+                                      const SizedBox(height: 15),
+                                      _buildNumberField(
+                                          'سعة البطارية (أمبير/س)',
+                                          Icons.storage_rounded, (value) {
+                                        _batteryCapacity = value.toDouble();
+                                        _updateFormProgress();
+                                      }),
+                                      const SizedBox(height: 15),
+                                      _buildTextField(
+                                          'نوع البطارية (اختياري)',
+                                          Icons.category_rounded,
+                                          (value) => _batteryType = value),
+                                      const SizedBox(height: 15),
+                                      _buildTextField(
+                                          'ماركة البطارية (اختياري)',
+                                          Icons.branding_watermark_outlined,
+                                          (value) => _batteryBrand = value),
+                                      const SizedBox(height: 15),
+                                      _buildImagePicker(
+                                          'صورة البطاريات',
+                                          _batteryImage,
+                                          (file) => setState(
+                                              () => _batteryImage = file)),
+                                      const SizedBox(height: 30),
+                                      _buildSectionHeader(
+                                          'ملاحظات إضافية',
+                                          Icons.note_add_rounded,
+                                          Colors.teal,
+                                          4),
+                                      const SizedBox(height: 15),
+                                      _buildTextField(
+                                          'تفاصيل إضافية (اختياري)',
+                                          Icons.description_rounded,
+                                          (value) => _detailsNotes = value,
+                                          maxLines: 4),
+                                      const SizedBox(height: 30),
+                                      _buildSubmitButton(),
+                                      const SizedBox(height: 40),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1103,4 +1192,22 @@ class _AddSolarSystemScreenState extends State<AddSolarSystemScreen>
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

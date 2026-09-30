@@ -1,11 +1,16 @@
 // lib/screens/solar_systems/solar_systems_screen.dart
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
+
+import 'dart:ui' as ui;
+
 import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/solar_system_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
+
 import 'add_solar_system_screen.dart';
 
 class SolarSystemsScreen extends StatefulWidget {
@@ -119,6 +124,7 @@ class _SolarSystemsScreenState extends State<SolarSystemsScreen>
   }
 
   void _navigateToAddSystem() {
+    HapticFeedback.lightImpact();
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -840,7 +846,19 @@ class _SolarSystemsScreenState extends State<SolarSystemsScreen>
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.cairo()),
+        content: Row(
+          children: [
+            Icon(
+                color == Colors.green
+                    ? Icons.check_circle_rounded
+                    : Icons.error_rounded,
+                color: Colors.white,
+                size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
+          ],
+        ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
@@ -852,95 +870,140 @@ class _SolarSystemsScreenState extends State<SolarSystemsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFEFF6FF), Color(0xFFF5F7FA)],
             ),
           ),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                    scale: 1.0 + (_pulseAnimationController.value * 0.15),
-                    child: child);
-              },
-              child: const Icon(Icons.solar_power_rounded,
-                  color: Colors.yellow, size: 26),
-            ),
-            const SizedBox(width: 10),
-            Text('منظوماتي',
-                style: GoogleFonts.cairo(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
-          ],
-        ),
-        elevation: 0,
-        centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12)),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12)),
-            child: IconButton(
-              onPressed: _navigateToAddSystem,
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
-              tooltip: 'إضافة منظومة',
-            ),
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : _errorMessage != null
-              ? _buildErrorWidget()
-              : _solarSystems.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      onRefresh: _refresh,
-                      color: primaryBlue,
-                      backgroundColor: cardWhite,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _solarSystems.length,
-                        itemBuilder: (context, index) {
-                          final system = _solarSystems[index];
-                          return _buildSystemCard(system, index);
-                        },
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      child: Row(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back_rounded,
+                                  color: Colors.white),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AnimatedBuilder(
+                                    animation: _pulseAnimationController,
+                                    builder: (context, child) =>
+                                        Transform.scale(
+                                      scale: 1.0 +
+                                          (_pulseAnimationController.value *
+                                              0.1),
+                                      child: child,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.25),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                          Icons.solar_power_rounded,
+                                          color: Colors.white,
+                                          size: 22),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'منظوماتي',
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              onPressed: _navigateToAddSystem,
+                              icon: const Icon(Icons.add_rounded,
+                                  color: Colors.white),
+                              tooltip: 'إضافة منظومة',
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-      floatingActionButton: _solarSystems.isNotEmpty
-          ? FloatingActionButton.extended(
-              onPressed: _navigateToAddSystem,
-              icon: const Icon(Icons.add_rounded),
-              label: Text('إضافة منظومة', style: GoogleFonts.cairo()),
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
-              elevation: 5,
-            )
-          : null,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : _errorMessage != null
+                        ? _buildErrorWidget()
+                        : _solarSystems.isEmpty
+                            ? _buildEmptyState()
+                            : RefreshIndicator(
+                                onRefresh: _refresh,
+                                color: primaryBlue,
+                                backgroundColor: cardWhite,
+                                child: ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: _solarSystems.length,
+                                  itemBuilder: (context, index) {
+                                    final system = _solarSystems[index];
+                                    return _buildSystemCard(system, index);
+                                  },
+                                ),
+                              ),
+              ),
+            ],
+          ),
+        ),
+        floatingActionButton: _solarSystems.isNotEmpty
+            ? FloatingActionButton.extended(
+                onPressed: _navigateToAddSystem,
+                icon: const Icon(Icons.add_rounded),
+                label: Text('إضافة منظومة', style: GoogleFonts.cairo()),
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                elevation: 5,
+              )
+            : null,
+      ),
     );
   }
 
@@ -1451,4 +1514,22 @@ class _SolarSystemsScreenState extends State<SolarSystemsScreen>
       setState(() => _isLoading = false);
     }
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

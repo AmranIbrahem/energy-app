@@ -1,15 +1,16 @@
+import 'dart:convert';
+
+import 'package:GeniusHouse/models/cart_item_model.dart';
+import 'package:GeniusHouse/screens/products/product_details_screen.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/cart_service.dart';
+import 'package:GeniusHouse/services/favorites_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/services/favorites_service.dart';
-import 'package:GeniusHouse/screens/products/product_details_screen.dart';
-import 'package:GeniusHouse/services/cart_service.dart';
-import 'package:GeniusHouse/models/cart_item_model.dart';
 
 import '../screens/cart/cart_screen.dart';
 
@@ -58,6 +59,149 @@ class _HomeProductCardState extends State<HomeProductCard>
     super.dispose();
   }
 
+  bool get _isSypPreferred {
+    final storage = widget.authService?.storageService;
+    if (storage == null) return false;
+    try {
+      return storage.isSypPreferred();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool get _isCompanyUser {
+    if (widget.authService == null) return false;
+    try {
+      final storage = widget.authService!.storageService;
+
+      final userData = storage.getUserDataMap();
+      if (userData != null && userData.isNotEmpty) {
+        final userType = (userData['user_type'] ??
+                userData['role'] ??
+                userData['type'] ??
+                '')
+            .toString()
+            .toLowerCase();
+
+        if (userType.isNotEmpty) {
+          // debugPrint('👤 [map] user_type = $userType');
+          if (userType == 'company' || userType.startsWith('company')) {
+            return true;
+          }
+        }
+
+        final companyId = userData['company_id'];
+        if (companyId != null) {
+          final cid = int.tryParse(companyId.toString()) ?? 0;
+          if (cid > 0) {
+            // debugPrint('👤 [map] company_id = $cid');
+            return true;
+          }
+        }
+      }
+
+      final userDataStr = storage.getUserData();
+      if (userDataStr != null && userDataStr.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(userDataStr);
+          if (decoded is Map) {
+            final userType = (decoded['user_type'] ??
+                    decoded['role'] ??
+                    decoded['type'] ??
+                    '')
+                .toString()
+                .toLowerCase();
+
+            if (userType.isNotEmpty) {
+              // debugPrint('👤 [json] user_type = $userType');
+              if (userType == 'company' || userType.startsWith('company')) {
+                return true;
+              }
+            }
+
+            final companyId = decoded['company_id'];
+            if (companyId != null) {
+              final cid = int.tryParse(companyId.toString()) ?? 0;
+              if (cid > 0) {
+                // debugPrint('👤 [json] company_id = $cid');
+                return true;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      // debugPrint('❌ user_type غير موجود في التخزين');
+      return false;
+    } catch (e) {
+      // debugPrint('❌ Error in _isCompanyUser: $e');
+      return false;
+    }
+  }
+
+  bool get _hasWholesale {
+    if (!_isCompanyUser) return false;
+
+    final hasWholesale = widget.product['has_wholesale'] == true;
+    final hasWholesaleSyp = widget.product['has_wholesale_syp'] == true;
+
+    return _isSypPreferred ? hasWholesaleSyp : hasWholesale;
+  }
+
+  double _getOriginalPrice() {
+    return _isSypPreferred
+        ? (double.tryParse(widget.product['price_syp']?.toString() ?? '0') ?? 0)
+        : (double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0);
+  }
+
+  double _getFinalPrice() {
+    return _isSypPreferred
+        ? (double.tryParse(
+                widget.product['final_price_syp']?.toString() ?? '0') ??
+            0)
+        : (double.tryParse(widget.product['final_price']?.toString() ?? '0') ??
+            0);
+  }
+
+  double _getWholesalePrice() {
+    return _isSypPreferred
+        ? (double.tryParse(
+                widget.product['wholesale_price_syp']?.toString() ?? '0') ??
+            0)
+        : (double.tryParse(
+                widget.product['wholesale_price']?.toString() ?? '0') ??
+            0);
+  }
+
+  int _getWholesaleMinQty() {
+    return int.tryParse(
+            widget.product['wholesale_min_quantity']?.toString() ?? '0') ??
+        0;
+  }
+
+  String _fmt(double price) {
+    if (_isSypPreferred) {
+      return '${_formatNumber(price)} SYP';
+    }
+    return '\$${_formatNumber(price)}';
+  }
+
+  String _formatNumber(double number) {
+    final parts = number.toStringAsFixed(2).split('.');
+    final intPart = parts[0];
+    final decimalPart = parts[1];
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < intPart.length; i++) {
+      if (i > 0 && (intPart.length - i) % 3 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(intPart[i]);
+    }
+
+    return '${buffer.toString()}.$decimalPart';
+  }
+
   Future<void> _toggleFavorite() async {
     setState(() => _isUpdatingFavorite = true);
     try {
@@ -68,19 +212,27 @@ class _HomeProductCardState extends State<HomeProductCard>
         final productData = {
           'id': widget.product['id'],
           'name_ar': widget.product['name_ar'],
+          'name_en': widget.product['name_en'],
           'slug': widget.product['slug'],
           'price': widget.product['price'],
           'final_price': widget.product['final_price'],
+          'discount_price': widget.product['discount_price'],
+          'price_syp': widget.product['price_syp'],
+          'final_price_syp': widget.product['final_price_syp'],
+          'discount_price_syp': widget.product['discount_price_syp'],
           'main_image': widget.product['main_image'],
+          'cover_image': widget.product['cover_image'],
           'discount_percentage': widget.product['discount_percentage'],
           'brand': widget.product['brand'],
           'rate': widget.product['rate'],
+          'stock': widget.product['stock'],
+          'governorate_product': widget.product['governorate_product'],
         };
         await _favoritesService.addProduct(productData);
         if (mounted) setState(() => _isFavorite = true);
       }
     } catch (e) {
-      debugPrint('Error: $e');
+      // debugPrint('Error: $e');
     } finally {
       if (mounted) setState(() => _isUpdatingFavorite = false);
     }
@@ -90,7 +242,7 @@ class _HomeProductCardState extends State<HomeProductCard>
     final cartService = CartService.instance;
 
     final existingItem = cartService.items.firstWhere(
-          (item) => item.id == widget.product['id'],
+      (item) => item.id == widget.product['id'],
       orElse: () => CartItemModel(
         id: 0,
         name: '',
@@ -104,7 +256,6 @@ class _HomeProductCardState extends State<HomeProductCard>
     final bool isExisting = existingItem.id != 0;
     final int oldQuantity = isExisting ? existingItem.quantity : 0;
 
-    // ✅ استخراج shipping_cities من المنتج
     List<Map<String, dynamic>>? shippingCities;
     if (widget.product['shipping_cities'] != null) {
       shippingCities = List<Map<String, dynamic>>.from(
@@ -123,19 +274,22 @@ class _HomeProductCardState extends State<HomeProductCard>
       );
     }
 
+    final double cartOriginalPrice =
+        _hasWholesale ? _getWholesalePrice() : _getOriginalPrice();
+    final double cartFinalPrice =
+        _hasWholesale ? _getWholesalePrice() : _getFinalPrice();
+
     final cartItem = CartItemModel(
       id: widget.product['id'],
       name: widget.product['name_ar']?.toString() ?? 'غير معروف',
       slug: widget.product['slug']?.toString() ?? '',
-      price: double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0,
-      finalPrice:
-      double.tryParse(widget.product['final_price']?.toString() ?? '0') ??
-          0,
+      price: cartOriginalPrice,
+      finalPrice: cartFinalPrice,
       image: widget.product['main_image']?.toString(),
       stock: widget.product['stock'] ?? 0,
       quantity: isExisting ? oldQuantity + 1 : 1,
       discountPercentage: widget.product['discount_percentage']?.toDouble(),
-      shippingCities: shippingCities, // ✅ إضافة shipping_cities
+      shippingCities: shippingCities,
     );
 
     cartService.addItem(cartItem);
@@ -161,7 +315,7 @@ class _HomeProductCardState extends State<HomeProductCard>
           ],
         ),
         backgroundColor:
-        isExisting ? const Color(0xFF1E3A8A) : const Color(0xFF059669),
+            isExisting ? const Color(0xFF1E3A8A) : const Color(0xFF059669),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -187,19 +341,143 @@ class _HomeProductCardState extends State<HomeProductCard>
     });
   }
 
+  Widget _buildPriceSection({
+    required double finalPrice,
+    required double originalPrice,
+    required bool hasDiscount,
+  }) {
+    if (_hasWholesale) {
+      final wholesalePrice = _getWholesalePrice();
+      final wholesaleMinQty = _getWholesaleMinQty();
+      final discountPct =
+          (widget.product['discount_percentage'] ?? 0).toDouble();
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+              ),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.store_rounded, color: Colors.white, size: 10),
+                const SizedBox(width: 3),
+                Text(
+                  'جملة',
+                  style: GoogleFonts.cairo(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                if (wholesaleMinQty > 1) ...[
+                  const SizedBox(width: 3),
+                  Text(
+                    '≥ $wholesaleMinQty',
+                    style: GoogleFonts.cairo(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Text(
+            _fmt(wholesalePrice),
+            style: GoogleFonts.cairo(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF7C3AED),
+            ),
+          ),
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  _fmt(finalPrice),
+                  style: GoogleFonts.cairo(
+                    fontSize: 10,
+                    color: Colors.grey.shade400,
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (hasDiscount && discountPct > 0) ...[
+                const SizedBox(width: 3),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '-${discountPct.toStringAsFixed(0)}%',
+                    style: GoogleFonts.cairo(
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Text(
+          _fmt(finalPrice),
+          style: GoogleFonts.cairo(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF059669),
+          ),
+        ),
+        if (hasDiscount) ...[
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              _fmt(originalPrice),
+              style: GoogleFonts.cairo(
+                fontSize: 10,
+                color: Colors.grey.shade400,
+                decoration: TextDecoration.lineThrough,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool hasDiscount = (widget.product['discount_percentage'] ?? 0) > 0;
-    final double finalPrice =
-        double.tryParse(widget.product['final_price']?.toString() ?? '0') ?? 0;
-    final double originalPrice =
-        double.tryParse(widget.product['price']?.toString() ?? '0') ?? 0;
+
+    final double finalPrice = _getFinalPrice();
+    final double originalPrice = _getOriginalPrice();
+
     final String name = widget.product['name_ar']?.toString() ?? 'غير معروف';
     final String imageUrl = widget.product['main_image']?.toString() ?? '';
     final String brand = widget.product['brand']?.toString() ?? '';
     final double rating =
         double.tryParse(widget.product['rate']?.toString() ?? '0') ?? 0;
-    // ✅ استخراج اسم المحافظة
     final String governorate =
         widget.product['governorate_product']?.toString() ?? '';
 
@@ -271,34 +549,34 @@ class _HomeProductCardState extends State<HomeProductCard>
                       ),
                       child: imageUrl.isNotEmpty
                           ? Hero(
-                        tag: 'product_${widget.product['id']}',
-                        child: CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.contain,
-                          placeholder: (context, url) =>
-                              Shimmer.fromColors(
-                                baseColor: Colors.grey.shade200,
-                                highlightColor: Colors.grey.shade100,
-                                child: Container(color: Colors.grey.shade200),
+                              tag: 'product_${widget.product['id']}',
+                              child: CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                fit: BoxFit.contain,
+                                placeholder: (context, url) =>
+                                    Shimmer.fromColors(
+                                  baseColor: Colors.grey.shade200,
+                                  highlightColor: Colors.grey.shade100,
+                                  child: Container(color: Colors.grey.shade200),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: Colors.grey.shade100,
+                                  child: Icon(
+                                    Icons.image_not_supported_rounded,
+                                    size: 40,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
                               ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Colors.grey.shade100,
-                            child: Icon(
-                              Icons.image_not_supported_rounded,
-                              size: 40,
-                              color: Colors.grey.shade400,
-                            ),
-                          ),
-                        ),
-                      )
+                            )
                           : Container(
-                        color: Colors.grey.shade100,
-                        child: Icon(
-                          Icons.image_not_supported_rounded,
-                          size: 40,
-                          color: Colors.grey.shade400,
-                        ),
-                      ),
+                              color: Colors.grey.shade100,
+                              child: Icon(
+                                Icons.image_not_supported_rounded,
+                                size: 40,
+                                color: Colors.grey.shade400,
+                              ),
+                            ),
                     ),
                   ),
                   if (hasDiscount)
@@ -355,7 +633,6 @@ class _HomeProductCardState extends State<HomeProductCard>
                         ),
                       ),
                     ),
-                  // ✅ المحافظة في الزاوية السفلى اليمنى
                   if (governorate.isNotEmpty)
                     Positioned(
                       bottom: 8,
@@ -394,7 +671,6 @@ class _HomeProductCardState extends State<HomeProductCard>
                         ),
                       ),
                     ),
-                  // أيقونة المفضلة في الزاوية السفلى اليسرى
                   Positioned(
                     bottom: 8,
                     left: 8,
@@ -414,18 +690,18 @@ class _HomeProductCardState extends State<HomeProductCard>
                         ),
                         child: _isUpdatingFavorite
                             ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.red),
-                        )
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.red),
+                              )
                             : Icon(
-                          _isFavorite
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: _isFavorite ? Colors.red : Colors.grey,
-                          size: 18,
-                        ),
+                                _isFavorite
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                color: _isFavorite ? Colors.red : Colors.grey,
+                                size: 18,
+                              ),
                       ),
                     ),
                   ),
@@ -467,31 +743,10 @@ class _HomeProductCardState extends State<HomeProductCard>
                         ),
                       ),
                       const Spacer(),
-                      Row(
-                        children: [
-                          Text(
-                            Helpers.formatPrice(finalPrice),
-                            style: GoogleFonts.cairo(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF059669),
-                            ),
-                          ),
-                          if (hasDiscount) ...[
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                Helpers.formatPrice(originalPrice),
-                                style: GoogleFonts.cairo(
-                                  fontSize: 10,
-                                  color: Colors.grey.shade400,
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ],
+                      _buildPriceSection(
+                        finalPrice: finalPrice,
+                        originalPrice: originalPrice,
+                        hasDiscount: hasDiscount,
                       ),
                     ],
                   ),
@@ -506,11 +761,15 @@ class _HomeProductCardState extends State<HomeProductCard>
                   decoration: BoxDecoration(
                     gradient: _isAddedToCart
                         ? const LinearGradient(
-                      colors: [Color(0xFF059669), Color(0xFF10B981)],
-                    )
-                        : const LinearGradient(
-                      colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                    ),
+                            colors: [Color(0xFF059669), Color(0xFF10B981)],
+                          )
+                        : (_hasWholesale
+                            ? const LinearGradient(
+                                colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                              )
+                            : const LinearGradient(
+                                colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+                              )),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -525,7 +784,9 @@ class _HomeProductCardState extends State<HomeProductCard>
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        _isAddedToCart ? 'تم ✓' : 'أضف للسلة',
+                        _isAddedToCart
+                            ? 'تم ✓'
+                            : (_hasWholesale ? 'أضف جملة للسلة' : 'أضف للسلة'),
                         style: GoogleFonts.cairo(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,

@@ -1,11 +1,10 @@
 // lib/screens/appliances/appliance_savings_screen.dart
 
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
 
 class ApplianceSavingsScreen extends StatefulWidget {
   final AuthService authService;
@@ -24,9 +23,11 @@ class ApplianceSavingsScreen extends StatefulWidget {
 class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
   int _currentStep = 0;
 
-  final TextEditingController _applianceNameController = TextEditingController();
+  final TextEditingController _applianceNameController =
+      TextEditingController();
   final TextEditingController _normalWattsController = TextEditingController();
-  final TextEditingController _inverterWattsController = TextEditingController();
+  final TextEditingController _inverterWattsController =
+      TextEditingController();
   final TextEditingController _hoursController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
 
@@ -38,7 +39,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
   List<Map<String, dynamic>> _filteredAppliances = [];
   List<Map<String, dynamic>> _selectedAppliances = [];
 
-  // ألوان الهوية البصرية
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentCyan = Color(0xFF06B6D4);
@@ -65,7 +65,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     super.dispose();
   }
 
-  // ✅ تحميل الأجهزة من الـ API
   Future<void> _loadAppliances() async {
     setState(() => _isLoadingAppliances = true);
     try {
@@ -88,15 +87,13 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     }
   }
 
-  // ✅ البحث الفوري
   void _onSearchChanged(String query) {
     setState(() {
       if (query.isEmpty) {
         _filteredAppliances = List.from(_allAppliances);
       } else {
         _filteredAppliances = _allAppliances
-            .where((appliance) =>
-            (appliance['name_ar'] ?? '')
+            .where((appliance) => (appliance['name_ar'] ?? '')
                 .toString()
                 .toLowerCase()
                 .contains(query.toLowerCase()))
@@ -105,50 +102,79 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     });
   }
 
-  // ✅ تحويل اسم الأيقونة النصي إلى IconData
   IconData _getIconData(String? iconName) {
     switch (iconName) {
-      case 'kitchen': return Icons.kitchen_rounded;
-      case 'tv': return Icons.tv_rounded;
-      case 'ac_unit': return Icons.ac_unit_rounded;
-      case 'local_laundry_service': return Icons.local_laundry_service_rounded;
-      case 'water_drop': return Icons.water_drop_rounded;
-      case 'water': return Icons.water_rounded;
-      case 'microwave': return Icons.microwave_rounded;
-      case 'blender': return Icons.blender_rounded;
-      case 'light': return Icons.light_rounded;
-      case 'lightbulb': return Icons.lightbulb_rounded;
-      case 'router': return Icons.router_rounded;
-      case 'speaker': return Icons.speaker_rounded;
-      case 'desktop_windows': return Icons.desktop_windows_rounded;
-      case 'laptop': return Icons.laptop_rounded;
-      case 'phone_android': return Icons.phone_android_rounded;
-      case 'print': return Icons.print_rounded;
-      case 'coffee': return Icons.coffee_rounded;
-      case 'iron': return Icons.iron_rounded;
-      case 'heater': return Icons.heat_pump_rounded;
-      case 'cleaning_services': return Icons.cleaning_services_rounded;
-      case 'air': return Icons.air_rounded;
-      case 'sports_esports': return Icons.sports_esports_rounded;
-      case 'ev_station': return Icons.ev_station_rounded;
-      case 'construction': return Icons.construction_rounded;
-      case 'sewing': return Icons.chair_rounded;
-      case 'hair_dryer': return Icons.air_rounded;
-      case 'toast': return Icons.breakfast_dining_rounded;
-      default: return Icons.power_rounded;
+      case 'kitchen':
+        return Icons.kitchen_rounded;
+      case 'tv':
+        return Icons.tv_rounded;
+      case 'ac_unit':
+        return Icons.ac_unit_rounded;
+      case 'local_laundry_service':
+        return Icons.local_laundry_service_rounded;
+      case 'water_drop':
+        return Icons.water_drop_rounded;
+      case 'water':
+        return Icons.water_rounded;
+      case 'microwave':
+        return Icons.microwave_rounded;
+      case 'blender':
+        return Icons.blender_rounded;
+      case 'light':
+        return Icons.light_rounded;
+      case 'lightbulb':
+        return Icons.lightbulb_rounded;
+      case 'router':
+        return Icons.router_rounded;
+      case 'speaker':
+        return Icons.speaker_rounded;
+      case 'desktop_windows':
+        return Icons.desktop_windows_rounded;
+      case 'laptop':
+        return Icons.laptop_rounded;
+      case 'phone_android':
+        return Icons.phone_android_rounded;
+      case 'print':
+        return Icons.print_rounded;
+      case 'coffee':
+        return Icons.coffee_rounded;
+      case 'iron':
+        return Icons.iron_rounded;
+      case 'heater':
+        return Icons.heat_pump_rounded;
+      case 'cleaning_services':
+        return Icons.cleaning_services_rounded;
+      case 'air':
+        return Icons.air_rounded;
+      case 'sports_esports':
+        return Icons.sports_esports_rounded;
+      case 'ev_station':
+        return Icons.ev_station_rounded;
+      case 'construction':
+        return Icons.construction_rounded;
+      case 'sewing':
+        return Icons.chair_rounded;
+      case 'hair_dryer':
+        return Icons.air_rounded;
+      case 'toast':
+        return Icons.breakfast_dining_rounded;
+      default:
+        return Icons.power_rounded;
     }
   }
 
-  // ✅ اختيار جهاز من القائمة - يفتح Bottom Sheet لتعديل الساعات
   void _selectAppliance(Map<String, dynamic> appliance) {
     HapticFeedback.lightImpact();
 
     final name = appliance['name_ar']?.toString() ?? '';
-    final normalWatts = int.tryParse(appliance['normal_watts']?.toString() ?? '') ?? 0;
-    final inverterWatts = int.tryParse(appliance['inverter_watts']?.toString() ?? '') ?? 0;
-    final defaultHours = double.tryParse((appliance['default_hours_per_day'] ?? 1).toString()) ?? 1;
+    final normalWatts =
+        int.tryParse(appliance['normal_watts']?.toString() ?? '') ?? 0;
+    final inverterWatts =
+        int.tryParse(appliance['inverter_watts']?.toString() ?? '') ?? 0;
+    final defaultHours =
+        double.tryParse((appliance['default_hours_per_day'] ?? 1).toString()) ??
+            1;
 
-    // فتح Bottom Sheet لتعديل ساعات التشغيل
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -162,14 +188,14 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     );
   }
 
-  // ✅ Bottom Sheet لإضافة جهاز مع تعديل الساعات
   Widget _buildAddDeviceSheet({
     required String name,
     required int normalWatts,
     required int inverterWatts,
     required double defaultHours,
   }) {
-    final hoursController = TextEditingController(text: defaultHours.toString());
+    final hoursController =
+        TextEditingController(text: defaultHours.toString());
 
     return Container(
       decoration: BoxDecoration(
@@ -192,7 +218,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // مؤشر السحب
             Center(
               child: Container(
                 width: 40,
@@ -204,19 +229,21 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // العنوان
             Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [primaryBlue.withOpacity(0.1), accentCyan.withOpacity(0.05)],
+                      colors: [
+                        primaryBlue.withOpacity(0.1),
+                        accentCyan.withOpacity(0.05)
+                      ],
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.devices_rounded, color: primaryBlue, size: 22),
+                  child:
+                      Icon(Icons.devices_rounded, color: primaryBlue, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -244,8 +271,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               ],
             ),
             const SizedBox(height: 20),
-
-            // حقل ساعات التشغيل
             Text(
               'ساعات التشغيل اليومية',
               style: GoogleFonts.cairo(
@@ -257,7 +282,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: hoursController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               style: GoogleFonts.cairo(fontSize: 16),
               textAlign: TextAlign.center,
               decoration: InputDecoration(
@@ -271,12 +297,11 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(color: primaryBlue, width: 2),
                 ),
-                suffixIcon: Icon(Icons.schedule_rounded, color: primaryBlue, size: 20),
+                suffixIcon:
+                    Icon(Icons.schedule_rounded, color: primaryBlue, size: 20),
               ),
             ),
             const SizedBox(height: 20),
-
-            // أزرار
             Row(
               children: [
                 Expanded(
@@ -315,7 +340,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('تمت إضافة $name', style: GoogleFonts.cairo()),
+                          content: Text('تمت إضافة $name',
+                              style: GoogleFonts.cairo()),
                           backgroundColor: successGreen,
                           duration: const Duration(milliseconds: 800),
                         ),
@@ -346,7 +372,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     );
   }
 
-  // ✅ Bottom Sheet لإضافة جهاز مخصص
   void _showCustomDeviceSheet() {
     showModalBottomSheet(
       context: context,
@@ -378,7 +403,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // مؤشر السحب
             Center(
               child: Container(
                 width: 40,
@@ -390,18 +414,21 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
             Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [primaryBlue.withOpacity(0.1), accentCyan.withOpacity(0.05)],
+                      colors: [
+                        primaryBlue.withOpacity(0.1),
+                        accentCyan.withOpacity(0.05)
+                      ],
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.add_circle_rounded, color: primaryBlue, size: 22),
+                  child: Icon(Icons.add_circle_rounded,
+                      color: primaryBlue, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -415,7 +442,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               ],
             ),
             const SizedBox(height: 20),
-
             TextField(
               controller: _applianceNameController,
               style: GoogleFonts.cairo(fontSize: 14),
@@ -436,7 +462,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               ),
             ),
             const SizedBox(height: 12),
-
             Row(
               children: [
                 Expanded(
@@ -487,10 +512,10 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               ],
             ),
             const SizedBox(height: 12),
-
             TextField(
               controller: _hoursController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               style: GoogleFonts.cairo(fontSize: 14),
               textAlign: TextAlign.right,
               decoration: InputDecoration(
@@ -509,7 +534,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
             Row(
               children: [
                 Expanded(
@@ -563,7 +587,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     );
   }
 
-  // ✅ إضافة جهاز يدوي
   void _addManualDevice() {
     final name = _applianceNameController.text.trim();
     final normalWatts = int.tryParse(_normalWattsController.text) ?? 0;
@@ -594,7 +617,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     });
   }
 
-  // ✅ حذف جهاز من القائمة
   void _removeSelectedAppliance(int index) {
     HapticFeedback.lightImpact();
     setState(() {
@@ -602,7 +624,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     });
   }
 
-  // ✅ تعديل جهاز محدد
   void _editSelectedAppliance(int index) {
     final device = _selectedAppliances[index];
     final hoursController = TextEditingController(
@@ -675,7 +696,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: hoursController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 style: GoogleFonts.cairo(fontSize: 14),
                 textAlign: TextAlign.right,
                 decoration: InputDecoration(
@@ -694,9 +716,12 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                   setState(() {
                     _selectedAppliances[index] = {
                       'name': device['name'],
-                      'normal_watts': int.tryParse(normalWattsController.text) ?? 0,
-                      'inverter_watts': int.tryParse(inverterWattsController.text) ?? 0,
-                      'hours_per_day': double.tryParse(hoursController.text) ?? 0,
+                      'normal_watts':
+                          int.tryParse(normalWattsController.text) ?? 0,
+                      'inverter_watts':
+                          int.tryParse(inverterWattsController.text) ?? 0,
+                      'hours_per_day':
+                          double.tryParse(hoursController.text) ?? 0,
                     };
                   });
                   Navigator.pop(context);
@@ -723,7 +748,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     );
   }
 
-  // ✅ حساب التوفير
   Future<void> _calculateSavings() async {
     if (_selectedAppliances.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -749,7 +773,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
           _isCalculating = false;
         });
 
-        // الانتقال لشاشة النتائج
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -780,49 +803,71 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     }
   }
 
+  Widget _buildCurvedHeader(BuildContext context) {
+    return ClipPath(
+      clipper: _BottomCurveClipper(),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [primaryBlue, secondaryBlue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'حاسبة التوفير',
+                      style: GoogleFonts.cairo(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 48),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue, accentCyan],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: primaryBlue.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-        ),
-        title: Text(
-          'حاسبة التوفير',
-          style: GoogleFonts.cairo(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            shadows: [
-              Shadow(
-                offset: const Offset(0, 2),
-                blurRadius: 4,
-                color: Colors.black.withOpacity(0.2),
-              ),
-            ],
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-      ),
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: _isCalculating
-            ? _buildLoadingScreen()
-            : _buildStepperForm(),
+        child: Column(
+          children: [
+            _buildCurvedHeader(context),
+            Expanded(
+              child:
+                  _isCalculating ? _buildLoadingScreen() : _buildStepperForm(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -877,7 +922,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
   Widget _buildStepperForm() {
     return Column(
       children: [
-        // مؤشر الخطوات المتقدم
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(
@@ -907,35 +951,40 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                       height: 8,
                       decoration: BoxDecoration(
                         gradient: isCompleted
-                            ? LinearGradient(
-                            colors: [successGreen, successGreen.withOpacity(0.7)]
-                        )
+                            ? LinearGradient(colors: [
+                                successGreen,
+                                successGreen.withOpacity(0.7)
+                              ])
                             : isCurrent
-                            ? LinearGradient(
-                            colors: [primaryBlue, secondaryBlue]
-                        )
-                            : null,
+                                ? LinearGradient(
+                                    colors: [primaryBlue, secondaryBlue])
+                                : null,
                         color: !isCompleted && !isCurrent
                             ? Colors.grey.shade300
                             : null,
                         borderRadius: BorderRadius.circular(4),
                         boxShadow: isCurrent
                             ? [
-                          BoxShadow(
-                            color: primaryBlue.withOpacity(0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
+                                BoxShadow(
+                                  color: primaryBlue.withOpacity(0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
                             : [],
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      index == 0 ? 'الأجهزة' : index == 1 ? 'مراجعة' : 'حساب',
+                      index == 0
+                          ? 'الأجهزة'
+                          : index == 1
+                              ? 'مراجعة'
+                              : 'حساب',
                       style: GoogleFonts.cairo(
                         fontSize: 10,
-                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            isCurrent ? FontWeight.bold : FontWeight.normal,
                         color: isCurrent ? primaryBlue : mediumGray,
                       ),
                     ),
@@ -945,8 +994,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
             }),
           ),
         ),
-
-        // المحتوى
         Expanded(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
@@ -965,8 +1012,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
             child: _buildStep(),
           ),
         ),
-
-        // الأزرار السفلية
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -998,7 +1043,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.arrow_forward, size: 18, color: primaryBlue),
+                        const Icon(Icons.arrow_forward,
+                            size: 18, color: primaryBlue),
                         const SizedBox(width: 6),
                         Text(
                           'السابق',
@@ -1018,19 +1064,22 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                 child: ElevatedButton(
                   onPressed: _isStepValid()
                       ? () {
-                    if (_currentStep < 2) {
-                      setState(() => _currentStep++);
-                    } else {
-                      _calculateSavings();
-                    }
-                  }
+                          if (_currentStep < 2) {
+                            setState(() => _currentStep++);
+                          } else {
+                            _calculateSavings();
+                          }
+                        }
                       : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isStepValid() ? primaryBlue : Colors.grey.shade300,
-                    foregroundColor: _isStepValid() ? Colors.white : Colors.grey.shade500,
+                    backgroundColor:
+                        _isStepValid() ? primaryBlue : Colors.grey.shade300,
+                    foregroundColor:
+                        _isStepValid() ? Colors.white : Colors.grey.shade500,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: _isStepValid() ? 2 : 0,
-                    shadowColor: _isStepValid() ? primaryBlue.withOpacity(0.3) : null,
+                    shadowColor:
+                        _isStepValid() ? primaryBlue.withOpacity(0.3) : null,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -1042,14 +1091,18 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                         _currentStep < 2 ? 'التالي' : 'احسب التوفير',
                         style: GoogleFonts.cairo(
                           fontWeight: FontWeight.bold,
-                          color: _isStepValid() ? Colors.white : Colors.grey.shade500,
+                          color: _isStepValid()
+                              ? Colors.white
+                              : Colors.grey.shade500,
                           fontSize: 16,
                         ),
                       ),
                       if (_isStepValid()) ...[
                         const SizedBox(width: 6),
                         Icon(
-                          _currentStep < 2 ? Icons.arrow_back : Icons.calculate_rounded,
+                          _currentStep < 2
+                              ? Icons.arrow_back
+                              : Icons.calculate_rounded,
                           size: 18,
                         ),
                       ],
@@ -1090,7 +1143,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     }
   }
 
-  // ✅ الخطوة 1: اختيار الأجهزة
   Widget _buildAppliancesStep() {
     return SingleChildScrollView(
       key: const ValueKey('appliances_step'),
@@ -1098,15 +1150,10 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // حقل البحث المحسن
           _buildSearchField(),
           const SizedBox(height: 16),
-
-          // زر إضافة جهاز مخصص
           _buildCustomDeviceButton(),
           const SizedBox(height: 16),
-
-          // شبكة الأجهزة (2 أعمدة)
           if (_isLoadingAppliances)
             const Center(
               child: Padding(
@@ -1160,7 +1207,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide(color: primaryBlue, width: 1.5),
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         ),
       ),
     );
@@ -1202,7 +1250,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
         ),
         child: Column(
           children: [
-            Icon(Icons.search_off_rounded, size: 48, color: Colors.grey.shade400),
+            Icon(Icons.search_off_rounded,
+                size: 48, color: Colors.grey.shade400),
             const SizedBox(height: 12),
             Text(
               'لا توجد أجهزة مطابقة',
@@ -1270,7 +1319,10 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [primaryBlue.withOpacity(0.1), accentCyan.withOpacity(0.05)],
+                  colors: [
+                    primaryBlue.withOpacity(0.1),
+                    accentCyan.withOpacity(0.05)
+                  ],
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
                 ),
@@ -1290,7 +1342,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               ),
             ),
             const SizedBox(height: 10),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
@@ -1306,7 +1357,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               ),
             ),
             const SizedBox(height: 6),
-
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -1322,14 +1372,16 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                 ),
               ),
             ),
-
             if (savingsPercentage.isNotEmpty) ...[
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [successGreen.withOpacity(0.15), successGreen.withOpacity(0.05)],
+                    colors: [
+                      successGreen.withOpacity(0.15),
+                      successGreen.withOpacity(0.05)
+                    ],
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -1349,7 +1401,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     );
   }
 
-  // ✅ الخطوة 2: مراجعة الأجهزة المختارة
   Widget _buildSelectedAppliancesStep() {
     return SingleChildScrollView(
       key: const ValueKey('selected_step'),
@@ -1357,12 +1408,14 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // عنوان القسم
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryBlue.withOpacity(0.05), accentCyan.withOpacity(0.02)],
+                colors: [
+                  primaryBlue.withOpacity(0.05),
+                  accentCyan.withOpacity(0.02)
+                ],
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: primaryBlue.withOpacity(0.1)),
@@ -1382,7 +1435,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.checklist_rounded, color: Colors.white, size: 22),
+                  child: const Icon(Icons.checklist_rounded,
+                      color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1400,13 +1454,15 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                       const SizedBox(height: 2),
                       Text(
                         'راجع الأجهزة قبل الحساب',
-                        style: GoogleFonts.cairo(fontSize: 13, color: mediumGray),
+                        style:
+                            GoogleFonts.cairo(fontSize: 13, color: mediumGray),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: primaryBlue,
                     borderRadius: BorderRadius.circular(20),
@@ -1424,8 +1480,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // قائمة الأجهزة المختارة
           if (_selectedAppliances.isEmpty)
             Container(
               padding: const EdgeInsets.all(20),
@@ -1436,7 +1490,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               ),
               child: Column(
                 children: [
-                  Icon(Icons.inbox_rounded, size: 48, color: Colors.grey.shade400),
+                  Icon(Icons.inbox_rounded,
+                      size: 48, color: Colors.grey.shade400),
                   const SizedBox(height: 12),
                   Text(
                     'لم تختر أي جهاز بعد',
@@ -1445,7 +1500,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'ارجع للخطوة السابقة لاختيار الأجهزة',
-                    style: GoogleFonts.cairo(fontSize: 12, color: Colors.grey.shade500),
+                    style: GoogleFonts.cairo(
+                        fontSize: 12, color: Colors.grey.shade500),
                   ),
                 ],
               ),
@@ -1475,7 +1531,10 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [primaryBlue.withOpacity(0.08), accentCyan.withOpacity(0.03)],
+                          colors: [
+                            primaryBlue.withOpacity(0.08),
+                            accentCyan.withOpacity(0.03)
+                          ],
                         ),
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -1517,12 +1576,14 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
                       child: Row(
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.edit_rounded, color: secondaryBlue, size: 18),
+                            icon: const Icon(Icons.edit_rounded,
+                                color: secondaryBlue, size: 18),
                             onPressed: () => _editSelectedAppliance(index),
                             padding: const EdgeInsets.all(6),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                            icon: const Icon(Icons.delete_outline,
+                                color: Colors.red, size: 18),
                             onPressed: () => _removeSelectedAppliance(index),
                             padding: const EdgeInsets.all(6),
                           ),
@@ -1538,7 +1599,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
     );
   }
 
-  // ✅ الخطوة 3: الحساب
   Widget _buildCalculateStep() {
     return SingleChildScrollView(
       key: const ValueKey('calculate_step'),
@@ -1546,7 +1606,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ملخص
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -1569,7 +1628,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.check_circle_rounded, color: Colors.white, size: 28),
+                    Icon(Icons.check_circle_rounded,
+                        color: Colors.white, size: 28),
                     const SizedBox(width: 12),
                     Text(
                       'جاهز للحساب',
@@ -1593,8 +1653,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
             ),
           ),
           const SizedBox(height: 20),
-
-          // زر الحساب الكبير
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -1609,7 +1667,8 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
             ),
             child: ElevatedButton.icon(
               onPressed: _calculateSavings,
-              icon: const Icon(Icons.calculate_rounded, color: Colors.white, size: 24),
+              icon: const Icon(Icons.calculate_rounded,
+                  color: Colors.white, size: 24),
               label: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Text(
@@ -1631,8 +1690,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // رسالة مساعدة
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -1662,7 +1719,6 @@ class _ApplianceSavingsScreenState extends State<ApplianceSavingsScreen> {
   }
 }
 
-// ✅ شاشة النتائج المنفصلة
 class _SavingsResultScreen extends StatelessWidget {
   final Map<String, dynamic> result;
   final VoidCallback onReset;
@@ -1680,6 +1736,56 @@ class _SavingsResultScreen extends StatelessWidget {
     required this.onReset,
   });
 
+  Widget _buildResultCurvedHeader(BuildContext context) {
+    return ClipPath(
+      clipper: _BottomCurveClipper(),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [primaryBlue, secondaryBlue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'نتائج الحساب',
+                      style: GoogleFonts.cairo(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 48),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appliancesResult = (result['appliances'] as List?) ?? [];
@@ -1688,326 +1794,317 @@ class _SavingsResultScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue, accentCyan],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: Text(
-          'نتائج الحساب',
-          style: GoogleFonts.cairo(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: true,
-      ),
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // بطاقة النجاح
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [primaryBlue, secondaryBlue],
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryBlue.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
+        child: Column(
+          children: [
+            _buildResultCurvedHeader(context),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'تم الحساب بنجاح!',
-                              style: GoogleFonts.cairo(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [primaryBlue, secondaryBlue],
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryBlue.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'تم الحساب بنجاح!',
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'النتائج أدناه',
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 13,
+                                      color: Colors.white.withOpacity(0.9),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'النتائج أدناه',
-                              style: GoogleFonts.cairo(
-                                fontSize: 13,
-                                color: Colors.white.withOpacity(0.9),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Colors.white,
+                                  size: 32,
+                                ),
                               ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    if (appliancesResult.isNotEmpty) ...[
+                      Text(
+                        '📊 مقارنة الأجهزة',
+                        style: GoogleFonts.cairo(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: darkColor,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...appliancesResult.map((item) {
+                        final name = item['name']?.toString() ?? '';
+                        final normal =
+                            item['normal_consumption']?.toString() ?? '';
+                        final inverter =
+                            item['inverter_consumption']?.toString() ?? '';
+                        final savings = item['savings']?.toString() ?? '';
+                        final percentage =
+                            item['savings_percentage']?.toString() ?? '';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.shade200),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: primaryBlue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(Icons.devices_rounded,
+                                        color: primaryBlue, size: 18),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    name,
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryBlue,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildMiniBar(
+                                      label: 'عادي',
+                                      value: normal,
+                                      color: Colors.red,
+                                      maxValue: 100,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _buildMiniBar(
+                                      label: 'إنفرتر',
+                                      value: inverter,
+                                      color: successGreen,
+                                      maxValue: 100,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildInfoTile(
+                                      label: 'التوفير',
+                                      value: savings,
+                                      color: secondaryBlue,
+                                      icon: Icons.savings_rounded,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: _buildInfoTile(
+                                      label: 'النسبة',
+                                      value: percentage,
+                                      color: warmOrange,
+                                      icon: Icons.percent_rounded,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                    if (total.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [primaryBlue, secondaryBlue],
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: primaryBlue.withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
                             ),
                           ],
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.check_circle_rounded,
-                            color: Colors.white,
-                            size: 32,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.account_balance_wallet_rounded,
+                                    color: Colors.white, size: 24),
+                                const SizedBox(width: 10),
+                                Text(
+                                  '💰 الإجمالي الشهري',
+                                  style: GoogleFonts.cairo(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTotalRow('استهلاك عادي',
+                                total['normal_consumption']?.toString() ?? ''),
+                            _buildTotalRow(
+                                'استهلاك إنفرتر',
+                                total['inverter_consumption']?.toString() ??
+                                    ''),
+                            const SizedBox(height: 8),
+                            Divider(
+                                color: Colors.white.withOpacity(0.3),
+                                height: 1),
+                            const SizedBox(height: 8),
+                            _buildTotalRow('التوفير الشهري',
+                                total['savings']?.toString() ?? '',
+                                isHighlight: true),
+                            _buildTotalRow('نسبة التوفير',
+                                total['savings_percentage']?.toString() ?? '',
+                                isHighlight: true),
+                          ],
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // مقارنة الأجهزة
-              if (appliancesResult.isNotEmpty) ...[
-                Text(
-                  '📊 مقارنة الأجهزة',
-                  style: GoogleFonts.cairo(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: darkColor,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ...appliancesResult.map((item) {
-                  final name = item['name']?.toString() ?? '';
-                  final normal = item['normal_consumption']?.toString() ?? '';
-                  final inverter = item['inverter_consumption']?.toString() ?? '';
-                  final savings = item['savings']?.toString() ?? '';
-                  final percentage = item['savings_percentage']?.toString() ?? '';
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                      ),
+                    ],
+                    if (recommendation.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.amber.shade200),
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: primaryBlue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.amber.shade100,
+                                shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.devices_rounded, color: primaryBlue, size: 18),
+                              child: Icon(
+                                Icons.lightbulb_rounded,
+                                color: Colors.amber.shade700,
+                                size: 24,
+                              ),
                             ),
-                            const SizedBox(width: 10),
-                            Text(
-                              name,
-                              style: GoogleFonts.cairo(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: primaryBlue,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                recommendation,
+                                style: GoogleFonts.cairo(
+                                  fontSize: 14,
+                                  color: darkColor,
+                                  height: 1.6,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-
-                        // رسم بياني مصغر
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildMiniBar(
-                                label: 'عادي',
-                                value: normal,
-                                color: Colors.red,
-                                maxValue: 100,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildMiniBar(
-                                label: 'إنفرتر',
-                                value: inverter,
-                                color: successGreen,
-                                maxValue: 100,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildInfoTile(
-                                label: 'التوفير',
-                                value: savings,
-                                color: secondaryBlue,
-                                icon: Icons.savings_rounded,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildInfoTile(
-                                label: 'النسبة',
-                                value: percentage,
-                                color: warmOrange,
-                                icon: Icons.percent_rounded,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-
-              // الإجمالي الشهري
-              if (total.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primaryBlue, secondaryBlue],
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryBlue.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
                       ),
                     ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 24),
-                          const SizedBox(width: 10),
-                          Text(
-                            '💰 الإجمالي الشهري',
-                            style: GoogleFonts.cairo(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTotalRow('استهلاك عادي', total['normal_consumption']?.toString() ?? ''),
-                      _buildTotalRow('استهلاك إنفرتر', total['inverter_consumption']?.toString() ?? ''),
-                      const SizedBox(height: 8),
-                      Divider(color: Colors.white.withOpacity(0.3), height: 1),
-                      const SizedBox(height: 8),
-                      _buildTotalRow('التوفير الشهري', total['savings']?.toString() ?? '', isHighlight: true),
-                      _buildTotalRow('نسبة التوفير', total['savings_percentage']?.toString() ?? '', isHighlight: true),
-                    ],
-                  ),
-                ),
-              ],
-
-              // التوصية
-              if (recommendation.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.amber.shade200),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade100,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.lightbulb_rounded,
-                          color: Colors.amber.shade700,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          recommendation,
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          onReset();
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.refresh_rounded,
+                            color: Colors.white, size: 20),
+                        label: Text(
+                          'حساب جديد',
                           style: GoogleFonts.cairo(
-                            fontSize: 14,
-                            color: darkColor,
-                            height: 1.6,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryBlue,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 24),
-
-              // زر حساب جديد
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    onReset();
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
-                  label: Text(
-                    'حساب جديد',
-                    style: GoogleFonts.cairo(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontSize: 16,
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -2102,7 +2199,8 @@ class _SavingsResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTotalRow(String label, String value, {bool isHighlight = false}) {
+  Widget _buildTotalRow(String label, String value,
+      {bool isHighlight = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -2128,4 +2226,22 @@ class _SavingsResultScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

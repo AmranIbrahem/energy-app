@@ -1,28 +1,30 @@
 // lib/screens/auth/login_screen.dart
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/screens/home_screen.dart';
-import 'package:GeniusHouse/screens/auth/register_screen.dart';
-import 'package:GeniusHouse/screens/governorate_selection_screen.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:GeniusHouse/screens/onboarding_screen.dart';
 import 'package:GeniusHouse/screens/auth/email_verification_screen.dart';
 import 'package:GeniusHouse/screens/auth/forgot_password_screen.dart';
+import 'package:GeniusHouse/screens/auth/register_screen.dart';
 import 'package:GeniusHouse/screens/company/company_choice_screen.dart';
+import 'package:GeniusHouse/screens/governorate_selection_screen.dart';
+import 'package:GeniusHouse/screens/home_screen.dart';
+import 'package:GeniusHouse/screens/onboarding_screen.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
   final StorageService storageService;
+  final bool returnToCheckout;
 
   const LoginScreen({
     super.key,
     required this.authService,
     required this.storageService,
+    this.returnToCheckout = false,
   });
 
   @override
@@ -116,18 +118,18 @@ class _LoginScreenState extends State<LoginScreen>
         await _saveCredentials();
         await widget.authService.sendFcmTokenToServer();
 
-        // ✅ التحقق من نوع المستخدم
-        final userType = result['user_type'] ?? result['data']?['user_type'];
+        if (widget.returnToCheckout) {
+          if (mounted) Navigator.pop(context);
+          return;
+        }
 
+        final userType = result['user_type'];
         if (userType == 'company_owner') {
-          // ✅ توجيه صاحب الشركة إلى شاشة الاختيار
           _navigateToCompanyChoice();
         } else {
-          // مستخدم عادي - توجيه مباشر للتطبيق
           _navigateToHome();
         }
       } else {
-        // ✅ التحقق من حالة تأكيد البريد الإلكتروني
         final emailVerificationRequired =
             result['email_verification_required'] == true ||
                 result['data']?['email_verification_required'] == true ||
@@ -136,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen>
                 result['message']?.toString().contains('Verification') == true;
 
         if (emailVerificationRequired) {
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             PageRouteBuilder(
               pageBuilder: (_, __, ___) => EmailVerificationScreen(
@@ -144,12 +146,14 @@ class _LoginScreenState extends State<LoginScreen>
                 storageService: widget.storageService,
                 email: _emailController.text.trim(),
                 isFromLogin: true,
+                returnToCheckout: widget.returnToCheckout,
               ),
               transitionsBuilder: (_, animation, __, child) {
                 return FadeTransition(
                   opacity: animation,
                   child: ScaleTransition(
-                    scale: Tween<double>(begin: 0.95, end: 1).animate(animation),
+                    scale:
+                        Tween<double>(begin: 0.95, end: 1).animate(animation),
                     child: child,
                   ),
                 );
@@ -164,7 +168,6 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  // ✅ دوال التوجيه
   void _navigateToHome() {
     Navigator.pushReplacement(
       context,
@@ -216,6 +219,7 @@ class _LoginScreenState extends State<LoginScreen>
         pageBuilder: (_, __, ___) => RegisterScreen(
           authService: widget.authService,
           storageService: widget.storageService,
+          returnToCheckout: widget.returnToCheckout,
         ),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(
@@ -405,7 +409,7 @@ class _LoginScreenState extends State<LoginScreen>
                 opacity: value,
                 child: Container(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -831,33 +835,33 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               child: _isLoading
                   ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2.5,
-                ),
-              )
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
                   : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
-                    Icons.login_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'تسجيل الدخول',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(
+                          Icons.login_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'تسجيل الدخول',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         );
@@ -865,7 +869,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ✅ زر تصفح كزائر بنفس شكل زر تسجيل الدخول
   Widget _buildModernGuestButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),

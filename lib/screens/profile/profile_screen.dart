@@ -1,17 +1,20 @@
 // lib/screens/profile/profile_screen.dart
+
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
+import 'dart:ui' as ui;
+
+import 'package:GeniusHouse/screens/company/request_company_screen.dart';
+import 'package:GeniusHouse/screens/profile/change_password_screen.dart';
+import 'package:GeniusHouse/screens/profile/edit_profile_screen.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/screens/profile/edit_profile_screen.dart';
-import 'package:GeniusHouse/screens/profile/change_password_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:GeniusHouse/screens/company/request_company_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shimmer/shimmer.dart';
+
 import 'orders_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -816,13 +819,16 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : (_errorMessage != null
-              ? _buildErrorWidget()
-              : _buildProfileContent()),
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: lightGray,
+        body: _isLoading
+            ? _buildShimmerLoading()
+            : (_errorMessage != null
+                ? _buildErrorWidget()
+                : _buildProfileContent()),
+      ),
     );
   }
 
@@ -840,322 +846,300 @@ class _ProfileScreenState extends State<ProfileScreen>
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        SliverAppBar(
-          expandedHeight: 260,
-          pinned: true,
-          backgroundColor: cardWhite,
-          elevation: 0,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Container(
+        SliverToBoxAdapter(
+          child: ClipPath(
+            clipper: _ProfileHeaderClipper(),
+            child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
+                  colors: [primaryBlue, secondaryBlue],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [primaryBlue, secondaryBlue, Color(0xFF1E3A8A)],
                 ),
               ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Positioned(
-                    top: -60,
-                    right: -40,
-                    child: AnimatedBuilder(
-                      animation: _pulseAnimationController,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: 1.0 + (_pulseAnimationController.value * 0.05),
-                          child: child,
-                        );
-                      },
-                      child: Container(
-                        width: 200,
-                        height: 200,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.05),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -100,
-                    left: -60,
-                    child: Container(
-                      width: 280,
-                      height: 280,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.03),
-                      ),
-                    ),
-                  ),
-                  ...List.generate(12, (index) {
-                    return Positioned(
-                      top: 20.0 + (index * 15),
-                      right: 10.0 + (index % 3 * 20),
-                      child: AnimatedBuilder(
-                        animation: _pulseAnimationController,
-                        builder: (context, child) {
-                          return Opacity(
-                            opacity:
-                                0.3 + (_pulseAnimationController.value * 0.3),
-                            child: child,
-                          );
-                        },
-                        child: Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.5),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                  Positioned(
-                    top: 50,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: GestureDetector(
-                        onTap: _showImagePickerOptions,
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 0.0, end: 1.0),
-                          duration: const Duration(milliseconds: 800),
-                          curve: Curves.elasticOut,
-                          builder: (context, value, child) =>
-                              Transform.scale(scale: value, child: child),
-                          child: Stack(
-                            alignment: Alignment.bottomRight,
-                            children: [
-                              Container(
-                                width: 110,
-                                height: 110,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border:
-                                      Border.all(color: Colors.white, width: 4),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.3),
-                                      blurRadius: 25,
-                                      offset: const Offset(0, 10),
-                                    ),
-                                  ],
-                                  gradient: const LinearGradient(
-                                    colors: [Colors.white, Color(0xFFE0E7FF)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 48),
+                          Expanded(
+                            child: Center(
+                              child: Text(
+                                'حسابي',
+                                style: GoogleFonts.cairo(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
-                                child: ClipOval(
-                                  child: _isUploadingImage
-                                      ? Container(
-                                          color: Colors.black54,
-                                          child: const Center(
-                                            child: CircularProgressIndicator(
-                                                color: Colors.white,
-                                                strokeWidth: 3),
-                                          ),
-                                        )
-                                      : (hasImage
-                                          ? CachedNetworkImage(
-                                              imageUrl:
-                                                  _userData!['profile_image'],
-                                              fit: BoxFit.cover,
-                                              placeholder: (_, __) => Container(
-                                                color: Colors.grey.shade200,
-                                                child: const Center(
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                          color: primaryBlue,
-                                                          strokeWidth: 2),
-                                                ),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.share_rounded,
+                                  color: Colors.white, size: 22),
+                              onPressed: _shareReferralCode,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    GestureDetector(
+                      onTap: _showImagePickerOptions,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 800),
+                        curve: Curves.elasticOut,
+                        builder: (context, value, child) =>
+                            Transform.scale(scale: value, child: child),
+                        child: Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            Container(
+                              width: 110,
+                              height: 110,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.white, width: 4),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 25,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                                gradient: const LinearGradient(
+                                  colors: [Colors.white, Color(0xFFE0E7FF)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: ClipOval(
+                                child: _isUploadingImage
+                                    ? Container(
+                                        color: Colors.black54,
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 3),
+                                        ),
+                                      )
+                                    : (hasImage
+                                        ? CachedNetworkImage(
+                                            imageUrl:
+                                                _userData!['profile_image'],
+                                            fit: BoxFit.cover,
+                                            placeholder: (_, __) => Container(
+                                              color: Colors.grey.shade200,
+                                              child: const Center(
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        color: primaryBlue,
+                                                        strokeWidth: 2),
                                               ),
-                                              errorWidget: (_, __, ___) =>
-                                                  Container(
-                                                color: Colors.white,
-                                                child: Icon(Icons.person,
-                                                    size: 55,
-                                                    color:
-                                                        Colors.grey.shade400),
-                                              ),
-                                            )
-                                          : Container(
+                                            ),
+                                            errorWidget: (_, __, ___) =>
+                                                Container(
                                               color: Colors.white,
                                               child: Icon(Icons.person,
                                                   size: 55,
                                                   color: Colors.grey.shade400),
-                                            )),
-                                ),
+                                            ),
+                                          )
+                                        : Container(
+                                            color: Colors.white,
+                                            child: Icon(Icons.person,
+                                                size: 55,
+                                                color: Colors.grey.shade400),
+                                          )),
                               ),
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [primaryBlue, secondaryBlue],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [primaryBlue, secondaryBlue],
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
                                   ),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(Icons.camera_alt_rounded,
-                                    size: 18, color: Colors.white),
+                                ],
                               ),
-                            ],
-                          ),
+                              child: const Icon(Icons.camera_alt_rounded,
+                                  size: 18, color: Colors.white),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 18),
-                      decoration: BoxDecoration(
-                        color: cardWhite,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(35),
-                          topRight: Radius.circular(35),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 20,
-                            offset: const Offset(0, -5),
-                          ),
-                        ],
+                    const SizedBox(height: 10),
+                    Text(
+                      _userData?['name'] ?? '',
+                      style: GoogleFonts.cairo(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.star_rounded,
-                                        color: Color(0xFFFFA726), size: 24),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      points.toString(),
-                                      style: GoogleFonts.cairo(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFFFFA726),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'نقاطي',
-                                  style: GoogleFonts.cairo(
-                                      fontSize: 12,
-                                      color: mediumGray,
-                                      fontWeight: FontWeight.w500),
-                                ),
-                              ],
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        userType,
+                        style: GoogleFonts.cairo(
+                          fontSize: 13,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 30),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: cardWhite,
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 20,
+                              offset: const Offset(0, 5),
                             ),
-                          ),
-                          Container(
-                            width: 1.5,
-                            height: 45,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.grey.shade200,
-                                  Colors.grey.shade100,
-                                  Colors.grey.shade200
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.star_rounded,
+                                          color: Color(0xFFFFA726), size: 24),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        points.toString(),
+                                        style: GoogleFonts.cairo(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFFFFA726),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'نقاطي',
+                                    style: GoogleFonts.cairo(
+                                        fontSize: 12,
+                                        color: mediumGray,
+                                        fontWeight: FontWeight.w500),
+                                  ),
                                 ],
                               ),
                             ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: InkWell(
-                              onTap: _copyReferralCode,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 4, horizontal: 8),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.card_giftcard_rounded,
-                                            color: primaryBlue, size: 18),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          referralCode,
-                                          style: GoogleFonts.cairo(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            color: primaryBlue,
-                                            letterSpacing: 1.5,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: primaryBlue.withOpacity(0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: const Icon(Icons.copy_rounded,
-                                              size: 14, color: primaryBlue),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'رمز الدعوة (اضغط للنسخ)',
-                                      style: GoogleFonts.cairo(
-                                          fontSize: 10,
-                                          color: mediumGray,
-                                          fontWeight: FontWeight.w500),
-                                    ),
+                            Container(
+                              width: 1.5,
+                              height: 45,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.grey.shade200,
+                                    Colors.grey.shade100,
+                                    Colors.grey.shade200
                                   ],
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                            Expanded(
+                              flex: 2,
+                              child: InkWell(
+                                onTap: _copyReferralCode,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 4, horizontal: 8),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                              Icons.card_giftcard_rounded,
+                                              color: primaryBlue,
+                                              size: 18),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            referralCode,
+                                            style: GoogleFonts.cairo(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: primaryBlue,
+                                              letterSpacing: 1.5,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  primaryBlue.withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                                Icons.copy_rounded,
+                                                size: 14,
+                                                color: primaryBlue),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'رمز الدعوة (اضغط للنسخ)',
+                                        style: GoogleFonts.cairo(
+                                            fontSize: 10,
+                                            color: mediumGray,
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-          actions: [
-            Container(
-              margin: const EdgeInsets.only(right: 8, top: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.share_rounded,
-                    color: Colors.white, size: 22),
-                onPressed: _shareReferralCode,
-              ),
-            ),
-          ],
         ),
         SliverToBoxAdapter(
           child: FadeTransition(
@@ -1169,71 +1153,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    const SizedBox(height: 10),
-                    Text(
-                      _userData?['name'] ?? '',
-                      style: GoogleFonts.cairo(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: darkColor,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 18, vertical: 10),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            primaryBlue.withOpacity(0.12),
-                            secondaryBlue.withOpacity(0.06)
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(color: primaryBlue.withOpacity(0.2)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: primaryBlue.withOpacity(0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AnimatedBuilder(
-                            animation: _pulseAnimationController,
-                            builder: (context, child) {
-                              return Transform.scale(
-                                scale: 1.0 +
-                                    (_pulseAnimationController.value * 0.2),
-                                child: child,
-                              );
-                            },
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              decoration: const BoxDecoration(
-                                color: primaryBlue,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            userType,
-                            style: GoogleFonts.cairo(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: primaryBlue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
                     Row(
                       children: [
                         _buildStatCard(
@@ -1424,9 +1343,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildSettingsSection() {
-
     final settingsItems = [
-
       if (_userData?['user_type'] == 'customer')
         {
           'icon': Icons.business_rounded,
@@ -1438,7 +1355,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               MaterialPageRoute(
                 builder: (_) => RequestCompanyScreen(
                   authService: widget.authService,
-                  apiService: widget.apiService, // ✅ apiService موجود في ProfileScreen
+                  apiService: widget.apiService,
                 ),
               ),
             );
@@ -1870,4 +1787,22 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
   }
+}
+
+class _ProfileHeaderClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

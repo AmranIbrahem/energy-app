@@ -1,10 +1,9 @@
 // lib/screens/company/company_dashboard_screen.dart
 
-import 'dart:convert';
 import 'dart:math';
 
-import 'package:fl_chart/fl_chart.dart';
 import 'package:GeniusHouse/screens/company/categories/main_categories_screen.dart';
+import 'package:GeniusHouse/screens/company/commissions/company_commission_screen.dart';
 import 'package:GeniusHouse/screens/company/offers/offers_list_screen.dart';
 import 'package:GeniusHouse/screens/company/products/products_list_screen.dart';
 import 'package:GeniusHouse/screens/company/supplier_orders/supplier_orders_list_screen.dart';
@@ -12,10 +11,9 @@ import 'package:GeniusHouse/screens/home_screen.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:GeniusHouse/screens/company/commissions/company_commission_screen.dart';
 
 class CompanyDashboardScreen extends StatefulWidget {
   final AuthService authService;
@@ -60,18 +58,19 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     super.initState();
 
     final token = widget.authService.token;
-    debugPrint('═══════════════════════════════════');
-    debugPrint('🔑 CompanyDashboard - Token: ${token != null ? token.substring(0, token.length > 30 ? 30 : token.length) + '...' : 'NULL'}');
-    debugPrint('🔑 isAuthenticated: ${widget.authService.isAuthenticated}');
-    debugPrint('═══════════════════════════════════');
+    // debugPrint('═══════════════════════════════════');
+    // debugPrint(
+    //     '🔑 CompanyDashboard - Token: ${token != null ? token.substring(0, token.length > 30 ? 30 : token.length) + '...' : 'NULL'}');
+    // debugPrint('🔑 isAuthenticated: ${widget.authService.isAuthenticated}');
+    // debugPrint('═══════════════════════════════════');
 
     _apiService = ApiService(storageService: widget.storageService);
 
     if (token != null && token.isNotEmpty) {
       _apiService.setToken(token);
-      debugPrint('✅ Token set in ApiService');
+      // debugPrint('✅ Token set in ApiService');
     } else {
-      debugPrint('❌ No token available!');
+      // debugPrint('❌ No token available!');
     }
 
     _loadCompanyInfo();
@@ -81,7 +80,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
   void _loadCompanyInfo() async {
     try {
       final userData = await widget.authService.getUserData();
-      debugPrint('👤 User Data: ${jsonEncode(userData)}');
+      // debugPrint('👤 User Data: ${jsonEncode(userData)}');
 
       if (userData != null && mounted) {
         setState(() {
@@ -89,7 +88,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         });
       } else {
         final name = widget.storageService.getUserName();
-        debugPrint('👤 User Name from Storage: $name');
+        // debugPrint('👤 User Name from Storage: $name');
         if (name != null && mounted) {
           setState(() {
             _companyName = name;
@@ -97,7 +96,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         }
       }
     } catch (e) {
-      debugPrint('❌ Error loading user data: $e');
+      // debugPrint('❌ Error loading user data: $e');
     }
   }
 
@@ -111,14 +110,16 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         requiresAuth: true,
       );
 
-      debugPrint('📊 Dashboard Stats Response: ${jsonEncode(response)}');
+      // debugPrint('📊 Dashboard Stats Response: ${jsonEncode(response)}');
 
       if (response['data'] != null && mounted) {
         final data = response['data'];
         setState(() {
           _advancedStats = data['statistics'];
-          _productsByMainCategory = List<Map<String, dynamic>>.from(data['chart_data']['products_by_main_category'] ?? []);
-          _productsBySubCategory = List<Map<String, dynamic>>.from(data['chart_data']['products_by_sub_category'] ?? []);
+          _productsByMainCategory = List<Map<String, dynamic>>.from(
+              data['chart_data']['products_by_main_category'] ?? []);
+          _productsBySubCategory = List<Map<String, dynamic>>.from(
+              data['chart_data']['products_by_sub_category'] ?? []);
           _isLoadingStats = false;
           _isLoadingAdvanced = false;
         });
@@ -131,7 +132,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         }
       }
     } catch (e) {
-      debugPrint('❌ Error fetching dashboard stats: $e');
+      // debugPrint('❌ Error fetching dashboard stats: $e');
       if (mounted) {
         setState(() {
           _isLoadingStats = false;
@@ -191,7 +192,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         title: Text('تسجيل الخروج',
             style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
         content:
-        Text('هل أنت متأكد من تسجيل الخروج؟', style: GoogleFonts.cairo()),
+            Text('هل أنت متأكد من تسجيل الخروج؟', style: GoogleFonts.cairo()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -222,7 +223,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               storageService: widget.storageService,
             ),
           ),
-              (route) => false,
+          (route) => false,
         );
       }
     }
@@ -230,35 +231,54 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        backgroundColor: cardWhite,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu_rounded, color: darkColor),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        title: Text(
-          _getAppBarTitle(),
-          style: GoogleFonts.cairo(
-              fontSize: 18, fontWeight: FontWeight.bold, color: darkColor),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh_rounded, color: primaryBlue),
-            onPressed: () {
-              if (_currentIndex == 0) {
-                _fetchDashboardStats();
-              }
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: lightGray,
+        appBar: _buildAppBar(),
+        drawer: _buildDrawer(),
+        body: _getBody(),
       ),
-      drawer: _buildDrawer(),
-      body: _getBody(),
+    );
+  }
+
+  AppBar _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.menu_rounded, color: Colors.white),
+        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      title: Text(
+        _getAppBarTitle(),
+        style: GoogleFonts.cairo(
+            fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.refresh_rounded, color: Colors.white),
+          onPressed: () {
+            if (_currentIndex == 0) {
+              _fetchDashboardStats();
+            }
+          },
+        ),
+        const SizedBox(width: 8),
+      ],
+      flexibleSpace: ClipPath(
+        clipper: _BottomCurveClipper(),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryBlue, secondaryBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -277,7 +297,7 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         );
       case 5:
         return _buildSupplierOrdersPlaceholder();
-      case 6: // ✅ عمولة المنصة
+      case 6:
         return CompanyCommissionScreen(
           authService: widget.authService,
           storageService: widget.storageService,
@@ -299,14 +319,12 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         return 'العروض';
       case 5:
         return 'طلبات التوريد';
-      case 6: // ✅
+      case 6:
         return 'عمولة المنصة';
       default:
         return 'لوحة التحكم';
     }
   }
-
-  // ==================== Drawer ====================
 
   Widget _buildDrawer() {
     return Drawer(
@@ -322,6 +340,10 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                   colors: [primaryBlue, secondaryBlue],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
                 ),
               ),
               child: Column(
@@ -452,10 +474,10 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             )),
         trailing: isSelected
             ? Container(
-            width: 4,
-            height: 30,
-            decoration: BoxDecoration(
-                color: primaryBlue, borderRadius: BorderRadius.circular(4)))
+                width: 4,
+                height: 30,
+                decoration: BoxDecoration(
+                    color: primaryBlue, borderRadius: BorderRadius.circular(4)))
             : null,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         onTap: () {
@@ -469,8 +491,6 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       ),
     );
   }
-
-  // ==================== Dashboard Content ====================
 
   Widget _buildDashboardContent() {
     final stats = _advancedStats;
@@ -486,12 +506,12 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
           children: [
             _buildWelcomeCard(),
             const SizedBox(height: 20),
-
-            // === بطاقات الإحصائيات السريعة ===
             if (stats != null) ...[
               Text('لوحة الإحصائيات المتقدمة',
                   style: GoogleFonts.cairo(
-                      fontSize: 18, fontWeight: FontWeight.bold, color: darkColor)),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: darkColor)),
               const SizedBox(height: 12),
               GridView.count(
                 crossAxisCount: 2,
@@ -502,36 +522,43 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                 childAspectRatio: 1.4,
                 children: [
                   _buildAdvancedStatCard(
-                      Icons.category_rounded, 'تصنيفات رئيسية',
+                      Icons.category_rounded,
+                      'تصنيفات رئيسية',
                       '${stats['main_categories_count'] ?? 0}',
                       '+${stats['main_categories_count'] ?? 0} هذا الشهر',
-                      primaryBlue, [primaryBlue, secondaryBlue]),
+                      primaryBlue,
+                      [primaryBlue, secondaryBlue]),
                   _buildAdvancedStatCard(
-                      Icons.layers_rounded, 'تصنيفات فرعية',
+                      Icons.layers_rounded,
+                      'تصنيفات فرعية',
                       '${stats['sub_categories_count'] ?? 0}',
                       '+${stats['sub_categories_count'] ?? 0} هذا الشهر',
-                      const Color(0xFF4facfe), [const Color(0xFF4facfe), const Color(0xFF00f2fe)]),
+                      const Color(0xFF4facfe),
+                      [const Color(0xFF4facfe), const Color(0xFF00f2fe)]),
                   _buildAdvancedStatCard(
-                      Icons.inventory_2_rounded, 'منتجاتك',
+                      Icons.inventory_2_rounded,
+                      'منتجاتك',
                       '${stats['total_products'] ?? 0}',
                       '${stats['active_products'] ?? 0} نشط',
-                      successGreen, [successGreen, const Color(0xFF34D399)]),
+                      successGreen,
+                      [successGreen, const Color(0xFF34D399)]),
                   _buildAdvancedStatCard(
-                      Icons.local_offer_rounded, 'العروض',
+                      Icons.local_offer_rounded,
+                      'العروض',
                       '${stats['total_offers'] ?? 0}',
                       '${stats['active_offers'] ?? 0} نشط',
-                      warningOrange, [warningOrange, const Color(0xFFFBBF24)]),
+                      warningOrange,
+                      [warningOrange, const Color(0xFFFBBF24)]),
                   _buildAdvancedStatCard(
-                      Icons.local_shipping_rounded, 'طلبات التوريد',
+                      Icons.local_shipping_rounded,
+                      'طلبات التوريد',
                       '${stats['total_supplier_orders'] ?? 0}',
                       '${stats['pending_supplier_orders'] ?? 0} قيد الانتظار',
-                      dangerRed, [dangerRed, const Color(0xFFF87171)]),
+                      dangerRed,
+                      [dangerRed, const Color(0xFFF87171)]),
                 ],
               ),
-
               const SizedBox(height: 24),
-
-              // === الرسوم البيانية ===
               if (!_isLoadingAdvanced) ...[
                 if (_productsByMainCategory.isNotEmpty) ...[
                   _buildChartCard(
@@ -539,7 +566,8 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                     icon: Icons.bar_chart_rounded,
                     color: primaryBlue,
                     child: Column(
-                      children: _productsByMainCategory.asMap().entries.map((e) {
+                      children:
+                          _productsByMainCategory.asMap().entries.map((e) {
                         final maxVal = _productsByMainCategory
                             .map((x) => (x['count'] as int).toDouble())
                             .reduce(max);
@@ -550,19 +578,20 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Row(
                             children: [
-                              // اسم التصنيف
                               SizedBox(
                                 width: 100,
                                 child: Text(
                                   e.value['name'] ?? '',
-                                  style: GoogleFonts.cairo(fontSize: 10, color: darkColor, fontWeight: FontWeight.w600),
+                                  style: GoogleFonts.cairo(
+                                      fontSize: 10,
+                                      color: darkColor,
+                                      fontWeight: FontWeight.w600),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.right,
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              // الشريط الأفقي
                               Expanded(
                                 child: Stack(
                                   children: [
@@ -580,12 +609,15 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                                         decoration: BoxDecoration(
                                           gradient: LinearGradient(colors: [
                                             _getChartColor(e.key),
-                                            _getChartColor(e.key).withOpacity(0.7),
+                                            _getChartColor(e.key)
+                                                .withOpacity(0.7),
                                           ]),
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
                                         ),
                                         alignment: Alignment.centerRight,
-                                        padding: const EdgeInsets.only(right: 8),
+                                        padding:
+                                            const EdgeInsets.only(right: 8),
                                         child: Text(
                                           '${e.value['count']}',
                                           style: GoogleFonts.cairo(
@@ -607,8 +639,6 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                   ),
                   const SizedBox(height: 16),
                 ],
-
-// Doughnut Chart - توزيع حسب التصنيف الفرعي مع Legend
                 if (_productsBySubCategory.isNotEmpty) ...[
                   _buildChartCard(
                     title: 'توزيع منتجاتك حسب التصنيف الفرعي',
@@ -621,25 +651,33 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                           child: PieChart(
                             PieChartData(
                               pieTouchData: PieTouchData(
-                                touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                                touchCallback:
+                                    (FlTouchEvent event, pieTouchResponse) {
                                   setState(() {
                                     if (!event.isInterestedForInteractions ||
                                         pieTouchResponse == null ||
-                                        pieTouchResponse.touchedSection == null) {
+                                        pieTouchResponse.touchedSection ==
+                                            null) {
                                       _touchedIndex = -1;
                                       return;
                                     }
-                                    _touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                                    _touchedIndex = pieTouchResponse
+                                        .touchedSection!.touchedSectionIndex;
                                   });
                                 },
                               ),
-                              sections: _productsBySubCategory.asMap().entries.map((e) {
+                              sections: _productsBySubCategory
+                                  .asMap()
+                                  .entries
+                                  .map((e) {
                                 final isTouched = e.key == _touchedIndex;
                                 final radius = isTouched ? 90.0 : 75.0;
                                 return PieChartSectionData(
                                   color: _getChartColor(e.key),
                                   value: (e.value['count'] as int).toDouble(),
-                                  title: isTouched ? '${e.value['name']}\n(${e.value['count']})' : '${e.value['count']}',
+                                  title: isTouched
+                                      ? '${e.value['name']}\n(${e.value['count']})'
+                                      : '${e.value['count']}',
                                   radius: radius,
                                   titleStyle: GoogleFonts.cairo(
                                     fontSize: isTouched ? 11 : 10,
@@ -655,19 +693,21 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // ✅ Legend - أسماء الأقسام مع الألوان
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: _productsBySubCategory.asMap().entries.map((e) {
+                          children:
+                              _productsBySubCategory.asMap().entries.map((e) {
                             return GestureDetector(
                               onTap: () {
                                 setState(() {
-                                  _touchedIndex = _touchedIndex == e.key ? -1 : e.key;
+                                  _touchedIndex =
+                                      _touchedIndex == e.key ? -1 : e.key;
                                 });
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: _touchedIndex == e.key
                                       ? _getChartColor(e.key).withOpacity(0.15)
@@ -696,7 +736,9 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                                       '${e.value['name']} (${e.value['count']})',
                                       style: GoogleFonts.cairo(
                                         fontSize: 10,
-                                        fontWeight: _touchedIndex == e.key ? FontWeight.bold : FontWeight.w500,
+                                        fontWeight: _touchedIndex == e.key
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
                                         color: darkColor,
                                       ),
                                     ),
@@ -709,12 +751,13 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                       ],
                     ),
                   ),
-                ],              ],
+                ],
+              ],
             ] else if (_isLoadingAdvanced) ...[
               const SizedBox(height: 40),
-              const Center(child: CircularProgressIndicator(color: primaryBlue)),
+              const Center(
+                  child: CircularProgressIndicator(color: primaryBlue)),
             ],
-
             const SizedBox(height: 40),
           ],
         ),
@@ -782,14 +825,16 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     );
   }
 
-  // بطاقة إحصائية متقدمة
-  Widget _buildAdvancedStatCard(IconData icon, String title, String value, String trend, Color color, List<Color> gradient) {
+  Widget _buildAdvancedStatCard(IconData icon, String title, String value,
+      String trend, Color color, List<Color> gradient) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -806,8 +851,13 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             ),
           ]),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(value, style: GoogleFonts.cairo(fontSize: 22, fontWeight: FontWeight.bold, color: darkColor)),
-            Text(title, style: GoogleFonts.cairo(fontSize: 10, color: mediumGray)),
+            Text(value,
+                style: GoogleFonts.cairo(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor)),
+            Text(title,
+                style: GoogleFonts.cairo(fontSize: 10, color: mediumGray)),
           ]),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -815,22 +865,28 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
               color: successGreen.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(trend, style: GoogleFonts.cairo(fontSize: 9, color: successGreen)),
+            child: Text(trend,
+                style: GoogleFonts.cairo(fontSize: 9, color: successGreen)),
           ),
         ],
       ),
     );
   }
 
-  // بطاقة رسم بياني
-  Widget _buildChartCard({required String title, required IconData icon, required Color color, required Widget child}) {
+  Widget _buildChartCard(
+      {required String title,
+      required IconData icon,
+      required Color color,
+      required Widget child}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)
+        ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -843,7 +899,9 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
             child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(width: 10),
-          Text(title, style: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.bold, color: darkColor)),
+          Text(title,
+              style: GoogleFonts.cairo(
+                  fontSize: 14, fontWeight: FontWeight.bold, color: darkColor)),
         ]),
         const SizedBox(height: 16),
         child,
@@ -851,12 +909,20 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     );
   }
 
-  // ألوان متنوعة للرسوم البيانية
   Color _getChartColor(int index) {
     const colors = [
-      Color(0xFF667eea), Color(0xFF4facfe), Color(0xFF84fab0), Color(0xFFf093fb),
-      Color(0xFFfa709a), Color(0xFFa855f7), Color(0xFF06b6d4), Color(0xFFf59e0b),
-      Color(0xFF8B5CF6), Color(0xFF10B981), Color(0xFFEF4444), Color(0xFF6366F1),
+      Color(0xFF667eea),
+      Color(0xFF4facfe),
+      Color(0xFF84fab0),
+      Color(0xFFf093fb),
+      Color(0xFFfa709a),
+      Color(0xFFa855f7),
+      Color(0xFF06b6d4),
+      Color(0xFFf59e0b),
+      Color(0xFF8B5CF6),
+      Color(0xFF10B981),
+      Color(0xFFEF4444),
+      Color(0xFF6366F1),
     ];
     return colors[index % colors.length];
   }
@@ -879,4 +945,22 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       storageService: widget.storageService,
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 20);
+    path.quadraticBezierTo(0, size.height, 20, size.height);
+    path.lineTo(size.width - 20, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 20);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

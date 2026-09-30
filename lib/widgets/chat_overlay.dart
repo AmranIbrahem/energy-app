@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:GeniusHouse/widgets/floating_chat_button.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/widgets/floating_chat_button.dart';
+import 'package:flutter/material.dart';
 
 class ChatOverlay extends StatefulWidget {
   final Widget child;

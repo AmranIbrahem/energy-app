@@ -1,14 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:GeniusHouse/models/cart_item_model.dart';
+import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/services/favorites_service.dart';
-import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
 import 'package:GeniusHouse/services/cart_service.dart';
-import 'package:GeniusHouse/models/cart_item_model.dart';
+import 'package:GeniusHouse/services/favorites_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 
 class HomeOfferCard extends StatefulWidget {
   final dynamic offer;
@@ -63,6 +62,54 @@ class _HomeOfferCardState extends State<HomeOfferCard>
     super.dispose();
   }
 
+  bool get _isSypPreferred {
+    final storage = widget.authService?.storageService;
+    if (storage == null) return false;
+    try {
+      return storage.isSypPreferred();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  double _getOriginalPrice() {
+    return _isSypPreferred
+        ? (double.tryParse(widget.offer['price_syp']?.toString() ?? '0') ?? 0)
+        : (double.tryParse(widget.offer['price']?.toString() ?? '0') ?? 0);
+  }
+
+  double _getFinalPrice() {
+    return _isSypPreferred
+        ? (double.tryParse(
+                widget.offer['final_price_syp']?.toString() ?? '0') ??
+            0)
+        : (double.tryParse(widget.offer['final_price']?.toString() ?? '0') ??
+            0);
+  }
+
+  String _fmt(double price) {
+    if (_isSypPreferred) {
+      return '${_formatNumber(price)} SYP';
+    }
+    return '\$${_formatNumber(price)}';
+  }
+
+  String _formatNumber(double number) {
+    final parts = number.toStringAsFixed(2).split('.');
+    final intPart = parts[0];
+    final decimalPart = parts[1];
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < intPart.length; i++) {
+      if (i > 0 && (intPart.length - i) % 3 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(intPart[i]);
+    }
+
+    return '${buffer.toString()}.$decimalPart';
+  }
+
   Future<void> _toggleFavorite() async {
     setState(() => _isUpdatingFavorite = true);
     try {
@@ -76,6 +123,9 @@ class _HomeOfferCardState extends State<HomeOfferCard>
           'slug': widget.offer['slug'],
           'price': widget.offer['price'],
           'final_price': widget.offer['final_price'],
+          'price_syp': widget.offer['price_syp'],
+          'final_price_syp': widget.offer['final_price_syp'],
+          'discount_price_syp': widget.offer['discount_price_syp'],
           'cover_image': widget.offer['cover_image'],
           'discount_percentage': widget.offer['discount_percentage'],
           'total_wattage': widget.offer['total_wattage'],
@@ -86,7 +136,7 @@ class _HomeOfferCardState extends State<HomeOfferCard>
         if (mounted) setState(() => _isFavorite = true);
       }
     } catch (e) {
-      debugPrint('Error: $e');
+      // debugPrint('Error: $e');
     } finally {
       if (mounted) setState(() => _isUpdatingFavorite = false);
     }
@@ -102,15 +152,13 @@ class _HomeOfferCardState extends State<HomeOfferCard>
 
     _cartAnimationController.forward();
 
-    // ✅ يستخدم CartItemModel.fromOffer التي تدعم shipping_cities تلقائياً
     final cartItem = CartItemModel.fromOffer(
       widget.offer,
       quantity: 1,
     );
 
-    // ✅ التحقق من وجود shipping_cities
-    debugPrint('📦 Offer shipping_cities: ${cartItem.shippingCities}');
-    debugPrint('📦 Offer hasShippingInfo: ${cartItem.hasShippingInfo}');
+    // debugPrint('📦 Offer shipping_cities: ${cartItem.shippingCities}');
+    // debugPrint('📦 Offer hasShippingInfo: ${cartItem.hasShippingInfo}');
 
     cartService.addOffer(cartItem);
 
@@ -148,17 +196,16 @@ class _HomeOfferCardState extends State<HomeOfferCard>
   @override
   Widget build(BuildContext context) {
     final bool hasDiscount = (widget.offer['discount_percentage'] ?? 0) > 0;
-    final double finalPrice =
-        double.tryParse(widget.offer['final_price']?.toString() ?? '0') ?? 0;
-    final double originalPrice =
-        double.tryParse(widget.offer['price']?.toString() ?? '0') ?? 0;
+
+    final double finalPrice = _getFinalPrice();
+    final double originalPrice = _getOriginalPrice();
+
     final int totalWattage = widget.offer['total_wattage'] ?? 0;
     final int totalCapacity = widget.offer['total_capacity'] ?? 0;
     final String name = widget.offer['name_ar']?.toString() ?? 'غير معروف';
     final String imageUrl = widget.offer['cover_image']?.toString() ?? '';
     final double rating =
         double.tryParse(widget.offer['rate']?.toString() ?? '0') ?? 0;
-    // ✅ استخراج اسم المحافظة للعرض
     final String governorate =
         widget.offer['governorate_offer']?.toString() ?? '';
 
@@ -230,27 +277,27 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                       ),
                       child: imageUrl.isNotEmpty
                           ? Hero(
-                        tag: 'offer_${widget.offer['id']}',
-                        child: CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.contain,
-                          placeholder: (_, __) => Shimmer.fromColors(
-                            baseColor: Colors.grey.shade200,
-                            highlightColor: Colors.grey.shade100,
-                            child: Container(color: Colors.grey.shade200),
-                          ),
-                          errorWidget: (_, __, ___) => Container(
-                            color: Colors.grey.shade100,
-                            child: Icon(Icons.local_offer_rounded,
-                                size: 40, color: Colors.grey.shade400),
-                          ),
-                        ),
-                      )
+                              tag: 'offer_${widget.offer['id']}',
+                              child: CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                fit: BoxFit.contain,
+                                placeholder: (_, __) => Shimmer.fromColors(
+                                  baseColor: Colors.grey.shade200,
+                                  highlightColor: Colors.grey.shade100,
+                                  child: Container(color: Colors.grey.shade200),
+                                ),
+                                errorWidget: (_, __, ___) => Container(
+                                  color: Colors.grey.shade100,
+                                  child: Icon(Icons.local_offer_rounded,
+                                      size: 40, color: Colors.grey.shade400),
+                                ),
+                              ),
+                            )
                           : Container(
-                        color: Colors.grey.shade100,
-                        child: Icon(Icons.local_offer_rounded,
-                            size: 40, color: Colors.grey.shade400),
-                      ),
+                              color: Colors.grey.shade100,
+                              child: Icon(Icons.local_offer_rounded,
+                                  size: 40, color: Colors.grey.shade400),
+                            ),
                     ),
                   ),
                   if (hasDiscount)
@@ -418,18 +465,18 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                         ),
                         child: _isUpdatingFavorite
                             ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.red),
-                        )
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.red),
+                              )
                             : Icon(
-                          _isFavorite
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: _isFavorite ? Colors.red : Colors.grey,
-                          size: 18,
-                        ),
+                                _isFavorite
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                color: _isFavorite ? Colors.red : Colors.grey,
+                                size: 18,
+                              ),
                       ),
                     ),
                   ),
@@ -456,7 +503,7 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                       Row(
                         children: [
                           Text(
-                            Helpers.formatPrice(finalPrice),
+                            _fmt(finalPrice),
                             style: GoogleFonts.cairo(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -467,7 +514,7 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
-                                Helpers.formatPrice(originalPrice),
+                                _fmt(originalPrice),
                                 style: GoogleFonts.cairo(
                                   fontSize: 10,
                                   color: Colors.grey.shade400,
@@ -500,11 +547,11 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                     decoration: BoxDecoration(
                       gradient: _isAddedToCart
                           ? const LinearGradient(
-                        colors: [Color(0xFF059669), Color(0xFF10B981)],
-                      )
+                              colors: [Color(0xFF059669), Color(0xFF10B981)],
+                            )
                           : const LinearGradient(
-                        colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
-                      ),
+                              colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
+                            ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -532,8 +579,8 @@ class _HomeOfferCardState extends State<HomeOfferCard>
                           _isAddingToCart
                               ? 'جاري الإضافة...'
                               : _isAddedToCart
-                              ? 'تم ✓'
-                              : 'أضف للسلة',
+                                  ? 'تم ✓'
+                                  : 'أضف للسلة',
                           style: GoogleFonts.cairo(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,

@@ -1,7 +1,8 @@
 // lib/services/rating_api_service.dart
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:http/http.dart' as http;
 
 class RatingApiService {
   final String baseUrl;
@@ -36,7 +37,7 @@ class RatingApiService {
       final data = jsonDecode(response.body);
       return data;
     } catch (e) {
-      print('Error getting rateable items: $e');
+      // print('Error getting rateable items: $e');
       return {'success': false, 'message': 'حدث خطأ في الاتصال: $e'};
     }
   }
@@ -77,7 +78,7 @@ class RatingApiService {
       final data = jsonDecode(response.body);
       return data;
     } catch (e) {
-      print('Error submitting rating: $e');
+      // print('Error submitting rating: $e');
       return {'success': false, 'message': 'حدث خطأ في إرسال التقييم: $e'};
     }
   }

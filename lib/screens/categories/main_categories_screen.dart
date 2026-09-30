@@ -1,14 +1,16 @@
 // lib/screens/categories/main_categories_screen.dart
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
+
+import 'package:GeniusHouse/screens/categories/subcategories_screen.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/screens/categories/subcategories_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 
 class MainCategoriesScreen extends StatefulWidget {
   final ApiService apiService;
@@ -110,195 +112,209 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
             return name.contains(_searchQuery.toLowerCase());
           }).toList();
 
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: 1.0 + (_pulseAnimationController.value * 0.15),
-                  child: child,
-                );
-              },
-              child: const Icon(Icons.grid_view_rounded,
-                  color: Colors.yellow, size: 24),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'الأقسام الرئيسية',
-              style: GoogleFonts.cairo(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-        elevation: 0,
-        centerTitle: true,
-        leading: null,
-        automaticallyImplyLeading: false,
-        actions: [
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: Icon(
-                  _isGridView
-                      ? Icons.view_list_rounded
-                      : Icons.grid_view_rounded,
-                  key: ValueKey(_isGridView),
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                setState(() {
-                  _isGridView = !_isGridView;
-                });
-              },
-              tooltip: _isGridView ? 'عرض القائمة' : 'عرض الشبكة',
-            ),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(70),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: cardWhite,
-              boxShadow: [
-                BoxShadow(
-                  color: primaryBlue.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFEFF6FF),
+                Color(0xFFF5F7FA),
               ],
             ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-              style: GoogleFonts.cairo(fontSize: 14, color: darkColor),
-              decoration: InputDecoration(
-                hintText: 'ابحث عن قسم...',
-                hintStyle: GoogleFonts.cairo(
-                  fontSize: 14,
-                  color: Colors.grey.shade400,
-                ),
-                prefixIcon: Container(
-                  margin: const EdgeInsets.all(6),
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
+          ),
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        primaryBlue.withOpacity(0.15),
-                        secondaryBlue.withOpacity(0.08),
-                      ],
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
-                    Icons.search_rounded,
-                    size: 18,
-                    color: primaryBlue,
-                  ),
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? Container(
-                        margin: const EdgeInsets.all(6),
-                        child: IconButton(
-                          icon: Container(
-                            padding: const EdgeInsets.all(4),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 300),
+                                    child: Icon(
+                                      _isGridView
+                                          ? Icons.view_list_rounded
+                                          : Icons.grid_view_rounded,
+                                      key: ValueKey(_isGridView),
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    HapticFeedback.lightImpact();
+                                    setState(() {
+                                      _isGridView = !_isGridView;
+                                    });
+                                  },
+                                  tooltip: _isGridView
+                                      ? 'عرض القائمة'
+                                      : 'عرض الشبكة',
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Center(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      AnimatedBuilder(
+                                        animation: _pulseAnimationController,
+                                        builder: (context, child) {
+                                          return Transform.scale(
+                                            scale: 1.0 +
+                                                (_pulseAnimationController
+                                                        .value *
+                                                    0.15),
+                                            child: child,
+                                          );
+                                        },
+                                        child: const Icon(
+                                            Icons.grid_view_rounded,
+                                            color: Colors.yellow,
+                                            size: 24),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text('الأقسام الرئيسية',
+                                          style: GoogleFonts.cairo(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 48),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                          child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Icon(
-                              Icons.close_rounded,
-                              size: 14,
-                              color: Colors.red,
+                            child: TextField(
+                              controller: _searchController,
+                              onChanged: (value) {
+                                setState(() {
+                                  _searchQuery = value;
+                                });
+                              },
+                              style: GoogleFonts.cairo(
+                                  fontSize: 14, color: darkColor),
+                              textAlign: TextAlign.right,
+                              decoration: InputDecoration(
+                                hintText: 'ابحث عن قسم...',
+                                hintStyle: GoogleFonts.cairo(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                ),
+                                prefixIcon: Container(
+                                  margin: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.search_rounded,
+                                    size: 20,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear_rounded,
+                                            color: Colors.white, size: 20),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() {
+                                            _searchQuery = '';
+                                          });
+                                        },
+                                      )
+                                    : null,
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.1),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: const BorderSide(
+                                      color: Colors.white, width: 2),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 16,
+                                ),
+                              ),
                             ),
                           ),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _searchQuery = '';
-                            });
-                          },
                         ),
-                      )
-                    : null,
-                filled: true,
-                fillColor: lightGray,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(
-                    color: primaryBlue,
-                    width: 2,
+                      ],
+                    ),
                   ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
               ),
-            ),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : _errorMessage != null
+                        ? _buildErrorWidget()
+                        : _categories.isEmpty
+                            ? _buildEmptyState()
+                            : filteredCategories.isEmpty
+                                ? _buildNoResultsState()
+                                : AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 500),
+                                    switchInCurve: Curves.easeInOut,
+                                    switchOutCurve: Curves.easeInOut,
+                                    transitionBuilder: (child, animation) {
+                                      return FadeTransition(
+                                        opacity: animation,
+                                        child: ScaleTransition(
+                                          scale: animation,
+                                          child: child,
+                                        ),
+                                      );
+                                    },
+                                    child: _isGridView
+                                        ? _buildGridView(filteredCategories)
+                                        : _buildListView(filteredCategories),
+                                  ),
+              ),
+            ],
           ),
         ),
       ),
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : _errorMessage != null
-              ? _buildErrorWidget()
-              : _categories.isEmpty
-                  ? _buildEmptyState()
-                  : filteredCategories.isEmpty
-                      ? _buildNoResultsState()
-                      : AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 500),
-                          switchInCurve: Curves.easeInOut,
-                          switchOutCurve: Curves.easeInOut,
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: ScaleTransition(
-                                scale: animation,
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: _isGridView
-                              ? _buildGridView(filteredCategories)
-                              : _buildListView(filteredCategories),
-                        ),
     );
   }
 
@@ -439,7 +455,7 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
             borderRadius: BorderRadius.circular(25),
             boxShadow: [
               BoxShadow(
-                color: primaryBlue.withOpacity(0.12),
+                color: primaryBlue.withOpacity(0.15),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -656,7 +672,7 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
           borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: primaryBlue.withOpacity(0.06),
+              color: primaryBlue.withOpacity(0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -804,7 +820,7 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
-                      Icons.arrow_forward_ios_rounded,
+                      Icons.arrow_back_ios_rounded,
                       size: 16,
                       color: primaryBlue,
                     ),
@@ -1061,4 +1077,22 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen>
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

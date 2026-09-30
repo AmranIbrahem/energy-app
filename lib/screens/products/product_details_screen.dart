@@ -1,12 +1,14 @@
-// lib/screens/products/product_details_screen.dart
-
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:GeniusHouse/models/cart_item_model.dart';
+import 'package:GeniusHouse/screens/chat/chat_screen.dart';
+import 'package:GeniusHouse/screens/chat/guest_chat_screen.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/cart_service.dart';
 import 'package:GeniusHouse/services/favorites_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:GeniusHouse/utils/helpers.dart';
 import 'package:GeniusHouse/widgets/product_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -35,6 +37,13 @@ class ProductDetailsScreen extends StatefulWidget {
   State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
 }
 
+class _SpecStyle {
+  final IconData icon;
+  final Color color;
+
+  const _SpecStyle(this.icon, this.color);
+}
+
 class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     with TickerProviderStateMixin {
   final FavoritesService _favoritesService = FavoritesService.instance;
@@ -49,7 +58,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
   bool _isInComparison = false;
 
   final TextEditingController _quantityController =
-  TextEditingController(text: '1');
+      TextEditingController(text: '1');
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
@@ -72,6 +81,52 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
   int _quantity = 1;
   bool _isAddingToCart = false;
   int _currentImageIndex = 0;
+
+  bool get _isSypPreferred {
+    final storage = widget.authService?.storageService;
+    if (storage == null) return false;
+    try {
+      return storage.isSypPreferred();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  double _getOriginalPrice() {
+    return _isSypPreferred
+        ? (double.tryParse(_product?['price_syp']?.toString() ?? '0') ?? 0)
+        : (double.tryParse(_product?['price']?.toString() ?? '0') ?? 0);
+  }
+
+  double _getFinalPrice() {
+    return _isSypPreferred
+        ? (double.tryParse(_product?['final_price_syp']?.toString() ?? '0') ??
+            0)
+        : (double.tryParse(_product?['final_price']?.toString() ?? '0') ?? 0);
+  }
+
+  String _fmt(double price) {
+    if (_isSypPreferred) {
+      return '${_formatNumber(price)} SYP';
+    }
+    return '\$${_formatNumber(price)}';
+  }
+
+  String _formatNumber(double number) {
+    final parts = number.toStringAsFixed(2).split('.');
+    final intPart = parts[0];
+    final decimalPart = parts[1];
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < intPart.length; i++) {
+      if (i > 0 && (intPart.length - i) % 3 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(intPart[i]);
+    }
+
+    return '${buffer.toString()}.$decimalPart';
+  }
 
   @override
   void initState() {
@@ -110,8 +165,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     _cartAnimationController.dispose();
     super.dispose();
   }
-
-  // ==================== Helper Functions ====================
 
   TextDirection _getTextDirection(String text) {
     if (text.isEmpty) return TextDirection.rtl;
@@ -165,16 +218,20 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     }
   }
 
-  // ==================== AI Analysis ====================
-
   Future<void> _askAIAboutProduct() async {
     final productId = _product?['id'];
     if (productId == null) return;
+
     setState(() => _isAnalyzing = true);
+    _showAnalyzingDialog();
+
     try {
       final endpoint = '/v1/user/public/ai/products/$productId/analyze';
       final response =
-      await widget.apiService.get(endpoint, requiresAuth: false);
+          await widget.apiService.get(endpoint, requiresAuth: false);
+
+      if (mounted) Navigator.pop(context);
+
       if (response['success'] == true && mounted) {
         _showAIAnalysisDialog(response['data']);
       } else {
@@ -183,24 +240,93 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
             Colors.red);
       }
     } catch (e) {
+      if (mounted) Navigator.pop(context);
       _showSnackBar('حدث خطأ في الاتصال بخدمة التحليل', Colors.red);
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
     }
   }
 
+  void _showAnalyzingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(30),
+          decoration: BoxDecoration(
+            color: cardWhite,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: primaryBlue.withOpacity(0.15),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      strokeWidth: 4,
+                      color: primaryBlue,
+                      backgroundColor: primaryBlue.withOpacity(0.1),
+                    ),
+                    Icon(
+                      Icons.auto_awesome_rounded,
+                      color: primaryBlue,
+                      size: 30,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'جاري التحليل...',
+                style: GoogleFonts.cairo(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: darkColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'الرجاء الانتظار قليلاً\nنحن نحلل المنتج الآن',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.cairo(
+                  fontSize: 13,
+                  color: mediumGray,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAIAnalysisDialog(Map<String, dynamic> analysisData) {
-    final String analysis = analysisData['analysis'] ?? '';
-    final String productName = analysisData['product_name'] ?? '';
-    final String analyzedAt = analysisData['analyzed_at'] ?? '';
-    final Map<String, String> sections = _parseAnalysisSections(analysis);
+    final engineResult =
+        analysisData['engine_result'] as Map<String, dynamic>? ?? {};
+    final aiExplanation = analysisData['ai_explanation']?.toString() ?? '';
+    final productName = analysisData['product_name']?.toString() ?? '';
+    final analyzedAt = analysisData['analyzed_at']?.toString() ?? '';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
+        initialChildSize: 0.9,
         minChildSize: 0.5,
         maxChildSize: 0.95,
         expand: false,
@@ -230,7 +356,24 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
               _buildAnalysisHeader(productName, analyzedAt),
               const Divider(height: 1, thickness: 1),
               Expanded(
-                  child: _buildAnalysisContent(sections, scrollController)),
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildEngineScoreCards(engineResult),
+                      const SizedBox(height: 20),
+                      _buildStrengthsWeaknesses(engineResult),
+                      const SizedBox(height: 20),
+                      _buildRecommendationCard(engineResult),
+                      const SizedBox(height: 20),
+                      _buildAIExplanationSection(aiExplanation),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -238,66 +381,138 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  void _discussProductWithAI() {
+    if (_product == null) return;
+
+    final StringBuffer message = StringBuffer();
+    message.writeln('🛍️ **مناقشة منتج**');
+    message.writeln('');
+    message.writeln('📦 **اسم المنتج:** ${_product!['name_ar'] ?? ''}');
+
+    if (_product!['brand'] != null) {
+      message.writeln('🏷️ **الماركة:** ${_product!['brand']}');
+    }
+    if (_product!['model'] != null) {
+      message.writeln('🔧 **الموديل:** ${_product!['model']}');
+    }
+
+    message.writeln('');
+    message.writeln('💰 **السعر:** ${_fmt(_getEffectivePrice())}');
+
+    if ((_product!['discount_percentage'] ?? 0) > 0) {
+      message.writeln('🏷️ **الخصم:** ${_product!['discount_percentage']}%');
+    }
+
+    if (_product!['warranty'] != null) {
+      message.writeln('🛡️ **الضمان:** ${_product!['warranty']}');
+    }
+
+    message.writeln('');
+    message.writeln('📋 **المواصفات:**');
+
+    final specs = _product!['specifications'] as List? ?? [];
+    for (var spec in specs) {
+      final key = spec['key']?.toString() ?? '';
+      final value = spec['value']?.toString() ?? '';
+      message.writeln('  • $key: $value');
+    }
+
+    if (_product!['description_ar'] != null &&
+        _product!['description_ar'].isNotEmpty) {
+      message.writeln('');
+      message.writeln('📝 **الوصف:**');
+      message.writeln(_product!['description_ar'].toString().substring(
+            0,
+            _product!['description_ar'].toString().length > 300
+                ? 300
+                : _product!['description_ar'].toString().length,
+          ));
+      if (_product!['description_ar'].toString().length > 300) {
+        message.writeln('...');
+      }
+    }
+
+    message.writeln('');
+    message
+        .writeln('أريد مناقشة هذا المنتج ومعرفة المزيد من التفاصيل والتوصيات.');
+
+    final storageService =
+        widget.authService?.storageService ?? StorageService();
+    final token = storageService.getToken();
+    final isGuest = token == null || token.isEmpty;
+
+    if (isGuest) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => GuestChatScreen(
+            apiService: widget.apiService,
+            storageService: storageService,
+            initialMessage: message.toString(),
+          ),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatScreen(
+            authService: widget.authService!,
+            apiService: widget.apiService,
+            initialMessage: message.toString(),
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _buildAnalysisHeader(String productName, String analyzedAt) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            primaryBlue.withOpacity(0.05),
-            secondaryBlue.withOpacity(0.02)
-          ],
+          colors: [primaryBlue, secondaryBlue],
+        ),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
         ),
       ),
       child: Row(
         children: [
-          AnimatedBuilder(
-            animation: _pulseAnimationController,
-            builder: (context, child) => Transform.scale(
-              scale: 1.0 + (_pulseAnimationController.value * 0.1),
-              child: child,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient:
-                const LinearGradient(colors: [primaryBlue, secondaryBlue]),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                      color: primaryBlue.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5))
-                ],
-              ),
-              child: const Icon(Icons.auto_awesome_rounded,
-                  color: Colors.white, size: 24),
-            ),
+            child: const Icon(Icons.auto_awesome_rounded,
+                color: Colors.white, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('تحليل الذكاء الاصطناعي',
+                Text('تحليل نيكس',
                     style: GoogleFonts.cairo(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: darkColor)),
+                        color: Colors.white)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
                     Icon(Icons.inventory_2_rounded,
-                        size: 14, color: Colors.grey.shade500),
+                        size: 14, color: Colors.white70),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         productName,
                         textDirection: _getTextDirection(productName),
-                        style:
-                        GoogleFonts.cairo(fontSize: 13, color: mediumGray),
+                        style: GoogleFonts.cairo(
+                            fontSize: 13, color: Colors.white70),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -309,11 +524,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                   Row(
                     children: [
                       Icon(Icons.access_time_rounded,
-                          size: 14, color: Colors.grey.shade400),
+                          size: 14, color: Colors.white70),
                       const SizedBox(width: 6),
                       Text(_formatDateTime(analyzedAt),
                           style: GoogleFonts.cairo(
-                              fontSize: 11, color: Colors.grey.shade400)),
+                              fontSize: 11, color: Colors.white70)),
                     ],
                   ),
                 ],
@@ -322,11 +537,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
           ),
           Container(
             decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12)),
             child: IconButton(
               onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.close_rounded, color: Colors.grey),
+              icon: const Icon(Icons.close_rounded, color: Colors.white),
               padding: const EdgeInsets.all(8),
               constraints: const BoxConstraints(),
             ),
@@ -336,52 +551,21 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
-  Widget _buildAnalysisContent(
-      Map<String, String> sections, ScrollController scrollController) {
-    return SingleChildScrollView(
-      controller: scrollController,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildScoreCards(sections),
-          const SizedBox(height: 20),
-          ...sections.entries.map((entry) {
-            if (_isScoreLine(entry.key, entry.value))
-              return const SizedBox.shrink();
-            return _buildAnalysisSection(
-                title: entry.key.trim(), content: entry.value.trim());
-          }),
-          const SizedBox(height: 30),
-        ],
-      ),
-    );
-  }
+  Widget _buildEngineScoreCards(Map<String, dynamic> engineResult) {
+    final totalScore = engineResult['total_score']?.toString() ?? '0';
+    final technicalQuality =
+        engineResult['technical_quality']?.toString() ?? '0';
+    final warrantyScore = engineResult['warranty_score']?.toString() ?? '0';
+    final valueScore = engineResult['value_score']?.toString() ?? '0';
+    final confidence = engineResult['confidence']?.toString() ?? '0';
+    final confidenceLevel =
+        engineResult['confidence_level']?.toString() ?? 'low';
 
-  bool _isScoreLine(String title, String content) {
-    final scorePattern = RegExp(r'\d+\.?\d*/\d+');
-    final isScore = scorePattern.hasMatch(content) &&
-        content.trim().split('\n').length <= 2;
-    if (isScore) {
-      final contentWithoutScore = content.replaceAll(scorePattern, '').trim();
-      return contentWithoutScore.length < 50;
-    }
-    return false;
-  }
-
-  Widget _buildScoreCards(Map<String, String> sections) {
-    final List<Map<String, dynamic>> scores = [];
-    sections.forEach((key, value) {
-      final scoreMatch = RegExp(r'(\d+\.?\d*)/(\d+)').firstMatch(value);
-      if (scoreMatch != null && value.trim().split('\n').length <= 2) {
-        scores.add({
-          'title': key.replaceAll('**', '').replaceAll(':', '').trim(),
-          'score': double.parse(scoreMatch.group(1)!),
-          'maxScore': double.parse(scoreMatch.group(2)!),
-        });
-      }
-    });
-    if (scores.isEmpty) return const SizedBox.shrink();
+    final confidenceColor = confidenceLevel == 'high'
+        ? successGreen
+        : confidenceLevel == 'medium'
+            ? warningOrange
+            : Colors.red;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -401,7 +585,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                   size: 20, color: Colors.amber),
             ),
             const SizedBox(width: 10),
-            Text('التقييمات',
+            Text('نتيجة المحرك',
                 style: GoogleFonts.cairo(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -409,86 +593,343 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
           ],
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          height: 100,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: scores.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final score = scores[index];
-              final percentage =
-                  (score['score'] as double) / (score['maxScore'] as double);
-              final Color scoreColor = percentage >= 0.8
-                  ? successGreen
-                  : percentage >= 0.6
-                  ? Colors.orange
-                  : Colors.red;
-              return Container(
-                width: 140,
-                padding: const EdgeInsets.all(16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildScoreCard(
+                title: 'الدرجة النهائية',
+                score: totalScore,
+                maxScore: '100',
+                color: primaryBlue,
+                icon: Icons.emoji_events_rounded,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildScoreCard(
+                title: 'الجودة الفنية',
+                score: technicalQuality,
+                maxScore: '55',
+                color: infoBlue,
+                icon: Icons.build_rounded,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _buildScoreCard(
+                title: 'الضمان',
+                score: warrantyScore,
+                maxScore: '30',
+                color: successGreen,
+                icon: Icons.shield_rounded,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildScoreCard(
+                title: 'القيمة',
+                score: valueScore,
+                maxScore: '15',
+                color: warningOrange,
+                icon: Icons.savings_rounded,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: confidenceColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: confidenceColor.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.trending_up_rounded, color: confidenceColor, size: 20),
+              const SizedBox(width: 10),
+              Text('الثقة:',
+                  style: GoogleFonts.cairo(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: mediumGray)),
+              const SizedBox(width: 6),
+              Text('$confidence%',
+                  style: GoogleFonts.cairo(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: confidenceColor)),
+              const Spacer(),
+              Text(
+                confidenceLevel == 'high'
+                    ? 'عالية'
+                    : confidenceLevel == 'medium'
+                        ? 'متوسطة'
+                        : 'منخفضة',
+                style: GoogleFonts.cairo(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: confidenceColor),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScoreCard({
+    required String title,
+    required String score,
+    required String maxScore,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const SizedBox(height: 8),
+          Text(title,
+              style: GoogleFonts.cairo(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: mediumGray)),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(score,
+                  style: GoogleFonts.cairo(
+                      fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('/$maxScore',
+                    style: GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStrengthsWeaknesses(Map<String, dynamic> engineResult) {
+    final strengths = (engineResult['strengths'] as List?) ?? [];
+    final weaknesses = (engineResult['weaknesses'] as List?) ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (strengths.isNotEmpty) ...[
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      scoreColor.withOpacity(0.1),
-                      scoreColor.withOpacity(0.05)
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: scoreColor.withOpacity(0.2)),
+                  color: successGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: const Icon(Icons.check_circle_rounded,
+                    color: successGreen, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text('نقاط القوة',
+                  style: GoogleFonts.cairo(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: darkColor)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...strengths.map((strength) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: successGreen.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: successGreen.withOpacity(0.2)),
+                ),
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                              color: scoreColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8)),
-                          child: Icon(Icons.star_rounded,
-                              color: scoreColor, size: 16),
-                        ),
-                        const Spacer(),
-                        Text('${score['score']}/${score['maxScore']}',
-                            style: GoogleFonts.cairo(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: scoreColor)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      score['title'] as String,
-                      textDirection:
-                      _getTextDirection(score['title'] as String),
-                      style: GoogleFonts.cairo(
-                          fontSize: 11,
-                          color: mediumGray,
-                          fontWeight: FontWeight.w600),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: percentage,
-                        backgroundColor: scoreColor.withOpacity(0.1),
-                        valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
-                        minHeight: 4,
+                    Icon(Icons.check_rounded, color: successGreen, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        strength.toString(),
+                        textDirection: _getTextDirection(strength.toString()),
+                        style:
+                            GoogleFonts.cairo(fontSize: 13, color: darkColor),
                       ),
                     ),
                   ],
                 ),
-              );
-            },
+              )),
+          const SizedBox(height: 16),
+        ],
+        if (weaknesses.isNotEmpty) ...[
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: warningOrange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.warning_amber_rounded,
+                    color: warningOrange, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text('نقاط الضعف',
+                  style: GoogleFonts.cairo(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: darkColor)),
+            ],
           ),
+          const SizedBox(height: 10),
+          ...weaknesses.map((weakness) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: warningOrange.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: warningOrange.withOpacity(0.2)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.close_rounded, color: warningOrange, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        weakness.toString(),
+                        textDirection: _getTextDirection(weakness.toString()),
+                        style:
+                            GoogleFonts.cairo(fontSize: 13, color: darkColor),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRecommendationCard(Map<String, dynamic> engineResult) {
+    final recommendation = engineResult['recommendation']?.toString() ?? '';
+    final disclaimer = engineResult['disclaimer']?.toString() ?? '';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            primaryBlue.withOpacity(0.08),
+            secondaryBlue.withOpacity(0.04)
+          ],
         ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primaryBlue.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lightbulb_rounded,
+                  color: Colors.amber.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text('التوصية',
+                  style: GoogleFonts.cairo(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: darkColor)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            recommendation,
+            textDirection: _getTextDirection(recommendation),
+            style: GoogleFonts.cairo(
+                fontSize: 14, fontWeight: FontWeight.w600, color: primaryBlue),
+          ),
+          if (disclaimer.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              disclaimer,
+              textDirection: _getTextDirection(disclaimer),
+              style: GoogleFonts.cairo(
+                  fontSize: 11, color: mediumGray, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAIExplanationSection(String aiExplanation) {
+    if (aiExplanation.isEmpty) return const SizedBox.shrink();
+
+    final sections = _parseAnalysisSections(aiExplanation);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [
+                  Colors.purple.withOpacity(0.15),
+                  Colors.purple.withOpacity(0.05)
+                ]),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.auto_awesome_rounded,
+                  color: Colors.purple, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Text('شرح الذكاء الاصطناعي',
+                style: GoogleFonts.cairo(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...sections.entries.map((entry) {
+          return _buildAnalysisSection(
+              title: entry.key.trim(), content: entry.value.trim());
+        }),
       ],
     );
   }
@@ -675,7 +1116,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
         currentTitle = headerMatch.group(1)!.replaceAll(':', '').trim();
         currentContent = StringBuffer();
         final remainingText =
-        trimmedLine.replaceFirst(headerMatch.group(0)!, '').trim();
+            trimmedLine.replaceFirst(headerMatch.group(0)!, '').trim();
         if (remainingText.isNotEmpty) currentContent.writeln(remainingText);
       } else {
         currentContent.writeln(trimmedLine);
@@ -699,13 +1140,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     final bulletRegex = RegExp(r'[-•*◉○‣⁃◦◘◙◆◇▪▫]\s+');
     if (bulletRegex.hasMatch(content)) {
       final parts =
-      content.split(bulletRegex).where((s) => s.trim().isNotEmpty).toList();
+          content.split(bulletRegex).where((s) => s.trim().isNotEmpty).toList();
       if (parts.length > 1) return parts;
     }
     return [content];
   }
-
-  // ==================== Comparison ====================
 
   void _checkIfInComparison() {
     final productId = _product?['id'];
@@ -732,8 +1171,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     _showSnackBar('تم إزالة المنتج من المقارنة', Colors.orange);
   }
 
-  // ==================== Product Details ====================
-
   Future<void> _fetchProductDetails() async {
     setState(() {
       _isLoading = true;
@@ -749,11 +1186,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
         final governorate =
             widget.authService?.storageService.getGovernorate() ?? 'دمشق';
         endpoint =
-        '/v1/user/public/products/${widget.productSlug}/show/$governorate';
+            '/v1/user/public/products/${widget.productSlug}/show/$governorate';
         requiresAuth = false;
       }
       final response =
-      await widget.apiService.get(endpoint, requiresAuth: requiresAuth);
+          await widget.apiService.get(endpoint, requiresAuth: requiresAuth);
       if (response.containsKey('data') && mounted) {
         setState(() {
           _product = response['data']['product'];
@@ -791,13 +1228,21 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
         final productData = {
           'id': _product!['id'],
           'name_ar': _product!['name_ar'],
+          'name_en': _product!['name_en'],
           'slug': _product!['slug'],
           'price': _product!['price'],
           'final_price': _product!['final_price'],
+          'discount_price': _product!['discount_price'],
+          'price_syp': _product!['price_syp'],
+          'final_price_syp': _product!['final_price_syp'],
+          'discount_price_syp': _product!['discount_price_syp'],
           'main_image': _product!['main_image'],
+          'cover_image': _product!['cover_image'],
           'discount_percentage': _product!['discount_percentage'],
           'brand': _product!['brand'],
           'rate': _product!['rate'],
+          'stock': _product!['stock'],
+          'governorate_product': _product!['governorate_product'],
         };
         await _favoritesService.addProduct(productData);
         setState(() => _isFavorite = true);
@@ -813,12 +1258,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
   }
 
   double _getEffectivePrice() {
-    final double defaultFinalPrice =
-        double.tryParse(_product?['final_price']?.toString() ?? '0') ?? 0;
+    final bool isSyp = _isSypPreferred;
+
+    final double defaultFinalPrice = isSyp
+        ? (double.tryParse(_product?['final_price_syp']?.toString() ?? '0') ??
+            0)
+        : (double.tryParse(_product?['final_price']?.toString() ?? '0') ?? 0);
+
     final bool hasWholesale = _product?['has_wholesale'] == true;
     final int wholesaleMinQty = _product?['wholesale_min_quantity'] ?? 0;
-    final double wholesalePrice =
-        double.tryParse(_product?['wholesale_price']?.toString() ?? '0') ?? 0;
+
+    final double wholesalePrice = isSyp
+        ? (double.tryParse(
+                _product?['wholesale_price_syp']?.toString() ?? '0') ??
+            0)
+        : (double.tryParse(_product?['wholesale_price']?.toString() ?? '0') ??
+            0);
 
     if (hasWholesale && _quantity >= wholesaleMinQty && wholesalePrice > 0) {
       return wholesalePrice;
@@ -826,7 +1281,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     return defaultFinalPrice;
   }
 
-  // ✅ دالة تحويل shipping_cities إلى List<Map>
   List<Map<String, dynamic>> _getShippingCitiesWithCosts() {
     final rawCities = _product?['shipping_cities'];
     if (rawCities == null) return [];
@@ -867,8 +1321,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     _cartAnimationController.forward();
 
     final cartService = CartService.instance;
-    final double originalPrice =
-        double.tryParse(_product!['price']?.toString() ?? '0') ?? 0;
+    final double originalPrice = _getOriginalPrice();
     final double effectivePrice = _getEffectivePrice();
 
     final bool hasWholesale = _product?['has_wholesale'] == true;
@@ -877,7 +1330,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
         hasWholesale && _quantity >= wholesaleMinQty;
 
     final existingItem = cartService.items.firstWhere(
-          (item) => item.id == _product!['id'],
+      (item) => item.id == _product!['id'],
       orElse: () => CartItemModel(
           id: 0, name: '', slug: '', price: 0, finalPrice: 0, stock: 0),
     );
@@ -885,7 +1338,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     final bool isExisting = existingItem.id != 0;
     final int oldQuantity = isExisting ? existingItem.quantity : 0;
 
-    // ✅ استخراج shipping_cities
     List<Map<String, dynamic>> shippingCities = _getShippingCitiesWithCosts();
 
     final cartItem = CartItemModel(
@@ -898,7 +1350,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
       stock: stock,
       quantity: _quantity,
       discountPercentage: _product!['discount_percentage']?.toDouble(),
-      shippingCities: shippingCities.isNotEmpty ? shippingCities : null, // ✅ إضافة shipping_cities
+      shippingCities: shippingCities.isNotEmpty ? shippingCities : null,
     );
 
     cartService.addItem(cartItem);
@@ -914,10 +1366,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     String message;
     if (isWholesaleApplied) {
       message =
-      '🎉 تم تطبيق سعر الجملة!\n${_product!['name_ar']}\nالكمية: $_quantity × ${Helpers.formatPrice(effectivePrice)}';
+          '🎉 تم تطبيق سعر الجملة!\n${_product!['name_ar']}\nالكمية: $_quantity × ${_fmt(effectivePrice)}';
     } else if (isExisting) {
       message =
-      'تم تحديث الكمية: ${_product!['name_ar']}\nالكمية: $oldQuantity → ${oldQuantity + _quantity}';
+          'تم تحديث الكمية: ${_product!['name_ar']}\nالكمية: $oldQuantity → ${oldQuantity + _quantity}';
     } else {
       message = 'تم إضافة $_quantity × ${_product!['name_ar']} إلى السلة';
     }
@@ -995,8 +1447,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
         _quantity = stock;
         _quantityController.text = '$stock';
       });
-      _showSnackBar('هذه الكمية غير متوفرة - الكمية المتاحة: $stock فقط',
-          Colors.orange);
+      _showSnackBar(
+          'هذه الكمية غير متوفرة - الكمية المتاحة: $stock فقط', Colors.orange);
     } else {
       setState(() {
         _quantity = parsed;
@@ -1060,19 +1512,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
         ));
   }
 
-  // ==================== Shipping Card ====================
-
   Widget _buildShippingCard() {
     final shippingCities = _getShippingCitiesWithCosts();
+    final currentGov =
+        widget.authService?.storageService.getGovernorate() ?? 'دمشق';
+    final bool isInCurrentGov =
+        shippingCities.any((c) => c['city'] == currentGov);
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            infoBlue.withOpacity(0.06),
-            infoBlue.withOpacity(0.02)
-          ],
+          colors: [infoBlue.withOpacity(0.06), infoBlue.withOpacity(0.02)],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: infoBlue.withOpacity(0.2)),
@@ -1100,6 +1551,40 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                   color: successGreen,
                 ),
               ),
+              if (isInCurrentGov) ...[
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        colors: [wholesaleLight, wholesaleGreen]),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                          color: wholesaleGreen.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3))
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.location_on_rounded,
+                          color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'متوفر في $currentGov',
+                        style: GoogleFonts.cairo(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
           if (shippingCities.isNotEmpty) ...[
@@ -1112,88 +1597,108 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
               ),
             ),
             const SizedBox(height: 10),
-            ...shippingCities.map((cityData) {
-              final city = cityData['city']?.toString() ?? '';
-              final cost = cityData['cost']?.toString();
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: shippingCities.map((cityData) {
+                final city = cityData['city']?.toString() ?? '';
+                final cost = cityData['cost']?.toString();
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: infoBlue.withOpacity(0.2)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.location_on_rounded,
-                        color: Colors.red, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
+                Color bgColor;
+                Color borderColor;
+                Color textColor;
+                IconData icon;
+                if (cost == null || cost.isEmpty) {
+                  bgColor = Colors.grey.shade100;
+                  borderColor = Colors.grey.shade300;
+                  textColor = Colors.grey.shade600;
+                  icon = Icons.question_mark_rounded;
+                } else if (double.tryParse(cost) == 0) {
+                  bgColor = const Color(0xFFD1FAE5);
+                  borderColor = const Color(0xFF6EE7B7);
+                  textColor = const Color(0xFF065F46);
+                  icon = Icons.emoji_events_rounded;
+                } else {
+                  final price = double.tryParse(cost) ?? 0;
+                  if (price <= 5000) {
+                    bgColor = Colors.blue.shade50;
+                    borderColor = Colors.blue.shade200;
+                    textColor = Colors.blue.shade700;
+                    icon = Icons.local_shipping_rounded;
+                  } else if (price <= 15000) {
+                    bgColor = Colors.orange.shade50;
+                    borderColor = Colors.orange.shade200;
+                    textColor = Colors.orange.shade700;
+                    icon = Icons.local_shipping_rounded;
+                  } else {
+                    bgColor = Colors.red.shade50;
+                    borderColor = Colors.red.shade200;
+                    textColor = Colors.red.shade700;
+                    icon = Icons.local_shipping_rounded;
+                  }
+                }
+
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: borderColor),
+                    boxShadow: [
+                      BoxShadow(
+                        color: borderColor.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, color: textColor, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
                         city,
                         style: GoogleFonts.cairo(
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: darkColor,
+                          color: textColor,
                         ),
                       ),
-                    ),
-                    if (cost == null || cost.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: warningOrange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
+                      const SizedBox(width: 6),
+                      if (cost == null || cost.isEmpty)
+                        Text(
                           'يحدد لاحقاً',
                           style: GoogleFonts.cairo(
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            color: warningOrange,
+                            color: textColor,
                           ),
-                        ),
-                      )
-                    else if (double.tryParse(cost) == 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: successGreen.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
+                        )
+                      else if (double.tryParse(cost) == 0)
+                        Text(
                           'شحن مجاني',
                           style: GoogleFonts.cairo(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        )
+                      else
+                        Text(
+                          Helpers.formatPrice(double.tryParse(cost) ?? 0),
+                          style: GoogleFonts.cairo(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: successGreen,
+                            color: textColor,
                           ),
                         ),
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: primaryBlue.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${Helpers.formatPrice(double.tryParse(cost) ?? 0)}',
-                          style: GoogleFonts.cairo(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: primaryBlue,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            }).toList(),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
           ] else
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -1210,17 +1715,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
-  // ==================== Wholesale Card ====================
-
   Widget _buildWholesaleCard() {
-    final double wholesalePrice =
-        double.tryParse(_product!['wholesale_price']?.toString() ?? '0') ?? 0;
+    final bool isSyp = _isSypPreferred;
+
+    final double wholesalePrice = isSyp
+        ? (double.tryParse(
+                _product!['wholesale_price_syp']?.toString() ?? '0') ??
+            0)
+        : (double.tryParse(_product!['wholesale_price']?.toString() ?? '0') ??
+            0);
+
     final int wholesaleMinQty = _product!['wholesale_min_quantity'] ?? 0;
-    final double originalPrice =
-        double.tryParse(_product!['price']?.toString() ?? '0') ?? 0;
+
+    final double originalPrice = _getOriginalPrice();
     final double saveAmount = originalPrice - wholesalePrice;
     final int savePercent =
-    originalPrice > 0 ? ((saveAmount / originalPrice) * 100).round() : 0;
+        originalPrice > 0 ? ((saveAmount / originalPrice) * 100).round() : 0;
 
     return TweenAnimationBuilder(
       tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -1282,7 +1792,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                 const Spacer(),
                 Container(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                         colors: [wholesaleLight, wholesaleGreen]),
@@ -1314,7 +1824,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(Helpers.formatPrice(wholesalePrice),
+                Text(_fmt(wholesalePrice),
                     style: GoogleFonts.cairo(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -1344,7 +1854,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                 color: Colors.white.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(14),
                 border:
-                Border.all(color: const Color(0xFF86EFAC).withOpacity(0.3)),
+                    Border.all(color: const Color(0xFF86EFAC).withOpacity(0.3)),
               ),
               child: Row(
                 children: [
@@ -1374,11 +1884,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                   ),
                   Container(
                     padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                         color: wholesaleLight.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8)),
-                    child: Text('وفر ${Helpers.formatPrice(saveAmount)}',
+                    child: Text('وفر ${_fmt(saveAmount)}',
                         style: GoogleFonts.cairo(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -1392,7 +1902,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                 padding: const EdgeInsets.only(top: 10),
                 child: Container(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: wholesaleLight.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -1419,26 +1929,34 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
-  // ==================== Main Build ====================
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : _errorMessage != null
-          ? _buildErrorWidget()
-          : _buildProductContent(),
-      bottomNavigationBar:
-      _isLoading || _errorMessage != null ? null : _buildBottomBar(),
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFEFF6FF), Color(0xFFF5F7FA)],
+            ),
+          ),
+          child: _isLoading
+              ? _buildShimmerLoading()
+              : _errorMessage != null
+                  ? _buildErrorWidget()
+                  : _buildProductContent(),
+        ),
+        bottomNavigationBar:
+            _isLoading || _errorMessage != null ? null : _buildBottomBar(),
+      ),
     );
   }
 
   Widget _buildProductContent() {
     final bool hasDiscount = (_product?['discount_percentage'] ?? 0) > 0;
-    final double originalPrice =
-        double.tryParse(_product?['price']?.toString() ?? '0') ?? 0;
+    final double originalPrice = _getOriginalPrice();
     final double effectivePrice = _getEffectivePrice();
     final int stock = _product?['stock'] ?? 0;
     final bool inStock = stock > 0;
@@ -1459,16 +1977,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
         SliverAppBar(
           expandedHeight: 350,
           pinned: true,
-          backgroundColor: cardWhite,
+          backgroundColor: Colors.transparent,
           elevation: 0,
           leading: Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: cardWhite,
+              color: cardWhite.withOpacity(0.9),
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withOpacity(0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 3))
               ],
@@ -1484,6 +2002,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
               children: [
                 GestureDetector(
                   onTap: () => _openImageGallery(_currentImageIndex),
+                  onDoubleTap: () => _openImageGallery(_currentImageIndex),
                   child: Hero(
                     tag: _product!['main_image'] ?? 'product_image',
                     child: PageView.builder(
@@ -1506,6 +2025,68 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                     ),
                   ),
                 ),
+                if (hasDiscount)
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.red.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3))
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.discount_rounded,
+                              color: Colors.white, size: 18),
+                          const SizedBox(width: 4),
+                          Text('خصم ${_product!['discount_percentage']}%',
+                              style: GoogleFonts.cairo(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ),
+                Positioned(
+                  bottom: 50,
+                  right: 16,
+                  child: GestureDetector(
+                    onTap: () => _openImageGallery(_currentImageIndex),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(20),
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.photo_library_rounded,
+                              color: Colors.white, size: 16),
+                          const SizedBox(width: 6),
+                          Text('عرض الصور (${images.length})',
+                              style: GoogleFonts.cairo(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 if (images.length > 1)
                   Positioned(
                     bottom: 20,
@@ -1515,26 +2096,31 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(
                           images.length,
-                              (index) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin:
-                            const EdgeInsets.symmetric(horizontal: 4),
-                            width: _currentImageIndex == index ? 24 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: _currentImageIndex == index
-                                  ? primaryBlue
-                                  : Colors.white.withOpacity(0.7),
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: _currentImageIndex == index
-                                  ? [
-                                BoxShadow(
-                                    color: primaryBlue.withOpacity(0.5),
-                                    blurRadius: 5)
-                              ]
-                                  : null,
-                            ),
-                          )),
+                          (index) => AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                                width: _currentImageIndex == index ? 24 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  gradient: _currentImageIndex == index
+                                      ? const LinearGradient(
+                                          colors: [primaryBlue, secondaryBlue])
+                                      : null,
+                                  color: _currentImageIndex == index
+                                      ? null
+                                      : Colors.white.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: _currentImageIndex == index
+                                      ? [
+                                          BoxShadow(
+                                              color:
+                                                  primaryBlue.withOpacity(0.5),
+                                              blurRadius: 5)
+                                        ]
+                                      : null,
+                                ),
+                              )),
                     ),
                   ),
               ],
@@ -1546,14 +2132,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
             opacity: _fadeAnimationController,
             child: SlideTransition(
               position:
-              Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
-                  .animate(CurvedAnimation(
-                  parent: _fadeAnimationController,
-                  curve: Curves.easeOutCubic)),
+                  Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
+                      .animate(CurvedAnimation(
+                          parent: _fadeAnimationController,
+                          curve: Curves.easeOutCubic)),
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: cardWhite,
+                  color: cardWhite.withOpacity(0.9),
                   borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(35),
                       topRight: Radius.circular(35)),
@@ -1616,37 +2202,24 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                           ),
                         ),
                         const Spacer(),
-                        if (hasDiscount)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: [
-                                Colors.red.shade400,
-                                Colors.red.shade600
-                              ]),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: Colors.red.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3))
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.discount_rounded,
-                                    color: Colors.white, size: 16),
-                                const SizedBox(width: 4),
-                                Text('خصم ${_product!['discount_percentage']}%',
-                                    style: GoogleFonts.cairo(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white)),
-                              ],
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              _shareProduct();
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: primaryBlue.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.share_rounded,
+                                  color: primaryBlue, size: 20),
                             ),
                           ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -1753,61 +2326,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                                 ? Icons.check_circle_rounded
                                 : Icons.cancel_rounded,
                             label:
-                            inStock ? 'متوفر ($stock قطعة)' : 'غير متوفر',
+                                inStock ? 'متوفر ($stock قطعة)' : 'غير متوفر',
                             color: inStock ? successGreen : Colors.red),
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            primaryBlue.withOpacity(0.08),
-                            secondaryBlue.withOpacity(0.04)
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                            color: primaryBlue.withOpacity(0.15), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                              color: primaryBlue.withOpacity(0.08),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5))
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('السعر',
-                              style: GoogleFonts.cairo(
-                                  fontSize: 14, color: mediumGray)),
-                          const SizedBox(height: 8),
-                          if (hasDiscount) ...[
-                            Text(Helpers.formatPrice(originalPrice),
-                                style: GoogleFonts.cairo(
-                                    fontSize: 16,
-                                    decoration: TextDecoration.lineThrough,
-                                    color: Colors.grey.shade500)),
-                            const SizedBox(height: 4),
-                          ],
-                          Text(
-                              Helpers.formatPrice(hasDiscount
-                                  ? double.tryParse(_product!['final_price']
-                                  ?.toString() ??
-                                  '0') ??
-                                  0
-                                  : originalPrice),
-                              style: GoogleFonts.cairo(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: primaryBlue)),
-                        ],
-                      ),
-                    ),
+                    _buildPriceCard(originalPrice, effectivePrice, hasDiscount,
+                        hasWholesale, wholesaleMinQty),
                     if (hasWholesale) ...[
                       const SizedBox(height: 16),
                       _buildWholesaleCard(),
@@ -1886,10 +2411,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                                     onTap: () {
                                       _quantityController.selection =
                                           TextSelection(
-                                            baseOffset: 0,
-                                            extentOffset:
+                                        baseOffset: 0,
+                                        extentOffset:
                                             _quantityController.text.length,
-                                          );
+                                      );
                                     },
                                   ),
                                 ),
@@ -1926,9 +2451,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                                           horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
                                           color:
-                                          wholesaleLight.withOpacity(0.15),
+                                              wholesaleLight.withOpacity(0.15),
                                           borderRadius:
-                                          BorderRadius.circular(6)),
+                                              BorderRadius.circular(6)),
                                       child: Text('جملة',
                                           style: GoogleFonts.cairo(
                                               fontSize: 9,
@@ -1939,12 +2464,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(Helpers.formatPrice(totalPrice),
+                              Text(_fmt(totalPrice),
                                   style: GoogleFonts.cairo(
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
                                       color: hasWholesale &&
-                                          _quantity >= wholesaleMinQty
+                                              _quantity >= wholesaleMinQty
                                           ? wholesaleGreen
                                           : primaryBlue)),
                             ],
@@ -1957,69 +2482,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                         _product!['description_ar'].isNotEmpty) ...[
                       _buildSectionTitle('الوصف', Icons.description_rounded),
                       const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                            color: lightGray,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.grey.shade200)),
-                        child: Text(_product!['description_ar'],
-                            style: GoogleFonts.cairo(
-                                fontSize: 14, height: 1.6, color: mediumGray)),
-                      ),
+                      _buildDescriptionCard(),
                       const SizedBox(height: 24),
                     ],
                     if (_product?['specifications'] != null &&
                         (_product!['specifications'] as List).isNotEmpty) ...[
                       _buildSectionTitle('المواصفات', Icons.list_alt_rounded),
                       const SizedBox(height: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: cardWhite,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey.shade200),
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3))
-                          ],
-                        ),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount:
-                          (_product!['specifications'] as List).length,
-                          separatorBuilder: (context, index) =>
-                              Divider(height: 1, color: Colors.grey.shade100),
-                          itemBuilder: (context, index) {
-                            final spec = _product!['specifications'][index];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 18, vertical: 14),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                      flex: 2,
-                                      child: Text(spec['key'] ?? '',
-                                          style: GoogleFonts.cairo(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: mediumGray))),
-                                  Expanded(
-                                      flex: 3,
-                                      child: Text(spec['value'] ?? '',
-                                          style: GoogleFonts.cairo(
-                                              fontSize: 14, color: darkColor))),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                      _buildSpecificationsCard(),
                       const SizedBox(height: 24),
                     ],
-                    // ✅ قسم الشحن ومدن الشحن مع الأسعار
                     if (_product?['has_shipping'] == true) ...[
                       const SizedBox(height: 24),
                       _buildSectionTitle('الشحن', Icons.local_shipping_rounded),
@@ -2040,7 +2512,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                             return TweenAnimationBuilder(
                               tween: Tween<double>(begin: 0.0, end: 1.0),
                               duration:
-                              Duration(milliseconds: 400 + (index * 100)),
+                                  Duration(milliseconds: 400 + (index * 100)),
                               curve: Curves.easeOut,
                               builder: (context, double value, child) {
                                 return Opacity(
@@ -2051,7 +2523,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                               },
                               child: Padding(
                                 padding:
-                                const EdgeInsets.symmetric(horizontal: 4),
+                                    const EdgeInsets.symmetric(horizontal: 4),
                                 child: ProductCard(
                                     product: product,
                                     apiService: widget.apiService,
@@ -2071,6 +2543,568 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
         ),
       ],
     );
+  }
+
+  Widget _buildPriceCard(double originalPrice, double effectivePrice,
+      bool hasDiscount, bool hasWholesale, int wholesaleMinQty) {
+    final double finalPrice = _getFinalPrice();
+    final double discountPercent = hasDiscount && originalPrice > 0
+        ? ((originalPrice - finalPrice) / originalPrice * 100)
+            .clamp(0, 100)
+            .toDouble()
+        : 0;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: primaryBlue.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+              color: primaryBlue.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 5))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('السعر',
+                  style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
+              const Spacer(),
+              if (hasDiscount)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        colors: [Color(0xFFEF5350), Color(0xFFE53935)]),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('وفّر ${_fmt(originalPrice - effectivePrice)}',
+                      style: GoogleFonts.cairo(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (hasDiscount) ...[
+            Text(_fmt(originalPrice),
+                style: GoogleFonts.cairo(
+                    fontSize: 16,
+                    decoration: TextDecoration.lineThrough,
+                    color: Colors.grey.shade500)),
+            const SizedBox(height: 4),
+          ],
+          Text(_fmt(effectivePrice),
+              style: GoogleFonts.cairo(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: primaryBlue)),
+          if (hasDiscount) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: discountPercent / 100,
+                backgroundColor: Colors.grey.shade200,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  discountPercent >= 50
+                      ? Colors.red.shade500
+                      : Colors.orange.shade500,
+                ),
+                minHeight: 8,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Text('نسبة الخصم: ${discountPercent.round()}%',
+                    style: GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDescriptionCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: lightGray,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ExpansionTile(
+        title: Text('التفاصيل الكاملة',
+            style: GoogleFonts.cairo(
+                fontSize: 14, fontWeight: FontWeight.bold, color: darkColor)),
+        trailing: const Icon(Icons.expand_more_rounded, color: primaryBlue),
+        shape: const Border(),
+        collapsedShape: const Border(),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Text(_product!['description_ar'],
+                style: GoogleFonts.cairo(
+                    fontSize: 14, height: 1.6, color: mediumGray)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpecificationsCard() {
+    final specs = _product!['specifications'] as List;
+    return Container(
+      decoration: BoxDecoration(
+        color: cardWhite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 3))
+        ],
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: specs.length,
+        separatorBuilder: (context, index) =>
+            Divider(height: 1, color: Colors.grey.shade100),
+        itemBuilder: (context, index) {
+          final spec = specs[index];
+          final key = spec['key']?.toString() ?? '';
+          final value = spec['value']?.toString() ?? '';
+          final style = _getSpecStyle(key);
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        style.color.withOpacity(0.15),
+                        style.color.withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: style.color.withOpacity(0.15), width: 0.5),
+                  ),
+                  child: Icon(style.icon, size: 18, color: style.color),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    key,
+                    textAlign: TextAlign.right,
+                    textDirection: TextDirection.rtl,
+                    style: GoogleFonts.cairo(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: mediumGray,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 1,
+                  height: 20,
+                  color: Colors.grey.shade200,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.right,
+                    textDirection: TextDirection.rtl,
+                    style: GoogleFonts.cairo(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: darkColor,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  _SpecStyle _getSpecStyle(String key) {
+    final k = key.toLowerCase().trim();
+    if (k.contains('عدد المداخل الشمسية') ||
+        k.contains('المداخل الشمسية') ||
+        k.contains('عدد المداخل')) {
+      return const _SpecStyle(Icons.solar_power_rounded, Color(0xFFF59E0B));
+    }
+
+    if (k.contains('تصنيف استخدام') ||
+        k.contains('تصنيف الاستخدام') ||
+        k.contains('استخدام المحول')) {
+      return const _SpecStyle(Icons.home_work_rounded, Color(0xFF7C3AED));
+    }
+
+    if (k.contains('أمبير ساعي') ||
+        k.contains('أمبير/ساعي') ||
+        k.contains('ampere hour') ||
+        k.contains('ampere-hour') ||
+        k.contains('ah')) {
+      return const _SpecStyle(
+          Icons.battery_charging_full_rounded, Color(0xFF10B981));
+    }
+    if (k.contains('نوع المنتج') ||
+        k.contains('نوع الجهاز') ||
+        k.contains('نوع اللوح') ||
+        k.contains('نوع العاكس') ||
+        k.contains('نوع البطارية') ||
+        k.contains('نوع الموديل') ||
+        k.contains('نوع الموصل') ||
+        k.contains('نوع التيار') ||
+        k.contains('نوع المرشح') ||
+        k.contains('نوع التغذية') ||
+        k.contains('نوع المحرك') ||
+        k.contains('نوع القهوة')) {
+      return const _SpecStyle(Icons.category_rounded, Color(0xFF6366F1));
+    }
+
+    if (k.contains('ماركة') ||
+        k.contains('العلامة التجارية') ||
+        k.contains('brand')) {
+      return const _SpecStyle(Icons.verified_rounded, Color(0xFF2563EB));
+    }
+
+    if (k.contains('موديل') || k.contains('model') || k.contains('طراز')) {
+      return const _SpecStyle(Icons.qr_code_rounded, Color(0xFF4F46E5));
+    }
+
+    if (k.contains('الدارة المفتوحة') || k.contains('voc')) {
+      return const _SpecStyle(Icons.electric_bolt_rounded, Color(0xFFF59E0B));
+    }
+
+    if (k.contains('جهد التشغيل') || k.contains('vmp')) {
+      return const _SpecStyle(
+          Icons.electrical_services_rounded, Color(0xFFF59E0B));
+    }
+
+    if (k.contains('جهد') || k.contains('فولت') || k.contains('volt')) {
+      return const _SpecStyle(Icons.electric_bolt_rounded, Color(0xFFF59E0B));
+    }
+
+    if (k.contains('تيار') || k.contains('أمبير') || k.contains('ampere')) {
+      return const _SpecStyle(Icons.electric_meter_rounded, Color(0xFFEA580C));
+    }
+
+    if (k.contains('استطاعة') ||
+        k.contains('قدرة') ||
+        k.contains('طاقة') ||
+        k.contains('واط') ||
+        k.contains('watt') ||
+        k.contains('كيلوواط')) {
+      return const _SpecStyle(Icons.flash_on_rounded, Color(0xFFF59E0B));
+    }
+
+    if (k.contains('تيار مستمر') ||
+        k.contains('تيار متناوب') ||
+        k.contains('ac') ||
+        k.contains('dc')) {
+      return const _SpecStyle(Icons.swap_horiz_rounded, Color(0xFFDC2626));
+    }
+
+    if (k.contains('الطور') || k.contains('phase')) {
+      return const _SpecStyle(Icons.tune_rounded, Color(0xFF7C3AED));
+    }
+
+    if (k.contains('تردد') || k.contains('هرتز') || k.contains('hz')) {
+      return const _SpecStyle(Icons.graphic_eq_rounded, Color(0xFF06B6D4));
+    }
+
+    if (k.contains('ليثيوم') || k.contains('lithium')) {
+      return const _SpecStyle(
+          Icons.battery_charging_full_rounded, Color(0xFF059669));
+    }
+
+    if (k.contains('عمق التفريغ') || k.contains('تفريغ')) {
+      return const _SpecStyle(Icons.trending_down_rounded, Color(0xFFDC2626));
+    }
+
+    if (k.contains('دورات') || k.contains('دورة') || k.contains('cycles')) {
+      return const _SpecStyle(Icons.autorenew_rounded, Color(0xFF06B6D4));
+    }
+
+    if (k.contains('بطارية') || k.contains('battery')) {
+      return const _SpecStyle(Icons.battery_std_rounded, Color(0xFF059669));
+    }
+
+    if (k.contains('سعة') || k.contains('حجم') || k.contains('capacity')) {
+      return const _SpecStyle(Icons.battery_std_rounded, Color(0xFF7C3AED));
+    }
+
+    if (k.contains('الأبعاد') ||
+        k.contains('طول') ||
+        k.contains('عرض') ||
+        k.contains('ارتفاع') ||
+        k.contains('سمك') ||
+        k.contains('dimensions')) {
+      return const _SpecStyle(Icons.straighten_rounded, Color(0xFF8B4513));
+    }
+
+    if (k.contains('وزن') || k.contains('weight')) {
+      return const _SpecStyle(Icons.scale_rounded, Color(0xFF14B8A6));
+    }
+
+    if (k.contains('قطر') || k.contains('مروحة')) {
+      return const _SpecStyle(Icons.toys_rounded, Color(0xFF0EA5E9));
+    }
+
+    if (k.contains('سرعة') || k.contains('rpm')) {
+      return const _SpecStyle(Icons.speed_rounded, Color(0xFF2563EB));
+    }
+
+    if (k.contains('مساحة المقطع') || k.contains('مقطع')) {
+      return const _SpecStyle(Icons.crop_square_rounded, Color(0xFF8B4513));
+    }
+
+    if (k.contains('نواقل') || k.contains('ناقل')) {
+      return const _SpecStyle(Icons.cable_rounded, Color(0xFF7C3AED));
+    }
+
+    if (k.contains('طول الرول') || k.contains('الرول')) {
+      return const _SpecStyle(Icons.waves_rounded, Color(0xFF8B4513));
+    }
+
+    if (k.contains('قدرة القطع')) {
+      return const _SpecStyle(Icons.content_cut_rounded, Color(0xFFDC2626));
+    }
+
+    if (k.contains('أقطاب') || k.contains('قطب')) {
+      return const _SpecStyle(Icons.account_tree_rounded, Color(0xFF7C3AED));
+    }
+
+    if (k.contains('لومن') || k.contains('شدة الإضاءة')) {
+      return const _SpecStyle(Icons.light_mode_rounded, Color(0xFFF59E0B));
+    }
+
+    if (k.contains('زاوية الإضاءة') || k.contains('زاوية')) {
+      return const _SpecStyle(Icons.architecture_rounded, Color(0xFFD97706));
+    }
+
+    if (k.contains('درجة حرارة اللون') ||
+        k.contains('كلفن') ||
+        k.contains('kelvin')) {
+      return const _SpecStyle(Icons.color_lens_rounded, Color(0xFFEC4899));
+    }
+
+    if (k.contains('لون الإضاءة') ||
+        k.contains('لون') ||
+        k.contains('color') ||
+        k.contains('ألوان')) {
+      return const _SpecStyle(Icons.palette_rounded, Color(0xFFEC4899));
+    }
+
+    if (k.contains('حرارة') || k.contains('temperature')) {
+      return const _SpecStyle(Icons.thermostat_rounded, Color(0xFFDC2626));
+    }
+
+    if (k.contains('تبريد') || k.contains('تجميد') || k.contains('cooling')) {
+      return const _SpecStyle(Icons.ac_unit_rounded, Color(0xFF0EA5E9));
+    }
+
+    if (k.contains('تدفئة') || k.contains('تسخين') || k.contains('heating')) {
+      return const _SpecStyle(Icons.whatshot_rounded, Color(0xFFEA580C));
+    }
+
+    if (k.contains('بخار') || k.contains('steam')) {
+      return const _SpecStyle(Icons.cloud_rounded, Color(0xFF94A3B8));
+    }
+
+    if (k.contains('غاز') || k.contains('gas')) {
+      return const _SpecStyle(
+          Icons.local_fire_department_rounded, Color(0xFFDC2626));
+    }
+
+    if (k.contains('مناخية') || k.contains('مناخ')) {
+      return const _SpecStyle(Icons.wb_sunny_rounded, Color(0xFFF59E0B));
+    }
+
+    if (k.contains('كفاءة') || k.contains('efficiency')) {
+      return const _SpecStyle(Icons.speed_rounded, Color(0xFF059669));
+    }
+
+    if (k.contains('خزان') || k.contains('ماء')) {
+      return const _SpecStyle(Icons.water_drop_rounded, Color(0xFF0EA5E9));
+    }
+
+    if (k.contains('تدفق') || k.contains('flow')) {
+      return const _SpecStyle(Icons.water_rounded, Color(0xFF0284C7));
+    }
+
+    if (k.contains('ضغط') || k.contains('bar') || k.contains('pressure')) {
+      return const _SpecStyle(Icons.compress_rounded, Color(0xFFEF4444));
+    }
+
+    if (k.contains('مرشح') || k.contains('فلتر') || k.contains('filter')) {
+      return const _SpecStyle(Icons.filter_alt_rounded, Color(0xFF059669));
+    }
+
+    if (k.contains('هواء') || k.contains('airflow') || k.contains('دفع')) {
+      return const _SpecStyle(Icons.air_rounded, Color(0xFF0EA5E9));
+    }
+
+    if (k.contains('شفط') || k.contains('suction')) {
+      return const _SpecStyle(Icons.air_rounded, Color(0xFF3B82F6));
+    }
+
+    if (k.contains('غبار') || k.contains('dust')) {
+      return const _SpecStyle(
+          Icons.cleaning_services_rounded, Color(0xFF64748B));
+    }
+
+    if (k.contains('ضجيج') || k.contains('ديسيبل') || k.contains('noise')) {
+      return const _SpecStyle(Icons.volume_up_rounded, Color(0xFF64748B));
+    }
+
+    if (k.contains('حماية') ||
+        k.contains('أمان') ||
+        k.contains('ip') ||
+        k.contains('safety')) {
+      return const _SpecStyle(Icons.shield_rounded, Color(0xFF10B981));
+    }
+
+    if (k.contains('وسائل')) {
+      return const _SpecStyle(
+          Icons.health_and_safety_rounded, Color(0xFF10B981));
+    }
+
+    if (k.contains('ضمان') || k.contains('warranty')) {
+      return const _SpecStyle(Icons.verified_user_rounded, Color(0xFF2563EB));
+    }
+
+    if (k.contains('ميزات') ||
+        k.contains('وظائف') ||
+        k.contains('ملحقات') ||
+        k.contains('features')) {
+      return const _SpecStyle(Icons.auto_awesome_rounded, Color(0xFF7C3AED));
+    }
+
+    if (k.contains('تحكم') || k.contains('control')) {
+      return const _SpecStyle(Icons.settings_remote_rounded, Color(0xFF6366F1));
+    }
+
+    if (k.contains('تركيب') || k.contains('installation')) {
+      return const _SpecStyle(Icons.build_rounded, Color(0xFF64748B));
+    }
+
+    if (k.contains('عدد السرعات') || k.contains('سرعات')) {
+      return const _SpecStyle(Icons.speed_rounded, Color(0xFF2563EB));
+    }
+
+    if (k.contains('عدد البرامج') || k.contains('برامج')) {
+      return const _SpecStyle(Icons.apps_rounded, Color(0xFF6366F1));
+    }
+
+    if (k.contains('عدد الأطقم') || k.contains('أطقم') || k.contains('طقم')) {
+      return const _SpecStyle(Icons.restaurant_rounded, Color(0xFF8B5CF6));
+    }
+
+    if (k.contains('عيون')) {
+      return const _SpecStyle(Icons.blur_circular_rounded, Color(0xFFEA580C));
+    }
+
+    if (k.contains('شرائح') || k.contains('شريحة')) {
+      return const _SpecStyle(Icons.view_agenda_rounded, Color(0xFF8B5CF6));
+    }
+
+    if (k.contains('سلال') || k.contains('صفائح')) {
+      return const _SpecStyle(Icons.grid_view_rounded, Color(0xFF7C3AED));
+    }
+
+    if (k.contains('شاشة') ||
+        k.contains('دقة') ||
+        k.contains('معدل تحديث') ||
+        k.contains('screen') ||
+        k.contains('display')) {
+      return const _SpecStyle(Icons.tv_rounded, Color(0xFF2563EB));
+    }
+
+    if (k.contains('اتصال') ||
+        k.contains('لاسلكي') ||
+        k.contains('بلوتوث') ||
+        k.contains('wifi')) {
+      return const _SpecStyle(Icons.wifi_rounded, Color(0xFF3B82F6));
+    }
+
+    if (k.contains('مداخل') ||
+        k.contains('usb') ||
+        k.contains('hdmi') ||
+        k.contains('منافذ')) {
+      return const _SpecStyle(Icons.usb_rounded, Color(0xFF64748B));
+    }
+
+    if (k.contains('سنوي') || k.contains('annual')) {
+      return const _SpecStyle(Icons.calendar_today_rounded, Color(0xFF8B5CF6));
+    }
+
+    if (k.contains('مدة') || k.contains('زمن') || k.contains('timer')) {
+      return const _SpecStyle(Icons.timer_rounded, Color(0xFF06B6D4));
+    }
+
+    if (k.contains('للدورة') || k.contains('per cycle')) {
+      return const _SpecStyle(Icons.refresh_rounded, Color(0xFF06B6D4));
+    }
+
+    if (k.contains('حليب') || k.contains('milk')) {
+      return const _SpecStyle(Icons.coffee_rounded, Color(0xFFEAB308));
+    }
+
+    if (k.contains('مطحنة') || k.contains('طحن') || k.contains('grinder')) {
+      return const _SpecStyle(Icons.coffee_maker_rounded, Color(0xFF78350F));
+    }
+
+    if (k.contains('سطح الكي') || k.contains('كي')) {
+      return const _SpecStyle(Icons.iron_rounded, Color(0xFF64748B));
+    }
+
+    if (k.contains('مصدر التشغيل') ||
+        k.contains('مصدر التغذية') ||
+        k.contains('كهرباء')) {
+      return const _SpecStyle(Icons.power_rounded, Color(0xFFF59E0B));
+    }
+
+    if (k.contains('مصدر المواصفات') || k.contains('مصدر')) {
+      return const _SpecStyle(Icons.source_rounded, Color(0xFF64748B));
+    }
+
+    if (k.contains('تغطية') || k.contains('مساحة')) {
+      return const _SpecStyle(Icons.grid_4x4_rounded, Color(0xFF7C3AED));
+    }
+
+    if (k.contains('مصدر الغاز')) {
+      return const _SpecStyle(Icons.propane_tank_rounded, Color(0xFFDC2626));
+    }
+
+    return const _SpecStyle(Icons.article_rounded, Color(0xFF64748B));
   }
 
   Widget _buildSectionTitle(String title, IconData icon) {
@@ -2118,6 +3152,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  void _shareProduct() {
+    final product = _product;
+    if (product == null) return;
+    final String name = product['name_ar'] ?? '';
+    final String price = _fmt(_getEffectivePrice());
+    final String url = 'https://nexsy.com/product/${product['slug']}';
+    final String shareText = 'تحقق من هذا المنتج: $name\nالسعر: $price\n$url';
+
+    _showSnackBar('تم نسخ الرابط إلى الحافظة', primaryBlue);
+    Clipboard.setData(ClipboardData(text: shareText));
+  }
+
   Widget _buildBottomBar() {
     final double effectivePrice = _getEffectivePrice();
     final int stock = _product?['stock'] ?? 0;
@@ -2130,7 +3176,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardWhite,
+        color: cardWhite.withOpacity(0.9),
         boxShadow: [
           BoxShadow(
               color: primaryBlue.withOpacity(0.08),
@@ -2145,12 +3191,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
           children: [
             PopupMenuButton<String>(
               onSelected: (value) {
-                if (value == 'analyze')
+                if (value == 'analyze') {
                   _askAIAboutProduct();
-                else if (value == 'compare')
+                } else if (value == 'compare') {
                   _isInComparison
                       ? _removeFromComparison()
                       : _addToComparison();
+                } else if (value == 'discuss') {
+                  _discussProductWithAI();
+                }
               },
               offset: const Offset(0, -120),
               shape: RoundedRectangleBorder(
@@ -2173,22 +3222,42 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
               ),
               itemBuilder: (context) => [
                 PopupMenuItem(
+                  value: 'discuss',
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.chat_bubble_rounded,
+                            color: Colors.purple, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Text('دردشة مع الذكاء',
+                          style: GoogleFonts.cairo(
+                              fontSize: 14, color: darkColor)),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
                   value: 'analyze',
                   child: Row(
                     children: [
                       _isAnalyzing
                           ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: primaryBlue))
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: primaryBlue))
                           : Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                              color: primaryBlue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.auto_awesome_rounded,
-                              color: primaryBlue, size: 20)),
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                  color: primaryBlue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8)),
+                              child: const Icon(Icons.auto_awesome_rounded,
+                                  color: primaryBlue, size: 20)),
                       const SizedBox(width: 12),
                       Text(
                           _isAnalyzing
@@ -2212,7 +3281,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                               borderRadius: BorderRadius.circular(8)),
                           child: Icon(Icons.compare_arrows_rounded,
                               color:
-                              _isInComparison ? primaryBlue : Colors.grey,
+                                  _isInComparison ? primaryBlue : Colors.grey,
                               size: 20)),
                       const SizedBox(width: 12),
                       Text(
@@ -2234,9 +3303,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                 gradient: LinearGradient(
                     colors: _isFavorite
                         ? [
-                      Colors.red.withOpacity(0.1),
-                      Colors.red.withOpacity(0.05)
-                    ]
+                            Colors.red.withOpacity(0.1),
+                            Colors.red.withOpacity(0.05)
+                          ]
                         : [Colors.grey.shade100, Colors.grey.shade200]),
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(
@@ -2248,23 +3317,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                 onPressed: _isUpdatingFavorite ? null : _toggleFavorite,
                 icon: _isUpdatingFavorite
                     ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.red))
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.red))
                     : AnimatedBuilder(
-                  animation: _heartAnimationController,
-                  builder: (context, child) => Transform.scale(
-                      scale:
-                      1.0 + (_heartAnimationController.value * 0.3),
-                      child: child),
-                  child: Icon(
-                      _isFavorite
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      color: _isFavorite ? Colors.red : Colors.grey,
-                      size: 26),
-                ),
+                        animation: _heartAnimationController,
+                        builder: (context, child) => Transform.scale(
+                            scale:
+                                1.0 + (_heartAnimationController.value * 0.3),
+                            child: child),
+                        child: Icon(
+                            _isFavorite
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            color: _isFavorite ? Colors.red : Colors.grey,
+                            size: 26),
+                      ),
               ),
             ),
             const SizedBox(width: 12),
@@ -2288,59 +3357,59 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                     elevation: inStock ? 5 : 0,
                     shadowColor: inStock
                         ? (isWholesaleActive ? wholesaleGreen : primaryBlue)
-                        .withOpacity(0.5)
+                            .withOpacity(0.5)
                         : Colors.transparent,
                   ),
                   child: _isAddingToCart
                       ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2)),
-                      const SizedBox(width: 10),
-                      Text('جاري الإضافة...',
-                          style: GoogleFonts.cairo(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
-                    ],
-                  )
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2)),
+                            const SizedBox(width: 10),
+                            Text('جاري الإضافة...',
+                                style: GoogleFonts.cairo(
+                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                          ],
+                        )
                       : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.shopping_cart_rounded, size: 22),
-                      const SizedBox(width: 8),
-                      Text(inStock ? 'أضف إلى السلة' : 'غير متوفر',
-                          style: GoogleFonts.cairo(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
-                      if (inStock) ...[
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.25),
-                              borderRadius: BorderRadius.circular(12)),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(Helpers.formatPrice(totalPrice),
-                                  style: GoogleFonts.cairo(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white)),
-                              if (isWholesaleActive) ...[
-                                const SizedBox(width: 4),
-                                const Icon(Icons.warehouse_rounded,
-                                    size: 14, color: Colors.white),
-                              ],
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.shopping_cart_rounded, size: 22),
+                            const SizedBox(width: 8),
+                            Text(inStock ? 'أضف إلى السلة' : 'غير متوفر',
+                                style: GoogleFonts.cairo(
+                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                            if (inStock) ...[
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.25),
+                                    borderRadius: BorderRadius.circular(12)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(_fmt(totalPrice),
+                                        style: GoogleFonts.cairo(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white)),
+                                    if (isWholesaleActive) ...[
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.warehouse_rounded,
+                                          size: 14, color: Colors.white),
+                                    ],
+                                  ],
+                                ),
+                              ),
                             ],
-                          ),
+                          ],
                         ),
-                      ],
-                    ],
-                  ),
                 ),
               ),
             ),
@@ -2449,7 +3518,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                 foregroundColor: Colors.white,
                 elevation: 5,
                 padding:
-                const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15)),
                 shadowColor: primaryBlue.withOpacity(0.5),

@@ -6,8 +6,13 @@ class CartItemModel {
   final int id;
   final String name;
   final String slug;
+
   final double price;
   final double finalPrice;
+
+  final double? priceSyp;
+  final double? finalPriceSyp;
+
   final String? image;
   final int stock;
   int quantity;
@@ -18,7 +23,6 @@ class CartItemModel {
   final int? totalWattage;
   final int? totalCapacity;
 
-  // ✅ إضافة بيانات الشحن
   final List<Map<String, dynamic>>? shippingCities;
 
   CartItemModel({
@@ -27,6 +31,8 @@ class CartItemModel {
     required this.slug,
     required this.price,
     required this.finalPrice,
+    this.priceSyp,
+    this.finalPriceSyp,
     this.image,
     required this.stock,
     this.quantity = 1,
@@ -38,13 +44,41 @@ class CartItemModel {
     this.shippingCities,
   });
 
+  // ============================================================
+  // ============================================================
+
+  double displayPrice({required bool isSyp}) {
+    if (isSyp && priceSyp != null && priceSyp! > 0) return priceSyp!;
+    return price;
+  }
+
+  double displayFinalPrice({required bool isSyp}) {
+    if (isSyp && finalPriceSyp != null && finalPriceSyp! > 0) {
+      return finalPriceSyp!;
+    }
+    return finalPrice;
+  }
+
+  double displayTotalPrice({required bool isSyp}) =>
+      displayFinalPrice(isSyp: isSyp) * quantity;
+
   double get totalPrice => finalPrice * quantity;
 
   bool get isOffer => itemType == 'offer';
 
-  // ✅ دالة للحصول على سعر الشحن لمدينة معينة
+  bool get hasSypPrices =>
+      priceSyp != null &&
+      priceSyp! > 0 &&
+      finalPriceSyp != null &&
+      finalPriceSyp! > 0;
+
+  // ============================================================
+  // ============================================================
+
   double? getShippingCostForCity(String? governorate) {
-    if (governorate == null || shippingCities == null || shippingCities!.isEmpty) {
+    if (governorate == null ||
+        shippingCities == null ||
+        shippingCities!.isEmpty) {
       return null;
     }
 
@@ -52,35 +86,35 @@ class CartItemModel {
       final city = cityData['city']?.toString() ?? '';
       if (city == governorate) {
         final cost = cityData['cost']?.toString();
-        if (cost == null || cost.isEmpty) return null; // غير محدد
+        if (cost == null || cost.isEmpty) return null;
         return double.tryParse(cost);
       }
     }
-    return null; // المدينة غير موجودة في القائمة
+    return null;
   }
 
-  // ✅ هل الشحن متاح لهذا العنصر
   bool get hasShippingInfo =>
       shippingCities != null && shippingCities!.isNotEmpty;
 
-  // ✅ هل الشحن مجاني لمدينة معينة
   bool isFreeShippingForCity(String? governorate) {
     final cost = getShippingCostForCity(governorate);
     return cost != null && cost == 0;
   }
 
-  // ✅ هل الشحن غير محدد لمدينة معينة
   bool isShippingPendingForCity(String? governorate) {
     if (governorate == null || !hasShippingInfo) return false;
     final cost = getShippingCostForCity(governorate);
     return cost == null;
   }
 
-  // ✅ هل الشحن محسوب لمدينة معينة
   bool isShippingCalculatedForCity(String? governorate) {
     final cost = getShippingCostForCity(governorate);
     return cost != null && cost > 0;
   }
+
+  // ============================================================
+  // ✅ Serialization
+  // ============================================================
 
   Map<String, dynamic> toJson() {
     return {
@@ -89,6 +123,8 @@ class CartItemModel {
       'slug': slug,
       'price': price,
       'final_price': finalPrice,
+      'price_syp': priceSyp,
+      'final_price_syp': finalPriceSyp,
       'image': image,
       'stock': stock,
       'quantity': quantity,
@@ -106,8 +142,14 @@ class CartItemModel {
       id: json['id'],
       name: json['name'],
       slug: json['slug'],
-      price: json['price'].toDouble(),
-      finalPrice: json['final_price'].toDouble(),
+      price: (json['price'] as num).toDouble(),
+      finalPrice: (json['final_price'] as num).toDouble(),
+      priceSyp: json['price_syp'] != null
+          ? (json['price_syp'] as num).toDouble()
+          : null,
+      finalPriceSyp: json['final_price_syp'] != null
+          ? (json['final_price_syp'] as num).toDouble()
+          : null,
       image: json['image'],
       stock: json['stock'],
       quantity: json['quantity'] ?? 1,
@@ -124,7 +166,9 @@ class CartItemModel {
     );
   }
 
-  // ✅ دالة مساعدة لتحويل shipping_cities إلى الصيغة الصحيحة
+  // ============================================================
+  // ============================================================
+
   static List<Map<String, dynamic>>? _parseShippingCities(dynamic rawCities) {
     if (rawCities == null) return null;
 
@@ -153,25 +197,35 @@ class CartItemModel {
     }).toList();
   }
 
+  // ============================================================
+  // ============================================================
+
   factory CartItemModel.fromOffer(Map<String, dynamic> offer,
       {int quantity = 1}) {
     final double price =
         double.tryParse(offer['price']?.toString() ?? '0') ?? 0;
     final double finalPrice =
         double.tryParse(offer['final_price']?.toString() ?? '0') ?? 0;
+
+    final double? priceSyp =
+        double.tryParse(offer['price_syp']?.toString() ?? '0');
+    final double? finalPriceSyp =
+        double.tryParse(offer['final_price_syp']?.toString() ?? '0');
+
     final int stock = offer['stock'] ?? -1;
 
     List<Map<String, dynamic>> productsInOffer = [];
     if (offer['products_in_offer'] != null) {
       productsInOffer = List<Map<String, dynamic>>.from(
         (offer['products_in_offer'] as List).map((product) => {
-          'id': product['id'],
-          'name': product['name_ar'],
-          'slug': product['slug'],
-          'quantity': product['quantity'],
-          'price': product['price'],
-          'image': product['main_image'],
-        }),
+              'id': product['id'],
+              'name': product['name_ar'],
+              'slug': product['slug'],
+              'quantity': product['quantity'],
+              'price': product['price'],
+              'price_syp': product['price_syp'],
+              'image': product['main_image'],
+            }),
       );
     }
 
@@ -181,6 +235,8 @@ class CartItemModel {
       slug: offer['slug'] ?? '',
       price: price,
       finalPrice: finalPrice,
+      priceSyp: priceSyp,
+      finalPriceSyp: finalPriceSyp,
       image: offer['cover_image']?.toString(),
       stock: stock > 0 ? stock : 999999,
       quantity: quantity,
@@ -193,12 +249,21 @@ class CartItemModel {
     );
   }
 
+  // ============================================================
+  // ============================================================
+
   factory CartItemModel.fromProduct(Map<String, dynamic> product,
       {int quantity = 1}) {
     final double price =
         double.tryParse(product['price']?.toString() ?? '0') ?? 0;
     final double finalPrice =
         double.tryParse(product['final_price']?.toString() ?? '0') ?? 0;
+
+    final double? priceSyp =
+        double.tryParse(product['price_syp']?.toString() ?? '0');
+    final double? finalPriceSyp =
+        double.tryParse(product['final_price_syp']?.toString() ?? '0');
+
     final int stock = product['stock'] ?? 0;
 
     return CartItemModel(
@@ -207,6 +272,8 @@ class CartItemModel {
       slug: product['slug'] ?? '',
       price: price,
       finalPrice: finalPrice,
+      priceSyp: priceSyp,
+      finalPriceSyp: finalPriceSyp,
       image: product['main_image']?.toString(),
       stock: stock,
       quantity: quantity,

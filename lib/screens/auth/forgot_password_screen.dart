@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:GeniusHouse/screens/auth/login_screen.dart';
 import 'package:GeniusHouse/screens/auth/reset_password_screen.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   final AuthService authService;
@@ -74,10 +74,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           if (isSuccess) {
             _isCodeSent = true;
             _showSuccess(result['message'] ?? 'تم إرسال رمز إعادة التعيين');
-            print('✅ Code sent successfully: $result');
           } else {
             _showError(result['message'] ?? 'فشل في إرسال الرمز');
-            print('❌ Failed to send code: $result');
           }
         });
       }
@@ -85,7 +83,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       if (mounted) {
         setState(() => _isLoading = false);
         _showError('حدث خطأ غير متوقع. الرجاء المحاولة مرة أخرى');
-        print('❌ Error sending code: $e');
       }
     }
   }
@@ -111,12 +108,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         code: code,
       );
 
-      print('🔍 Verification result: $result');
-
       if (mounted) {
         setState(() => _isLoading = false);
 
-        // التحقق من نجاح العملية
         final isSuccess = result['success'] == true ||
             result['status'] == 'success' ||
             result['status'] == true ||
@@ -124,36 +118,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             (result['message']?.toString().contains('success') ?? false);
 
         final message = result['message']?.toString() ?? '';
-        final isVerificationSuccess = message.contains('تم التحقق من الرمز بنجاح') ||
-            message.contains('رمز التحقق صحيح') ||
-            message.contains('تم تأكيد الرمز');
+        final isVerificationSuccess =
+            message.contains('تم التحقق من الرمز بنجاح') ||
+                message.contains('رمز التحقق صحيح') ||
+                message.contains('تم تأكيد الرمز');
 
         final isSuccessful = isSuccess || isVerificationSuccess;
 
         if (isSuccessful) {
           final email = _emailController.text.trim();
-          print('✅ Verification successful!');
-          print('📧 Email: $email');
 
-          // التوجه مباشرة إلى صفحة إعادة تعيين كلمة المرور بدون reset_token
           _navigateToResetPassword(email);
         } else {
           _showError(result['message'] ?? 'رمز التحقق غير صحيح');
-          print('❌ Verification failed: ${result['message']}');
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         _showError('حدث خطأ غير متوقع. الرجاء المحاولة مرة أخرى');
-        print('❌ Error verifying code: $e');
       }
     }
   }
 
   void _navigateToResetPassword(String email) {
-    print('🚀 Navigating to ResetPasswordScreen with email: $email');
-
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
@@ -186,7 +174,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           children: [
             const Icon(Icons.error_outline, color: Colors.white, size: 20),
             const SizedBox(width: 12),
-            Expanded(child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
+            Expanded(
+                child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
           ],
         ),
         backgroundColor: errorColor,
@@ -203,9 +192,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const Icon(Icons.check_circle_outline,
+                color: Colors.white, size: 20),
             const SizedBox(width: 12),
-            Expanded(child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
+            Expanded(
+                child: Text(message, style: GoogleFonts.cairo(fontSize: 14))),
           ],
         ),
         backgroundColor: const Color(0xFF10B981),
@@ -303,7 +294,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                   borderRadius: BorderRadius.circular(15),
                   child: Container(
                     padding: const EdgeInsets.all(10),
-                    child: const Icon(Icons.arrow_back_rounded, color: primaryBlue, size: 22),
+                    child: const Icon(Icons.arrow_back_rounded,
+                        color: primaryBlue, size: 22),
                   ),
                 ),
               ),
@@ -316,10 +308,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
-              BoxShadow(color: primaryBlue.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 2)),
+              BoxShadow(
+                  color: primaryBlue.withOpacity(0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2)),
             ],
           ),
-          child: Text('NEX', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: darkColor)),
+          child: Text('NEX',
+              style: GoogleFonts.poppins(
+                  fontSize: 13, fontWeight: FontWeight.w700, color: darkColor)),
         ),
       ],
     );
@@ -344,12 +341,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
               ),
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: primaryBlue.withOpacity(0.35), blurRadius: 30, spreadRadius: 5),
-                BoxShadow(color: secondaryBlue.withOpacity(0.15), blurRadius: 50, spreadRadius: 8),
+                BoxShadow(
+                    color: primaryBlue.withOpacity(0.35),
+                    blurRadius: 30,
+                    spreadRadius: 5),
+                BoxShadow(
+                    color: secondaryBlue.withOpacity(0.15),
+                    blurRadius: 50,
+                    spreadRadius: 8),
               ],
             ),
             child: const Center(
-              child: Icon(Icons.lock_reset_rounded, color: Colors.white, size: 55),
+              child:
+                  Icon(Icons.lock_reset_rounded, color: Colors.white, size: 55),
             ),
           ),
         );
@@ -362,14 +366,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       children: [
         Text(
           _isCodeSent ? 'التحقق من الرمز' : 'نسيت كلمة المرور؟',
-          style: GoogleFonts.cairo(fontSize: 28, fontWeight: FontWeight.bold, color: darkColor),
+          style: GoogleFonts.cairo(
+              fontSize: 28, fontWeight: FontWeight.bold, color: darkColor),
         ),
         const SizedBox(height: 8),
         Container(
           width: 60,
           height: 4,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [primaryBlue, secondaryBlue]),
+            gradient:
+                const LinearGradient(colors: [primaryBlue, secondaryBlue]),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -410,7 +416,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.06), blurRadius: 20)],
+        boxShadow: [
+          BoxShadow(color: primaryBlue.withOpacity(0.06), blurRadius: 20)
+        ],
       ),
       child: Column(
         children: [
@@ -438,7 +446,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                 borderSide: const BorderSide(color: errorColor, width: 2),
               ),
             ),
-            validator: (v) => v?.isEmpty == true ? 'الرجاء إدخال البريد الإلكتروني' : null,
+            validator: (v) =>
+                v?.isEmpty == true ? 'الرجاء إدخال البريد الإلكتروني' : null,
           ),
           const SizedBox(height: 20),
           _buildSendButton(),
@@ -454,32 +463,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       decoration: BoxDecoration(
         gradient: const LinearGradient(colors: [primaryBlue, secondaryBlue]),
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.4), blurRadius: 15)],
+        boxShadow: [
+          BoxShadow(color: primaryBlue.withOpacity(0.4), blurRadius: 15)
+        ],
       ),
       child: ElevatedButton(
         onPressed: _isLoading ? null : _sendResetCode,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
         child: _isLoading
             ? const SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            color: Colors.white,
-            strokeWidth: 2.5,
-          ),
-        )
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
             : const Text(
-          'إرسال الرمز',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+                'إرسال الرمز',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }
@@ -490,7 +502,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.06), blurRadius: 20)],
+        boxShadow: [
+          BoxShadow(color: primaryBlue.withOpacity(0.06), blurRadius: 20)
+        ],
       ),
       child: Column(
         children: [
@@ -565,32 +579,35 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       decoration: BoxDecoration(
         gradient: const LinearGradient(colors: [primaryBlue, secondaryBlue]),
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.4), blurRadius: 15)],
+        boxShadow: [
+          BoxShadow(color: primaryBlue.withOpacity(0.4), blurRadius: 15)
+        ],
       ),
       child: ElevatedButton(
         onPressed: _isLoading ? null : _verifyCode,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
         child: _isLoading
             ? const SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            color: Colors.white,
-            strokeWidth: 2.5,
-          ),
-        )
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
             : const Text(
-          'تحقق من الرمز',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+                'تحقق من الرمز',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }
@@ -617,6 +634,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
 class FadeInAnimation extends StatelessWidget {
   final Widget child;
+
   const FadeInAnimation({super.key, required this.child});
 
   @override

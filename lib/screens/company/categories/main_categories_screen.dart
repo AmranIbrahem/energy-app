@@ -25,6 +25,7 @@ class MainCategoriesScreen extends StatefulWidget {
 
 class _MainCategoriesScreenState extends State<MainCategoriesScreen> {
   static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color darkColor = Color(0xFF111827);
   static const Color mediumGray = Color(0xFF4B5563);
   static const Color lightGray = Color(0xFFF3F4F6);
@@ -56,6 +57,8 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen> {
           _categories = response['data']['categories'] ?? [];
           _isLoading = false;
         });
+      } else {
+        if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
@@ -64,55 +67,58 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AddMainCategoryScreen(
-                authService: widget.authService,
-                storageService: widget.storageService,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: lightGray,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AddMainCategoryScreen(
+                  authService: widget.authService,
+                  storageService: widget.storageService,
+                ),
               ),
+            );
+
+            if (result == true) {
+              _fetchCategories();
+            }
+          },
+          backgroundColor: primaryBlue,
+          icon: const Icon(Icons.add_rounded, color: Colors.white),
+          label: Text(
+            'إضافة قسم',
+            style: GoogleFonts.cairo(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
             ),
-          );
-          // إعادة تحميل البيانات إذا تمت إضافة تصنيف جديد
-          if (result == true) {
-            _fetchCategories();
-          }
-        },
-        backgroundColor: primaryBlue,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: Text(
-          'إضافة قسم',
-          style: GoogleFonts.cairo(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
           ),
         ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryBlue))
-          : RefreshIndicator(
-        onRefresh: _fetchCategories,
-        color: primaryBlue,
-        child: _categories.isEmpty
-            ? _buildEmptyState()
-            : GridView.builder(
-          padding: const EdgeInsets.all(16),
-          gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.85,
-          ),
-          itemCount: _categories.length,
-          itemBuilder: (context, index) =>
-              _buildCategoryCard(_categories[index]),
-        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: primaryBlue))
+            : RefreshIndicator(
+                onRefresh: _fetchCategories,
+                color: primaryBlue,
+                child: _categories.isEmpty
+                    ? _buildEmptyState()
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.85,
+                        ),
+                        itemCount: _categories.length,
+                        itemBuilder: (context, index) =>
+                            _buildCategoryCard(_categories[index]),
+                      ),
+              ),
       ),
     );
   }
@@ -143,56 +149,65 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 3))
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Image
             Container(
               width: 70,
               height: 70,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                    colors: [primaryBlue, Color(0xFF3B82F6)]),
+                  colors: [primaryBlue, secondaryBlue],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryBlue.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: imageUrl != null
                   ? ClipOval(
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => const Icon(Icons.folder_rounded,
-                      color: Colors.white, size: 35),
-                  errorWidget: (_, __, ___) => const Icon(
-                      Icons.folder_rounded,
-                      color: Colors.white,
-                      size: 35),
-                ),
-              )
+                      child: CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => const Icon(Icons.folder_rounded,
+                            color: Colors.white, size: 35),
+                        errorWidget: (_, __, ___) => const Icon(
+                            Icons.folder_rounded,
+                            color: Colors.white,
+                            size: 35),
+                      ),
+                    )
                   : const Icon(Icons.folder_rounded,
-                  color: Colors.white, size: 35),
+                      color: Colors.white, size: 35),
             ),
             const SizedBox(height: 12),
-            // Name
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 name,
                 style: GoogleFonts.cairo(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: darkColor),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: darkColor,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(height: 8),
-            // Stats
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -213,16 +228,19 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12)),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
-          Text(count,
-              style: GoogleFonts.cairo(
-                  fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+          Text(
+            count,
+            style: GoogleFonts.cairo(
+                fontSize: 11, fontWeight: FontWeight.w600, color: color),
+          ),
         ],
       ),
     );
@@ -244,4 +262,22 @@ class _MainCategoriesScreenState extends State<MainCategoriesScreen> {
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 20);
+    path.quadraticBezierTo(0, size.height, 20, size.height);
+    path.lineTo(size.width - 20, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 20);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

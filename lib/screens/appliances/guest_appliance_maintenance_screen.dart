@@ -2,17 +2,17 @@
 
 import 'dart:io';
 
+import 'package:GeniusHouse/screens/appliances/maintenance_message_bubble.dart';
+import 'package:GeniusHouse/screens/workshop/workshop_request_screen.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/permission_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_sound/flutter_sound.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_sound/flutter_sound.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:GeniusHouse/services/permission_service.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/screens/workshop/workshop_request_screen.dart';
-import 'package:GeniusHouse/screens/appliances/maintenance_message_bubble.dart';
 
 import '../chat/guest_appliance_support_chat_screen.dart';
 
@@ -55,7 +55,6 @@ class _GuestApplianceMaintenanceScreenState
   bool _isAiTyping = false;
   String? _errorMessage;
 
-  // ألوان محدثة
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentCyan = Color(0xFF06B6D4);
@@ -87,7 +86,6 @@ class _GuestApplianceMaintenanceScreenState
     return await PermissionService.requestMicrophone();
   }
 
-  // ✅ بدء الجلسة
   Future<void> _initSession() async {
     final savedSessionId = widget.storageService.getGuestMaintenanceSessionId();
 
@@ -139,7 +137,8 @@ class _GuestApplianceMaintenanceScreenState
 
         setState(() {
           _messages = messages
-              .map<Map<String, dynamic>>((msg) => Map<String, dynamic>.from(msg))
+              .map<Map<String, dynamic>>(
+                  (msg) => Map<String, dynamic>.from(msg))
               .toList();
           _isLoading = false;
         });
@@ -241,8 +240,8 @@ class _GuestApplianceMaintenanceScreenState
         ),
         content: Text(
             'يحتاج التطبيق إلى الوصول إلى الميكروفون لإرسال الرسائل الصوتية.\n\nيمكنك تفعيل الصلاحية من إعدادات التطبيق.',
-            style: GoogleFonts.cairo(
-                fontSize: 14, color: mediumGray, height: 1.6),
+            style:
+                GoogleFonts.cairo(fontSize: 14, color: mediumGray, height: 1.6),
             textAlign: TextAlign.center),
         actions: [
           TextButton(
@@ -262,8 +261,7 @@ class _GuestApplianceMaintenanceScreenState
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
-              padding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
@@ -478,13 +476,12 @@ class _GuestApplianceMaintenanceScreenState
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
-              padding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            child:
-            Text('مسح', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+            child: Text('مسح',
+                style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -522,6 +519,19 @@ class _GuestApplianceMaintenanceScreenState
         builder: (context) => WorkshopRequestScreen(
           apiService: widget.apiService,
           authService: null,
+        ),
+      ),
+    );
+  }
+
+  void _openSupportChat() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GuestApplianceSupportChatScreen(
+          apiService: widget.apiService,
+          storageService: widget.storageService,
+          initialGovernorate: _governorate,
         ),
       ),
     );
@@ -568,103 +578,129 @@ class _GuestApplianceMaintenanceScreenState
       ));
   }
 
+  Widget _buildCurvedHeader(BuildContext context) {
+    return ClipPath(
+      clipper: _BottomCurveClipper(),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [primaryBlue, secondaryBlue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.build_rounded,
+                      color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'الصيانة الذكية',
+                        style: GoogleFonts.cairo(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              offset: const Offset(0, 2),
+                              blurRadius: 4,
+                              color: Colors.black.withOpacity(0.2),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        'وضع الزوار • ${_governorate ?? "دمشق"}',
+                        style: GoogleFonts.cairo(
+                          fontSize: 10,
+                          color: Colors.white.withOpacity(0.85),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (_messages.isNotEmpty)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: Colors.white, size: 22),
+                      onPressed: _clearChat,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue, accentCyan],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: primaryBlue.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-        ),
-        title: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child:
-              const Icon(Icons.build_rounded, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('الصيانة الذكية',
-                    style: GoogleFonts.cairo(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            offset: const Offset(0, 2),
-                            blurRadius: 4,
-                            color: Colors.black.withOpacity(0.2),
-                          ),
-                        ])),
-                Text('وضع الزوار • ${_governorate ?? "دمشق"}',
-                    style: GoogleFonts.cairo(
-                        fontSize: 11,
-                        color: Colors.white.withOpacity(0.85))),
-              ],
-            ),
-          ],
-        ),
-        elevation: 0,
-        actions: [
-          if (_messages.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.white, size: 22),
-                onPressed: _clearChat,
-              ),
-            ),
-        ],
-      ),
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: _isLoading
-            ? _buildLoadingScreen()
-            : _errorMessage != null
-            ? _buildErrorState()
-            : Column(
+        child: Column(
           children: [
+            _buildCurvedHeader(context),
             Expanded(
-              child: _messages.isEmpty
-                  ? _buildEmptyState()
-                  : _buildMessagesList(),
+              child: _isLoading
+                  ? _buildLoadingScreen()
+                  : _errorMessage != null
+                      ? _buildErrorState()
+                      : Column(
+                          children: [
+                            Expanded(
+                              child: _messages.isEmpty
+                                  ? _buildEmptyState()
+                                  : _buildMessagesList(),
+                            ),
+                            if (_messages.isNotEmpty) _buildActionButtons(),
+                            _buildInputBar(),
+                          ],
+                        ),
             ),
-            // ✅ زر طلب فني فوق شريط الإرسال
-            if (_messages.isNotEmpty) _buildActionButtons(),
-            _buildInputBar(),
           ],
         ),
       ),
     );
   }
 
-  // ✅ شاشة التحميل
   Widget _buildLoadingScreen() {
     return Center(
       child: Column(
@@ -712,13 +748,11 @@ class _GuestApplianceMaintenanceScreenState
     );
   }
 
-  // ✅ زر طلب فني (فوق شريط الإرسال)
   Widget _buildActionButtons() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(
         children: [
-          // ✅ زر محادثة الدعم البشري
           Expanded(
             child: ElevatedButton.icon(
               onPressed: _openSupportChat,
@@ -743,7 +777,6 @@ class _GuestApplianceMaintenanceScreenState
             ),
           ),
           const SizedBox(width: 8),
-          // ✅ زر طلب فني
           Expanded(
             child: ElevatedButton.icon(
               onPressed: _openWorkshopRequest,
@@ -771,21 +804,6 @@ class _GuestApplianceMaintenanceScreenState
       ),
     );
   }
-
-// ✅ أضف هذه الدالة
-  void _openSupportChat() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => GuestApplianceSupportChatScreen(
-          apiService: widget.apiService,
-          storageService: widget.storageService,
-          initialGovernorate: _governorate,
-        ),
-      ),
-    );
-  }
-
 
   Widget _buildMessagesList() {
     return ListView.builder(
@@ -831,10 +849,10 @@ class _GuestApplianceMaintenanceScreenState
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                  colors: [primaryBlue.withOpacity(0.15), accentCyan.withOpacity(0.05)],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft),
+              gradient: LinearGradient(colors: [
+                primaryBlue.withOpacity(0.15),
+                accentCyan.withOpacity(0.05)
+              ], begin: Alignment.topRight, end: Alignment.bottomLeft),
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
@@ -844,7 +862,8 @@ class _GuestApplianceMaintenanceScreenState
                 ),
               ],
             ),
-            child: const Icon(Icons.build_rounded, color: primaryBlue, size: 18),
+            child:
+                const Icon(Icons.build_rounded, color: primaryBlue, size: 18),
           ),
           const SizedBox(width: 8),
           Container(
@@ -888,8 +907,8 @@ class _GuestApplianceMaintenanceScreenState
           child: Container(
             width: 7,
             height: 7,
-            decoration: const BoxDecoration(
-                color: primaryBlue, shape: BoxShape.circle),
+            decoration:
+                const BoxDecoration(color: primaryBlue, shape: BoxShape.circle),
           ),
         );
       },
@@ -917,150 +936,144 @@ class _GuestApplianceMaintenanceScreenState
             child: _isRecording
                 ? _buildRecordingStopButton()
                 : Row(
-              children: [
-                GestureDetector(
-                  onLongPressStart: (_) async {
-                    final hasPermission =
-                    await _requestMicrophonePermission();
-                    if (hasPermission) {
-                      await _startRecording();
-                    } else {
-                      _showPermissionDeniedDialog();
-                    }
-                  },
-                  onLongPressEnd: (_) async {
-                    if (_isRecording) {
-                      await _stopRecording();
-                    }
-                  },
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: _isRecording
-                          ? LinearGradient(
-                          colors: [Colors.red, Colors.redAccent])
-                          : null,
-                      color: _isRecording
-                          ? null
-                          : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: _isRecording
-                          ? [
-                        BoxShadow(
-                            color: Colors.red.withOpacity(0.3),
-                            blurRadius: 6)
-                      ]
-                          : null,
-                    ),
-                    child: Icon(
-                      _isRecording
-                          ? Icons.mic_rounded
-                          : Icons.mic_none_rounded,
-                      color: _isRecording
-                          ? Colors.white
-                          : primaryBlue,
-                      size: 22,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _toggleImagePicker,
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: _selectedImages.isNotEmpty
-                          ? LinearGradient(
-                          colors: [primaryBlue, secondaryBlue])
-                          : null,
-                      color: _selectedImages.isNotEmpty
-                          ? null
-                          : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _selectedImages.isNotEmpty
-                          ? Icons.close_rounded
-                          : Icons.photo_camera_rounded,
-                      color: _selectedImages.isNotEmpty
-                          ? Colors.white
-                          : primaryBlue,
-                      size: 22,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: lightGray,
-                      borderRadius: BorderRadius.circular(25),
-                      border: Border.all(color: Colors.grey.shade200),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                    children: [
+                      GestureDetector(
+                        onLongPressStart: (_) async {
+                          final hasPermission =
+                              await _requestMicrophonePermission();
+                          if (hasPermission) {
+                            await _startRecording();
+                          } else {
+                            _showPermissionDeniedDialog();
+                          }
+                        },
+                        onLongPressEnd: (_) async {
+                          if (_isRecording) {
+                            await _stopRecording();
+                          }
+                        },
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            gradient: _isRecording
+                                ? LinearGradient(
+                                    colors: [Colors.red, Colors.redAccent])
+                                : null,
+                            color: _isRecording ? null : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: _isRecording
+                                ? [
+                                    BoxShadow(
+                                        color: Colors.red.withOpacity(0.3),
+                                        blurRadius: 6)
+                                  ]
+                                : null,
+                          ),
+                          child: Icon(
+                            _isRecording
+                                ? Icons.mic_rounded
+                                : Icons.mic_none_rounded,
+                            color: _isRecording ? Colors.white : primaryBlue,
+                            size: 22,
+                          ),
                         ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _messageController,
-                      focusNode: _focusNode,
-                      style: GoogleFonts.cairo(
-                          fontSize: 14, color: darkColor),
-                      maxLines: 3,
-                      minLines: 1,
-                      textAlign: TextAlign.right,
-                      decoration: InputDecoration(
-                        hintText: 'صف العطل أو أرفق صورة...',
-                        hintStyle: GoogleFonts.cairo(
-                            fontSize: 14,
-                            color: Colors.grey.shade400),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
                       ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: [primaryBlue, secondaryBlue]),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryBlue.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: _toggleImagePicker,
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            gradient: _selectedImages.isNotEmpty
+                                ? LinearGradient(
+                                    colors: [primaryBlue, secondaryBlue])
+                                : null,
+                            color: _selectedImages.isNotEmpty
+                                ? null
+                                : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _selectedImages.isNotEmpty
+                                ? Icons.close_rounded
+                                : Icons.photo_camera_rounded,
+                            color: _selectedImages.isNotEmpty
+                                ? Colors.white
+                                : primaryBlue,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: lightGray,
+                            borderRadius: BorderRadius.circular(25),
+                            border: Border.all(color: Colors.grey.shade200),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _messageController,
+                            focusNode: _focusNode,
+                            style: GoogleFonts.cairo(
+                                fontSize: 14, color: darkColor),
+                            maxLines: 3,
+                            minLines: 1,
+                            textAlign: TextAlign.right,
+                            decoration: InputDecoration(
+                              hintText: 'صف العطل أو أرفق صورة...',
+                              hintStyle: GoogleFonts.cairo(
+                                  fontSize: 14, color: Colors.grey.shade400),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                            ),
+                            onSubmitted: (_) => _sendMessage(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                              colors: [primaryBlue, secondaryBlue]),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: primaryBlue.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: InkWell(
+                          onTap: _isSending ? null : () => _sendMessage(),
+                          borderRadius: BorderRadius.circular(30),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            child: _isSending
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white, strokeWidth: 2))
+                                : const Icon(Icons.send_rounded,
+                                    color: Colors.white, size: 20),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  child: InkWell(
-                    onTap: _isSending ? null : () => _sendMessage(),
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      child: _isSending
-                          ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2))
-                          : const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 20),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ],
@@ -1164,7 +1177,6 @@ class _GuestApplianceMaintenanceScreenState
     );
   }
 
-  // ✅ شاشة الحالة الفارغة
   Widget _buildEmptyState() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -1193,8 +1205,8 @@ class _GuestApplianceMaintenanceScreenState
                 ),
               ],
             ),
-            child:
-            const Icon(Icons.build_circle_rounded, size: 50, color: primaryBlue),
+            child: const Icon(Icons.build_circle_rounded,
+                size: 50, color: primaryBlue),
           ),
           const SizedBox(height: 24),
           Text('الصيانة الذكية',
@@ -1204,8 +1216,6 @@ class _GuestApplianceMaintenanceScreenState
           Text('صور العطل واحصل على تشخيص فوري',
               style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
           const SizedBox(height: 32),
-
-          // ✅ أمثلة جاهزة
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1238,8 +1248,8 @@ class _GuestApplianceMaintenanceScreenState
                         color: primaryBlue.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child:
-                      const Icon(Icons.lightbulb_rounded, color: primaryBlue, size: 18),
+                      child: const Icon(Icons.lightbulb_rounded,
+                          color: primaryBlue, size: 18),
                     ),
                     const SizedBox(width: 8),
                     Text('أمثلة شائعة',
@@ -1264,9 +1274,6 @@ class _GuestApplianceMaintenanceScreenState
             ),
           ),
           const SizedBox(height: 24),
-
-          // ✅ زر طلب فني في الحالة الفارغة
-          // ✅ زرين في الحالة الفارغة
           Row(
             children: [
               Expanded(
@@ -1275,13 +1282,15 @@ class _GuestApplianceMaintenanceScreenState
                   icon: const Icon(Icons.support_agent_rounded, size: 20),
                   label: Text(
                     'محادثة الدعم',
-                    style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: secondaryBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
@@ -1292,18 +1301,21 @@ class _GuestApplianceMaintenanceScreenState
                   icon: const Icon(Icons.build_rounded, size: 20),
                   label: Text(
                     'طلب فني',
-                    style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.bold, fontSize: 14),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryBlue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
             ],
-          ),        ],
+          ),
+        ],
       ),
     );
   }
@@ -1354,17 +1366,35 @@ class _GuestApplianceMaintenanceScreenState
           ElevatedButton.icon(
             onPressed: _fetchHistory,
             icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: Text('إعادة المحاولة',
-                style: GoogleFonts.cairo(fontSize: 14)),
+            label:
+                Text('إعادة المحاولة', style: GoogleFonts.cairo(fontSize: 14)),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
-              shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

@@ -1,11 +1,12 @@
 // lib/screens/appliances/maintenance_message_bubble.dart
 
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class MaintenanceMessageBubble extends StatelessWidget {
   final bool isUser;
@@ -45,7 +46,8 @@ class MaintenanceMessageBubble extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
-          mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment:
+              isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!isUser) _buildAvatar(),
@@ -56,48 +58,45 @@ class MaintenanceMessageBubble extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: isUser
                       ? LinearGradient(
-                    colors: [primaryBlue, secondaryBlue],
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                  )
+                          colors: [primaryBlue, secondaryBlue],
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                        )
                       : null,
                   color: isUser ? null : cardWhite,
                   borderRadius: BorderRadius.only(
                     topLeft: const Radius.circular(16),
                     topRight: const Radius.circular(16),
-                    bottomLeft: isUser ? const Radius.circular(16) : Radius.zero,
-                    bottomRight: isUser ? Radius.zero : const Radius.circular(16),
+                    bottomLeft:
+                        isUser ? const Radius.circular(16) : Radius.zero,
+                    bottomRight:
+                        isUser ? Radius.zero : const Radius.circular(16),
                   ),
                   boxShadow: isUser
                       ? [
-                    BoxShadow(
-                      color: primaryBlue.withOpacity(0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ]
+                          BoxShadow(
+                            color: primaryBlue.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
                       : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                  border: isUser ? null : Border.all(color: Colors.grey.shade200),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                  border:
+                      isUser ? null : Border.all(color: Colors.grey.shade200),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ✅ عرض الصور
                     if (hasImages) _buildImages(),
-
-                    // ✅ عرض الصوت
                     if (hasAudio) _buildAudioPlayer(),
-
                     if ((hasImages || hasAudio) && content.isNotEmpty)
                       const SizedBox(height: 8),
-
-                    // ✅ إذا تشخيص → عرض بطاقة منسقة
                     if (isDiagnosis && data != null)
                       _buildDiagnosisCard()
                     else if (content.isNotEmpty)
@@ -119,16 +118,20 @@ class MaintenanceMessageBubble extends StatelessWidget {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        gradient: isUser ? null : LinearGradient(
-          colors: [primaryBlue, secondaryBlue],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-        ),
+        gradient: isUser
+            ? null
+            : LinearGradient(
+                colors: [primaryBlue, secondaryBlue],
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+              ),
         shape: BoxShape.circle,
         color: isUser ? Colors.grey.shade200 : null,
         boxShadow: [
           BoxShadow(
-            color: isUser ? Colors.grey.withOpacity(0.2) : primaryBlue.withOpacity(0.3),
+            color: isUser
+                ? Colors.grey.withOpacity(0.2)
+                : primaryBlue.withOpacity(0.3),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -235,7 +238,6 @@ class MaintenanceMessageBubble extends StatelessWidget {
     );
   }
 
-  // ✅ بطاقة التشخيص المنظمة
   Widget _buildDiagnosisCard() {
     final diagnosis = data?['diagnosis']?.toString() ?? '';
     final possibleCauses = (data?['possible_causes'] as List?) ?? [];
@@ -243,7 +245,6 @@ class MaintenanceMessageBubble extends StatelessWidget {
     final severity = data?['severity']?.toString() ?? 'غير محدد';
     final needsTechnician = data?['needs_technician'] ?? false;
 
-    // ✅ لون الخطورة
     Color severityColor;
     IconData severityIcon;
     switch (severity) {
@@ -284,7 +285,6 @@ class MaintenanceMessageBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ العنوان
             Row(
               children: [
                 Container(
@@ -293,7 +293,8 @@ class MaintenanceMessageBubble extends StatelessWidget {
                     color: primaryBlue.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.build_rounded, size: 16, color: primaryBlue),
+                  child: const Icon(Icons.build_rounded,
+                      size: 16, color: primaryBlue),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -307,8 +308,6 @@ class MaintenanceMessageBubble extends StatelessWidget {
               ],
             ),
             const Divider(thickness: 1, height: 16),
-
-            // ✅ وصف المشكلة
             Text(
               diagnosis,
               style: GoogleFonts.cairo(
@@ -317,8 +316,6 @@ class MaintenanceMessageBubble extends StatelessWidget {
                 height: 1.6,
               ),
             ),
-
-            // ✅ مستوى الخطورة
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -342,8 +339,6 @@ class MaintenanceMessageBubble extends StatelessWidget {
                 ],
               ),
             ),
-
-            // ✅ الأسباب المحتملة (كائنات {cause, details})
             if (possibleCauses.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
@@ -366,7 +361,8 @@ class MaintenanceMessageBubble extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.orange.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.withOpacity(0.15)),
+                      border:
+                          Border.all(color: Colors.orange.withOpacity(0.15)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,7 +370,8 @@ class MaintenanceMessageBubble extends StatelessWidget {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.arrow_circle_right_rounded, size: 14, color: Colors.orange.shade700),
+                            Icon(Icons.arrow_circle_right_rounded,
+                                size: 14, color: Colors.orange.shade700),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -391,25 +388,27 @@ class MaintenanceMessageBubble extends StatelessWidget {
                         if (details.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           ...details.map((detail) => Padding(
-                            padding: const EdgeInsets.only(right: 20, bottom: 2),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.circle, size: 5, color: Colors.orange.shade400),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    detail.toString(),
-                                    style: GoogleFonts.cairo(
-                                      fontSize: 11,
-                                      color: mediumGray,
-                                      height: 1.5,
+                                padding:
+                                    const EdgeInsets.only(right: 20, bottom: 2),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.circle,
+                                        size: 5, color: Colors.orange.shade400),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        detail.toString(),
+                                        style: GoogleFonts.cairo(
+                                          fontSize: 11,
+                                          color: mediumGray,
+                                          height: 1.5,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          )),
+                              )),
                         ],
                       ],
                     ),
@@ -420,12 +419,14 @@ class MaintenanceMessageBubble extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.arrow_circle_right_rounded, size: 14, color: Colors.orange.shade700),
+                        Icon(Icons.arrow_circle_right_rounded,
+                            size: 14, color: Colors.orange.shade700),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             cause.toString(),
-                            style: GoogleFonts.cairo(fontSize: 12, color: mediumGray, height: 1.5),
+                            style: GoogleFonts.cairo(
+                                fontSize: 12, color: mediumGray, height: 1.5),
                           ),
                         ),
                       ],
@@ -434,8 +435,6 @@ class MaintenanceMessageBubble extends StatelessWidget {
                 }
               }),
             ],
-
-            // ✅ التوصيات
             if (recommendations.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
@@ -448,48 +447,59 @@ class MaintenanceMessageBubble extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               ...recommendations.map((rec) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.check_circle_rounded, size: 14, color: successGreen),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        rec.toString(),
-                        style: GoogleFonts.cairo(fontSize: 12, color: mediumGray, height: 1.5),
-                      ),
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.check_circle_rounded,
+                            size: 14, color: successGreen),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            rec.toString(),
+                            style: GoogleFonts.cairo(
+                                fontSize: 12, color: mediumGray, height: 1.5),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              )),
+                  )),
             ],
-
-            // ✅ هل يحتاج فني
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: needsTechnician ? Colors.red.shade50 : Colors.green.shade50,
+                color:
+                    needsTechnician ? Colors.red.shade50 : Colors.green.shade50,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: needsTechnician ? Colors.red.shade200 : Colors.green.shade200,
+                  color: needsTechnician
+                      ? Colors.red.shade200
+                      : Colors.green.shade200,
                 ),
               ),
               child: Row(
                 children: [
                   Icon(
-                    needsTechnician ? Icons.support_agent_rounded : Icons.thumb_up_rounded,
+                    needsTechnician
+                        ? Icons.support_agent_rounded
+                        : Icons.thumb_up_rounded,
                     size: 16,
-                    color: needsTechnician ? Colors.red.shade700 : Colors.green.shade700,
+                    color: needsTechnician
+                        ? Colors.red.shade700
+                        : Colors.green.shade700,
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    needsTechnician ? 'يُنصح بطلب فني متخصص' : 'يمكن إصلاحه بنفسك',
+                    needsTechnician
+                        ? 'يُنصح بطلب فني متخصص'
+                        : 'يمكن إصلاحه بنفسك',
                     style: GoogleFonts.cairo(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: needsTechnician ? Colors.red.shade700 : Colors.green.shade700,
+                      color: needsTechnician
+                          ? Colors.red.shade700
+                          : Colors.green.shade700,
                     ),
                   ),
                 ],
@@ -502,7 +512,6 @@ class MaintenanceMessageBubble extends StatelessWidget {
   }
 }
 
-// ✅ مشغل الصوت
 class _AudioPlayerButton extends StatefulWidget {
   final String url;
   final bool isUser;
@@ -548,7 +557,7 @@ class _AudioPlayerButtonState extends State<_AudioPlayerButton> {
         await _player.play(UrlSource(widget.url));
       }
     } catch (e) {
-      print('Error playing audio: $e');
+      //
     }
   }
 

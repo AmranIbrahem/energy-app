@@ -1,15 +1,15 @@
 // lib/screens/chat/message_bubble.dart
 
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:audioplayers/audioplayers.dart';
+
+import 'package:GeniusHouse/screens/products/product_details_screen.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/screens/products/product_details_screen.dart';
-import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class MessageBubble extends StatelessWidget {
   final bool isUser;
@@ -62,7 +62,7 @@ class MessageBubble extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment:
-        isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) _buildAvatar(context),
@@ -70,7 +70,7 @@ class MessageBubble extends StatelessWidget {
           Flexible(
             child: Column(
               crossAxisAlignment:
-              isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 GestureDetector(
                   onLongPress: onCopyTap,
@@ -82,9 +82,9 @@ class MessageBubble extends StatelessWidget {
                         topLeft: const Radius.circular(16),
                         topRight: const Radius.circular(16),
                         bottomLeft:
-                        isUser ? const Radius.circular(16) : Radius.zero,
+                            isUser ? const Radius.circular(16) : Radius.zero,
                         bottomRight:
-                        isUser ? Radius.zero : const Radius.circular(16),
+                            isUser ? Radius.zero : const Radius.circular(16),
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -97,12 +97,8 @@ class MessageBubble extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ✅ عرض الصور
                         if (hasImages) _buildImages(context),
-
-                        // ✅ عرض مشغل الصوت
                         if (hasAudio) _buildAudioPlayer(context),
-
                         if ((hasImages || hasAudio) && content.isNotEmpty)
                           const SizedBox(height: 8),
                         if (content.isNotEmpty)
@@ -171,7 +167,6 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  // ✅ مشغل الصوت
   Widget _buildAudioPlayer(BuildContext context) {
     return Container(
       width: 200,
@@ -245,7 +240,7 @@ class MessageBubble extends StatelessWidget {
   Widget _buildFormattedContent(BuildContext context, String text) {
     String cleanedText = text.replaceAllMapped(
       RegExp(r'(\d+)\.(\d{15,})'),
-          (match) => match.group(1)!,
+      (match) => match.group(1)!,
     );
 
     cleanedText = _formatMixedText(cleanedText);
@@ -309,12 +304,12 @@ class MessageBubble extends StatelessWidget {
 
     formatted = formatted.replaceAllMapped(
       RegExp(r'([\u0600-\u06FF])([a-zA-Z0-9])'),
-          (match) => '${match.group(1)} ${match.group(2)}',
+      (match) => '${match.group(1)} ${match.group(2)}',
     );
 
     formatted = formatted.replaceAllMapped(
       RegExp(r'([a-zA-Z0-9])([\u0600-\u06FF])'),
-          (match) => '${match.group(1)} ${match.group(2)}',
+      (match) => '${match.group(1)} ${match.group(2)}',
     );
 
     return formatted;
@@ -371,7 +366,7 @@ class MessageBubble extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child:
-                const Icon(Icons.calculate, size: 16, color: Colors.white),
+                    const Icon(Icons.calculate, size: 16, color: Colors.white),
               ),
               const SizedBox(width: 8),
               Text(
@@ -593,7 +588,7 @@ class MessageBubble extends StatelessWidget {
                 const Spacer(),
                 Container(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                       color: color.shade50,
                       borderRadius: BorderRadius.circular(12)),
@@ -657,9 +652,9 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildProductChip(BuildContext context,
       {required String icon,
-        required String label,
-        required String? slug,
-        required MaterialColor color}) {
+      required String label,
+      required String? slug,
+      required MaterialColor color}) {
     if (slug == null || slug.isEmpty) return const SizedBox.shrink();
 
     return GestureDetector(
@@ -805,9 +800,9 @@ class MessageBubble extends StatelessWidget {
                 comparison['type']?.toString().contains('ليثيوم') == true
                     ? Icons.battery_charging_full
                     : comparison['type']?.toString().contains('موجة جيبية') ==
-                    true
-                    ? Icons.electrical_services
-                    : Icons.solar_power,
+                            true
+                        ? Icons.electrical_services
+                        : Icons.solar_power,
                 size: 24,
                 color: primaryBlue,
               ),
@@ -916,7 +911,7 @@ class MessageBubble extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(12)),
+                    const BorderRadius.vertical(top: Radius.circular(12)),
                 child: CachedNetworkImage(
                   imageUrl: product['image'] ?? product['main_image'] ?? '',
                   height: 100,
@@ -975,7 +970,6 @@ class MessageBubble extends StatelessWidget {
   }
 }
 
-// ✅ مشغل الصوت
 class _AudioPlayerButton extends StatefulWidget {
   final String url;
   final bool isUser;
@@ -1004,7 +998,6 @@ class _AudioPlayerButtonState extends State<_AudioPlayerButton> {
       }
     });
 
-    // ✅ الاستماع للأخطاء
     _player.onPlayerComplete.listen((event) {
       if (mounted) {
         setState(() => _isPlaying = false);
@@ -1017,11 +1010,10 @@ class _AudioPlayerButtonState extends State<_AudioPlayerButton> {
       if (_isPlaying) {
         await _player.pause();
       } else {
-        // ✅ استخدم UrlSource للروابط
         await _player.play(UrlSource(widget.url));
       }
     } catch (e) {
-      print('Error playing audio: $e');
+      //
     }
   }
 

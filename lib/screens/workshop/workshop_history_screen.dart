@@ -1,12 +1,12 @@
 // lib/screens/workshop/workshop_history_screen.dart
 
+import 'dart:ui' as ui;
+
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:flutter/services.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
 
 class WorkshopHistoryScreen extends StatefulWidget {
   final AuthService authService;
@@ -190,64 +190,66 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
     }
   }
 
-  // ✅ إلغاء طلب
   Future<void> _cancelRequest(int requestId) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => TweenAnimationBuilder(
-        tween: Tween<double>(begin: 0.0, end: 1.0),
-        duration: const Duration(milliseconds: 300),
-        builder: (context, double value, child) {
-          return Transform.scale(
-            scale: 0.8 + (0.2 * value),
-            child: Opacity(opacity: value, child: child),
-          );
-        },
-        child: AlertDialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(12),
+      builder: (context) => Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: TweenAnimationBuilder(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          builder: (context, double value, child) {
+            return Transform.scale(
+              scale: 0.8 + (0.2 * value),
+              child: Opacity(opacity: value, child: child),
+            );
+          },
+          child: AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.warning_rounded,
+                      color: Colors.red.shade700, size: 24),
                 ),
-                child: Icon(Icons.warning_rounded,
-                    color: Colors.red.shade700, size: 24),
+                const SizedBox(width: 12),
+                Text('إلغاء الطلب',
+                    style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.bold, color: darkColor)),
+              ],
+            ),
+            content: Text('هل أنت متأكد من إلغاء هذا الطلب؟',
+                style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('تراجع',
+                    style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.w600, color: mediumGray)),
               ),
-              const SizedBox(width: 12),
-              Text('إلغاء الطلب',
-                  style: GoogleFonts.cairo(
-                      fontWeight: FontWeight.bold, color: darkColor)),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('تأكيد الإلغاء',
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+              ),
             ],
           ),
-          content: Text('هل أنت متأكد من إلغاء هذا الطلب؟',
-              style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('تراجع',
-                  style: GoogleFonts.cairo(
-                      fontWeight: FontWeight.w600, color: mediumGray)),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text('تأكيد الإلغاء',
-                  style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
-            ),
-          ],
         ),
       ),
     );
@@ -259,7 +261,7 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
         final response = await widget.apiService.post(
           '/v1/user/workshop-requests/$requestId/cancel',
           requiresAuth: true,
-          data: {}, // ✅ استخدام data بدلاً من body
+          data: {},
         );
 
         if (response['success'] == true) {
@@ -277,144 +279,146 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
     }
   }
 
-  // ✅ تقييم الطلب
   Future<void> _rateRequest(Map<String, dynamic> request) async {
     int selectedRating = 5;
     final TextEditingController commentController = TextEditingController();
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.star_rounded,
-                    color: Colors.amber, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'تقييم العامل',
-                  style: GoogleFonts.cairo(
-                      fontWeight: FontWeight.bold, color: darkColor),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (request['assigned_worker'] != null) ...[
+      builder: (context) => Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+            title: Row(
+              children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: lightGray,
+                    color: Colors.amber.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: primaryBlue.withOpacity(0.1),
-                        child: Icon(Icons.person_rounded,
-                            color: primaryBlue, size: 20),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          request['assigned_worker']['full_name'] ?? 'العامل',
-                          style: GoogleFonts.cairo(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: darkColor,
+                  child: const Icon(Icons.star_rounded,
+                      color: Colors.amber, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'تقييم العامل',
+                    style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.bold, color: darkColor),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (request['assigned_worker'] != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: lightGray,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: primaryBlue.withOpacity(0.1),
+                          child: Icon(Icons.person_rounded,
+                              color: primaryBlue, size: 20),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            request['assigned_worker']['full_name'] ?? 'العامل',
+                            style: GoogleFonts.cairo(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: darkColor,
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    return IconButton(
+                      onPressed: () {
+                        setDialogState(() {
+                          selectedRating = index + 1;
+                        });
+                      },
+                      icon: Icon(
+                        index < selectedRating
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
+                        color: Colors.amber,
+                        size: 40,
                       ),
-                    ],
+                    );
+                  }),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _getRatingText(selectedRating),
+                  style: GoogleFonts.cairo(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amber.shade800,
                   ),
                 ),
                 const SizedBox(height: 16),
-              ],
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  return IconButton(
-                    onPressed: () {
-                      setDialogState(() {
-                        selectedRating = index + 1;
-                      });
-                    },
-                    icon: Icon(
-                      index < selectedRating
-                          ? Icons.star_rounded
-                          : Icons.star_border_rounded,
-                      color: Colors.amber,
-                      size: 40,
+                TextField(
+                  controller: commentController,
+                  maxLines: 3,
+                  style: GoogleFonts.cairo(color: darkColor),
+                  decoration: InputDecoration(
+                    hintText: 'أضف تعليقك (اختياري)...',
+                    hintStyle: GoogleFonts.cairo(color: Colors.grey.shade400),
+                    filled: true,
+                    fillColor: lightGray,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
                     ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _getRatingText(selectedRating),
-                style: GoogleFonts.cairo(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.amber.shade800,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: commentController,
-                maxLines: 3,
-                textDirection: TextDirection.rtl,
-                style: GoogleFonts.cairo(color: darkColor),
-                decoration: InputDecoration(
-                  hintText: 'أضف تعليقك (اختياري)...',
-                  hintStyle: GoogleFonts.cairo(color: Colors.grey.shade400),
-                  filled: true,
-                  fillColor: lightGray,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: primaryBlue, width: 2),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: primaryBlue, width: 2),
+                    ),
                   ),
                 ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('إلغاء',
+                    style: GoogleFonts.cairo(
+                        color: mediumGray, fontWeight: FontWeight.w600)),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: Text('إرسال التقييم',
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('إلغاء',
-                  style: GoogleFonts.cairo(
-                      color: mediumGray, fontWeight: FontWeight.w600)),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: Text('إرسال التقييم',
-                  style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
-            ),
-          ],
         ),
       ),
     );
@@ -426,7 +430,7 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
         final response = await widget.apiService.post(
           '/v1/user/workshop-requests/${request['id']}/rate',
           requiresAuth: true,
-          data: { // ✅ استخدام data بدلاً من body
+          data: {
             'rating': selectedRating,
             'rating_comment': commentController.text.trim().isEmpty
                 ? null
@@ -493,100 +497,101 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
       ));
   }
 
-  // ✅ عرض تفاصيل الطلب
   void _showRequestDetails(Map<String, dynamic> request) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 50,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(10),
+      builder: (context) => Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 50,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: primaryBlue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.handyman_rounded,
+                          color: primaryBlue, size: 24),
                     ),
-                    child: const Icon(Icons.handyman_rounded,
-                        color: primaryBlue, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      request['workshop_type'] ?? 'غير محدد',
-                      style: GoogleFonts.cairo(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: darkColor,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        request['workshop_type'] ?? 'غير محدد',
+                        style: GoogleFonts.cairo(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: darkColor,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded, color: Colors.grey),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              const Divider(),
-              const SizedBox(height: 16),
-              _buildDetailRow(
-                  Icons.person_rounded, 'الاسم', request['name'] ?? '-'),
-              _buildDetailRow(
-                  Icons.phone_rounded, 'الهاتف', request['phone'] ?? '-'),
-              _buildDetailRow(Icons.location_on_rounded, 'العنوان',
-                  request['address'] ?? '-'),
-              if (request['preferred_time'] != null)
-                _buildDetailRow(Icons.schedule_rounded, 'الوقت المفضل',
-                    request['preferred_time']),
-              if (request['booking_datetime'] != null)
-                _buildDetailRow(Icons.calendar_month_rounded, 'موعد الحجز',
-                    request['booking_datetime']),
-              if (request['problems'] != null &&
-                  request['problems'].isNotEmpty)
-                _buildDetailRow(Icons.warning_rounded, 'المشاكل',
-                    request['problems']),
-              if (request['description'] != null &&
-                  request['description'].isNotEmpty)
-                _buildDetailRow(Icons.description_rounded, 'الوصف',
-                    request['description']),
-              if (request['assigned_worker'] != null)
-                _buildDetailRow(
-                  Icons.person_rounded,
-                  'العامل المكلف',
-                  request['assigned_worker']['full_name'] ?? '-',
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                    ),
+                  ],
                 ),
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 16),
+                _buildDetailRow(
+                    Icons.person_rounded, 'الاسم', request['name'] ?? '-'),
+                _buildDetailRow(
+                    Icons.phone_rounded, 'الهاتف', request['phone'] ?? '-'),
+                _buildDetailRow(Icons.location_on_rounded, 'العنوان',
+                    request['address'] ?? '-'),
+                if (request['preferred_time'] != null)
+                  _buildDetailRow(Icons.schedule_rounded, 'الوقت المفضل',
+                      request['preferred_time']),
+                if (request['booking_datetime'] != null)
+                  _buildDetailRow(Icons.calendar_month_rounded, 'موعد الحجز',
+                      request['booking_datetime']),
+                if (request['problems'] != null &&
+                    request['problems'].isNotEmpty)
+                  _buildDetailRow(
+                      Icons.warning_rounded, 'المشاكل', request['problems']),
+                if (request['description'] != null &&
+                    request['description'].isNotEmpty)
+                  _buildDetailRow(Icons.description_rounded, 'الوصف',
+                      request['description']),
+                if (request['assigned_worker'] != null)
+                  _buildDetailRow(
+                    Icons.person_rounded,
+                    'العامل المكلف',
+                    request['assigned_worker']['full_name'] ?? '-',
+                  ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ✅ الدالة الصحيحة - 3 معاملات
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -620,123 +625,177 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                    scale: 1.0 + (_pulseAnimationController.value * 0.1),
-                    child: child);
-              },
-              child: const Icon(Icons.handyman_rounded,
-                  color: Colors.yellow, size: 24),
-            ),
-            const SizedBox(width: 10),
-            Text('سجل طلبات الورشة',
-                style: GoogleFonts.cairo(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
-          ],
-        ),
-        elevation: 0,
-        centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12)),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(55),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-            decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20)),
-            child: TabBar(
-              controller: _tabController,
-              indicator: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [Colors.white, Color(0xFFF0F0F0)]),
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2))
-                ],
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: primaryBlue,
-              unselectedLabelColor: Colors.white70,
-              labelStyle:
-              GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w700),
-              unselectedLabelStyle:
-              GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w500),
-              tabs: [
-                Tab(child: Text('الكل', style: GoogleFonts.cairo())),
-                Tab(child: Text('قيد الانتظار', style: GoogleFonts.cairo())),
-                Tab(child: Text('مكتمل', style: GoogleFonts.cairo())),
-                Tab(child: Text('ملغي', style: GoogleFonts.cairo())),
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFEFF6FF),
+                Color(0xFFF5F7FA),
               ],
-              onTap: (index) {
-                setState(() {
-                  switch (index) {
-                    case 0:
-                      _selectedTab = 'all';
-                      break;
-                    case 1:
-                      _selectedTab = 'pending';
-                      break;
-                    case 2:
-                      _selectedTab = 'completed';
-                      break;
-                    case 3:
-                      _selectedTab = 'cancelled';
-                      break;
-                  }
-                  _loadRequests();
-                });
-              },
             ),
           ),
-        ),
-      ),
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : _errorMessage != null
-          ? _buildErrorWidget()
-          : _filteredRequests.isEmpty
-          ? _buildEmptyState()
-          : RefreshIndicator(
-        onRefresh: _refreshRequests,
-        color: primaryBlue,
-        backgroundColor: cardWhite,
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: _filteredRequests.length,
-          itemBuilder: (context, index) =>
-              _buildRequestCard(_filteredRequests[index], index),
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back_rounded,
+                                      color: Colors.white),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Center(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      AnimatedBuilder(
+                                        animation: _pulseAnimationController,
+                                        builder: (context, child) {
+                                          return Transform.scale(
+                                              scale: 1.0 +
+                                                  (_pulseAnimationController
+                                                          .value *
+                                                      0.1),
+                                              child: child);
+                                        },
+                                        child: const Icon(
+                                            Icons.handyman_rounded,
+                                            color: Colors.yellow,
+                                            size: 24),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text('سجل طلبات الورشة',
+                                          style: GoogleFonts.cairo(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 48),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 15, vertical: 8),
+                          decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20)),
+                          child: TabBar(
+                            controller: _tabController,
+                            dividerColor: Colors.transparent,
+                            indicator: BoxDecoration(
+                              gradient: const LinearGradient(
+                                  colors: [Colors.white, Color(0xFFF0F0F0)]),
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2))
+                              ],
+                            ),
+                            indicatorSize: TabBarIndicatorSize.tab,
+                            labelColor: primaryBlue,
+                            unselectedLabelColor: Colors.white70,
+                            labelStyle: GoogleFonts.cairo(
+                                fontSize: 12, fontWeight: FontWeight.w700),
+                            unselectedLabelStyle: GoogleFonts.cairo(
+                                fontSize: 12, fontWeight: FontWeight.w500),
+                            tabs: [
+                              Tab(
+                                  child:
+                                      Text('الكل', style: GoogleFonts.cairo())),
+                              Tab(
+                                  child: Text('قيد الانتظار',
+                                      style: GoogleFonts.cairo())),
+                              Tab(
+                                  child: Text('مكتمل',
+                                      style: GoogleFonts.cairo())),
+                              Tab(
+                                  child:
+                                      Text('ملغي', style: GoogleFonts.cairo())),
+                            ],
+                            onTap: (index) {
+                              setState(() {
+                                switch (index) {
+                                  case 0:
+                                    _selectedTab = 'all';
+                                    break;
+                                  case 1:
+                                    _selectedTab = 'pending';
+                                    break;
+                                  case 2:
+                                    _selectedTab = 'completed';
+                                    break;
+                                  case 3:
+                                    _selectedTab = 'cancelled';
+                                    break;
+                                }
+                                _loadRequests();
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : _errorMessage != null
+                        ? _buildErrorWidget()
+                        : _filteredRequests.isEmpty
+                            ? _buildEmptyState()
+                            : RefreshIndicator(
+                                onRefresh: _refreshRequests,
+                                color: primaryBlue,
+                                backgroundColor: cardWhite,
+                                child: ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: _filteredRequests.length,
+                                  itemBuilder: (context, index) =>
+                                      _buildRequestCard(
+                                          _filteredRequests[index], index),
+                                ),
+                              ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -792,19 +851,22 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
               ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          statusColor.withOpacity(0.2),
-                          statusColor.withOpacity(0.1)
-                        ],
+                  Hero(
+                    tag: 'workshop_status_${request['id']}',
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            statusColor.withOpacity(0.2),
+                            statusColor.withOpacity(0.1)
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(15),
                       ),
-                      borderRadius: BorderRadius.circular(15),
+                      child: Icon(_getStatusIcon(status),
+                          size: 22, color: statusColor),
                     ),
-                    child: Icon(_getStatusIcon(status),
-                        size: 22, color: statusColor),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -822,8 +884,8 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
                         Text(
                           request['created_at'] != null
                               ? DateTime.parse(request['created_at'])
-                              .toString()
-                              .split(' ')[0]
+                                  .toString()
+                                  .split(' ')[0]
                               : '',
                           style: GoogleFonts.cairo(
                               fontSize: 11, color: mediumGray),
@@ -833,7 +895,7 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
                   ),
                   Container(
                     padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -876,8 +938,8 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
                     ],
                   ),
                   const SizedBox(height: 10),
-                  _buildDetailRow(
-                      Icons.location_on_rounded, 'العنوان', request['address'] ?? '-'),
+                  _buildDetailRow(Icons.location_on_rounded, 'العنوان',
+                      request['address'] ?? '-'),
                   if (request['assigned_worker'] != null) ...[
                     const SizedBox(height: 8),
                     Row(
@@ -931,13 +993,11 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(15)),
-                              padding:
-                              const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                             child: Text('إلغاء الطلب',
                                 style: GoogleFonts.cairo(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600)),
+                                    fontSize: 13, fontWeight: FontWeight.w600)),
                           ),
                         ),
                       ],
@@ -949,8 +1009,7 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
                             icon: const Icon(Icons.star_rounded, size: 18),
                             label: Text('تقييم',
                                 style: GoogleFonts.cairo(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold)),
+                                    fontSize: 13, fontWeight: FontWeight.bold)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.amber,
                               foregroundColor: Colors.white,
@@ -958,8 +1017,7 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
                               shadowColor: Colors.amber.withOpacity(0.5),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(15)),
-                              padding:
-                              const EdgeInsets.symmetric(vertical: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),
                         ),
@@ -973,7 +1031,8 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
                       decoration: BoxDecoration(
                         color: Colors.green.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.withOpacity(0.2)),
+                        border:
+                            Border.all(color: Colors.green.withOpacity(0.2)),
                       ),
                       child: Row(
                         children: [
@@ -1103,4 +1162,22 @@ class _WorkshopHistoryScreenState extends State<WorkshopHistoryScreen>
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

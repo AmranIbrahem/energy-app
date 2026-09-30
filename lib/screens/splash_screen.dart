@@ -1,12 +1,17 @@
+// lib/screens/splash_screen.dart
+
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/screens/onboarding_screen.dart';
+
+import 'package:GeniusHouse/screens/entry_hub_screen.dart';
 import 'package:GeniusHouse/screens/governorate_selection_screen.dart';
 import 'package:GeniusHouse/screens/home_screen.dart';
+import 'package:GeniusHouse/screens/onboarding_screen.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SplashScreen extends StatefulWidget {
   final AuthService authService;
@@ -26,7 +31,6 @@ class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
-  static const Color accentBlue = Color(0xFF60A5FA);
   static const Color darkColor = Color(0xFF111827);
 
   late AnimationController _mainController;
@@ -145,14 +149,11 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateToNext() async {
     if (!mounted) return;
 
-    // ✅ تأكد من تحميل حالة المصادقة
     await widget.authService.refreshAuthState();
 
     if (widget.authService.isAuthenticated) {
       final tokenValid = await widget.authService.handleTokenExpiry();
-      if (!tokenValid) {
-        print('⚠️ Could not refresh token, continuing as guest');
-      }
+      if (!tokenValid) {}
     }
 
     final isOnboardingSeen = widget.storageService.isOnboardingSeen();
@@ -163,25 +164,27 @@ class _SplashScreenState extends State<SplashScreen>
     Widget destination;
 
     if (!isOnboardingSeen) {
-      // أول مرة - onboarding
       destination = OnboardingScreen(
         authService: widget.authService,
         storageService: widget.storageService,
       );
-    } else if (isAuthenticated) {
-      // ✅ مسجل دخول - اذهب مباشرة للرئيسية
-      destination = HomeScreen(
-        authService: widget.authService,
-        storageService: widget.storageService,
-      );
-    } else if (isGuest && governorate != null && governorate.isNotEmpty) {
-      // زائر مع محافظة
-      destination = HomeScreen(
-        authService: widget.authService,
-        storageService: widget.storageService,
-      );
+    } else if (isAuthenticated ||
+        (isGuest && governorate != null && governorate.isNotEmpty)) {
+      final showHub = widget.storageService.isAlwaysShowHub();
+
+      if (showHub) {
+        destination = EntryHubScreen(
+          authService: widget.authService,
+          storageService: widget.storageService,
+          apiService: ApiService(storageService: widget.storageService),
+        );
+      } else {
+        destination = HomeScreen(
+          authService: widget.authService,
+          storageService: widget.storageService,
+        );
+      }
     } else {
-      // زائر بدون محافظة
       destination = GovernorateSelectionScreen(
         authService: widget.authService,
         storageService: widget.storageService,

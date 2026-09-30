@@ -1,16 +1,19 @@
 // lib/screens/cart/cart_screen.dart
 
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:GeniusHouse/services/cart_service.dart';
+import 'dart:ui' as ui;
+
 import 'package:GeniusHouse/models/cart_item_model.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:flutter/services.dart';
+import 'package:GeniusHouse/screens/products/product_details_screen.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/screens/products/product_details_screen.dart';
+import 'package:GeniusHouse/services/cart_service.dart';
+import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
+
 import '../offers/offer_details_screen.dart';
 import 'checkout_screen.dart';
 
@@ -32,8 +35,8 @@ class _CartScreenState extends State<CartScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final CartService _cartService = CartService.instance;
   bool _isLoading = true;
+  bool _showSummary = true;
 
-  // ✅ خريطة لتخزين Controllers لكل عنصر
   final Map<String, TextEditingController> _quantityControllers = {};
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
@@ -50,11 +53,43 @@ class _CartScreenState extends State<CartScreen>
   late AnimationController _cartAnimationController;
   late Animation<double> _fadeAnimation;
 
+  bool get _isSypPreferred {
+    final storage = widget.authService?.storageService;
+    if (storage == null) return false;
+    try {
+      return storage.isSypPreferred();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _fmt(double price) {
+    if (_isSypPreferred) {
+      return '${_formatNumber(price)} SYP';
+    }
+    return '\$${_formatNumber(price)}';
+  }
+
+  String _formatNumber(double number) {
+    final parts = number.toStringAsFixed(2).split('.');
+    final intPart = parts[0];
+    final decimalPart = parts[1];
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < intPart.length; i++) {
+      if (i > 0 && (intPart.length - i) % 3 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(intPart[i]);
+    }
+
+    return '${buffer.toString()}.$decimalPart';
+  }
+
   @override
   void initState() {
     super.initState();
 
-    // ✅ تعيين محافظة المستخدم
     _cartService.userGovernorate =
         widget.authService?.storageService.getGovernorate() ??
             widget.authService?.storageService.getGuestGovernorate();
@@ -203,7 +238,7 @@ class _CartScreenState extends State<CartScreen>
         },
         child: AlertDialog(
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
           title: Row(
             children: [
               Container(
@@ -254,7 +289,7 @@ class _CartScreenState extends State<CartScreen>
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
@@ -282,7 +317,7 @@ class _CartScreenState extends State<CartScreen>
         },
         child: AlertDialog(
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
           title: Row(
             children: [
               Container(
@@ -331,7 +366,7 @@ class _CartScreenState extends State<CartScreen>
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
@@ -462,92 +497,265 @@ class _CartScreenState extends State<CartScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFEFF6FF),
+                Color(0xFFF5F7FA),
+              ],
+            ),
+          ),
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          if (Navigator.canPop(context))
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.arrow_back_rounded,
+                                    color: Colors.white),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AnimatedBuilder(
+                                    animation: _pulseAnimationController,
+                                    builder: (context, child) {
+                                      return Transform.scale(
+                                          scale: 1.0 +
+                                              (_pulseAnimationController.value *
+                                                  0.15),
+                                          child: child);
+                                    },
+                                    child: const Icon(
+                                        Icons.shopping_cart_rounded,
+                                        color: Colors.yellow,
+                                        size: 24),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Flexible(
+                                    child: Text(
+                                      'سلة المشتريات',
+                                      style: GoogleFonts.cairo(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (_cartService.items.isNotEmpty)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: IconButton(
+                                icon: const Icon(Icons.delete_sweep_rounded,
+                                    color: Colors.white, size: 22),
+                                onPressed: _clearCart,
+                                tooltip: 'تفريغ الكل',
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : _cartService.items.isEmpty
+                        ? _buildEmptyCart()
+                        : RefreshIndicator(
+                            onRefresh: _onRefresh,
+                            color: primaryBlue,
+                            backgroundColor: cardWhite,
+                            child: Stack(
+                              children: [
+                                Column(
+                                  children: [
+                                    _buildItemsCountBanner(),
+                                    Expanded(
+                                      child: ListView.builder(
+                                        physics:
+                                            const AlwaysScrollableScrollPhysics(),
+                                        padding: const EdgeInsets.fromLTRB(
+                                            16, 0, 16, 80),
+                                        itemCount: _cartService.items.length,
+                                        itemBuilder: (context, index) {
+                                          final item =
+                                              _cartService.items[index];
+                                          return _buildCartItemCard(
+                                              item, index);
+                                        },
+                                      ),
+                                    ),
+                                    AnimatedSlide(
+                                      duration:
+                                          const Duration(milliseconds: 400),
+                                      curve: Curves.easeInOut,
+                                      offset: _showSummary
+                                          ? Offset.zero
+                                          : const Offset(0, 1.2),
+                                      child: AnimatedOpacity(
+                                        duration:
+                                            const Duration(milliseconds: 400),
+                                        curve: Curves.easeInOut,
+                                        opacity: _showSummary ? 1.0 : 0.0,
+                                        child: _showSummary
+                                            ? _buildBottomBar()
+                                            : const SizedBox.shrink(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (!_showSummary &&
+                                    _cartService.items.isNotEmpty)
+                                  _buildShowSummaryButton(),
+                              ],
+                            ),
+                          ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShowSummaryButton() {
+    return Positioned(
+      bottom: 20,
+      left: 16,
+      right: 16,
+      child: AnimatedBuilder(
+        animation: _animationController,
+        builder: (context, child) {
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: child,
+          );
+        },
+        child: Container(
+          height: 50,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
               colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(
+                color: primaryBlue.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                setState(() {
+                  _showSummary = true;
+                });
+              },
+              borderRadius: BorderRadius.circular(25),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.keyboard_arrow_up_rounded,
+                      color: Colors.white, size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'إظهار الملخص',
+                    style: GoogleFonts.cairo(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: 1.0 + (_pulseAnimationController.value * 0.15),
-                  child: child,
-                );
-              },
-              child: const Icon(Icons.shopping_cart_rounded,
-                  color: Colors.yellow, size: 24),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'سلة المشتريات',
-              style: GoogleFonts.cairo(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-        elevation: 0,
-        centerTitle: true,
-        actions: [
-          if (_cartService.items.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: TextButton.icon(
-                onPressed: _clearCart,
-                icon: const Icon(Icons.delete_sweep_rounded,
-                    color: Colors.white, size: 18),
-                label: Text(
-                  'تفريغ الكل',
-                  style: GoogleFonts.cairo(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-        ],
       ),
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : _cartService.items.isEmpty
-          ? _buildEmptyCart()
-          : RefreshIndicator(
-        onRefresh: _onRefresh,
-        color: primaryBlue,
-        backgroundColor: cardWhite,
-        child: Column(
+    );
+  }
+
+  Widget _buildHideSummaryArrow() {
+    return InkWell(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        setState(() {
+          _showSummary = false;
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: primaryBlue.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: primaryBlue.withOpacity(0.1), width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildItemsCountBanner(),
-            Expanded(
-              child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _cartService.items.length,
-                itemBuilder: (context, index) {
-                  final item = _cartService.items[index];
-                  return _buildCartItemCard(item, index);
-                },
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: primaryBlue,
+              size: 20,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'إخفاء الملخص',
+              style: GoogleFonts.cairo(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: primaryBlue,
               ),
             ),
-            _buildBottomBar(),
           ],
         ),
       ),
@@ -619,7 +827,7 @@ class _CartScreenState extends State<CartScreen>
               borderRadius: BorderRadius.circular(15),
             ),
             child: Text(
-              Helpers.formatPrice(_cartService.totalPrice),
+              _fmt(_cartService.totalPrice),
               style: GoogleFonts.cairo(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -697,38 +905,38 @@ class _CartScreenState extends State<CartScreen>
                         children: [
                           item.image != null && item.image!.isNotEmpty
                               ? CachedNetworkImage(
-                            imageUrl: item.image!,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(
-                              color: Colors.grey.shade200,
-                              child: const Center(
-                                child: CircularProgressIndicator(
-                                  color: primaryBlue,
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            ),
-                            errorWidget: (_, __, ___) => Container(
-                              color: Colors.grey.shade100,
-                              child: Icon(
-                                isOffer
-                                    ? Icons.local_offer_rounded
-                                    : Icons.shopping_bag_rounded,
-                                size: 35,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          )
+                                  imageUrl: item.image!,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => Container(
+                                    color: Colors.grey.shade200,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        color: primaryBlue,
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ),
+                                  errorWidget: (_, __, ___) => Container(
+                                    color: Colors.grey.shade100,
+                                    child: Icon(
+                                      isOffer
+                                          ? Icons.local_offer_rounded
+                                          : Icons.shopping_bag_rounded,
+                                      size: 35,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                )
                               : Container(
-                            color: Colors.grey.shade100,
-                            child: Icon(
-                              isOffer
-                                  ? Icons.local_offer_rounded
-                                  : Icons.shopping_bag_rounded,
-                              size: 35,
-                              color: Colors.grey,
-                            ),
-                          ),
+                                  color: Colors.grey.shade100,
+                                  child: Icon(
+                                    isOffer
+                                        ? Icons.local_offer_rounded
+                                        : Icons.shopping_bag_rounded,
+                                    size: 35,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                           if (hasDiscount)
                             Positioned(
                               top: 8,
@@ -827,7 +1035,7 @@ class _CartScreenState extends State<CartScreen>
                           children: [
                             if (hasDiscount) ...[
                               Text(
-                                Helpers.formatPrice(item.price),
+                                _fmt(item.price),
                                 style: GoogleFonts.cairo(
                                   fontSize: 11,
                                   color: Colors.grey.shade500,
@@ -837,7 +1045,7 @@ class _CartScreenState extends State<CartScreen>
                               const SizedBox(width: 6),
                             ],
                             Text(
-                              Helpers.formatPrice(item.finalPrice),
+                              _fmt(item.finalPrice),
                               style: GoogleFonts.cairo(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -847,11 +1055,8 @@ class _CartScreenState extends State<CartScreen>
                           ],
                         ),
                         const SizedBox(height: 6),
-
-                        // ✅ عرض حالة الشحن لهذا العنصر
                         _buildItemShippingStatus(item),
                         const SizedBox(height: 6),
-
                         if (item.stock <= 5 && item.stock < 999999)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -898,7 +1103,7 @@ class _CartScreenState extends State<CartScreen>
                                     child: InkWell(
                                       onTap: item.quantity > 1
                                           ? () => _updateQuantity(
-                                          item, item.quantity - 1)
+                                              item, item.quantity - 1)
                                           : null,
                                       borderRadius: const BorderRadius.only(
                                         topRight: Radius.circular(15),
@@ -978,7 +1183,7 @@ class _CartScreenState extends State<CartScreen>
                                   ),
                                 ),
                                 Text(
-                                  Helpers.formatPrice(item.totalPrice),
+                                  _fmt(item.totalPrice),
                                   style: GoogleFonts.cairo(
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
@@ -1021,7 +1226,6 @@ class _CartScreenState extends State<CartScreen>
     );
   }
 
-  // ✅ عرض حالة الشحن للعنصر
   Widget _buildItemShippingStatus(CartItemModel item) {
     final governorate = _cartService.userGovernorate;
 
@@ -1045,7 +1249,8 @@ class _CartScreenState extends State<CartScreen>
           const SizedBox(width: 4),
           Text(
             'شحن مجاني',
-            style: GoogleFonts.cairo(fontSize: 10, color: Colors.green, fontWeight: FontWeight.w600),
+            style: GoogleFonts.cairo(
+                fontSize: 10, color: Colors.green, fontWeight: FontWeight.w600),
           ),
         ],
       );
@@ -1059,7 +1264,8 @@ class _CartScreenState extends State<CartScreen>
           const SizedBox(width: 4),
           Text(
             'شحن: ${Helpers.formatPrice(cost)}',
-            style: GoogleFonts.cairo(fontSize: 10, color: successGreen, fontWeight: FontWeight.w600),
+            style: GoogleFonts.cairo(
+                fontSize: 10, color: successGreen, fontWeight: FontWeight.w600),
           ),
         ],
       );
@@ -1071,7 +1277,8 @@ class _CartScreenState extends State<CartScreen>
         const SizedBox(width: 4),
         Text(
           'الشحن سيحدد لاحقاً',
-          style: GoogleFonts.cairo(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.w600),
+          style: GoogleFonts.cairo(
+              fontSize: 10, color: Colors.orange, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -1123,6 +1330,8 @@ class _CartScreenState extends State<CartScreen>
       child: SafeArea(
         child: Column(
           children: [
+            _buildHideSummaryArrow(),
+            const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -1140,7 +1349,6 @@ class _CartScreenState extends State<CartScreen>
               ),
               child: Column(
                 children: [
-                  // ✅ المجموع الفرعي
                   Row(
                     children: [
                       Icon(Icons.receipt_rounded, size: 18, color: mediumGray),
@@ -1148,11 +1356,11 @@ class _CartScreenState extends State<CartScreen>
                       Text(
                         'المجموع الفرعي',
                         style:
-                        GoogleFonts.cairo(fontSize: 14, color: mediumGray),
+                            GoogleFonts.cairo(fontSize: 14, color: mediumGray),
                       ),
                       const Spacer(),
                       Text(
-                        Helpers.formatPrice(_cartService.totalPrice),
+                        _fmt(_cartService.totalPrice),
                         style: GoogleFonts.cairo(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -1162,8 +1370,6 @@ class _CartScreenState extends State<CartScreen>
                     ],
                   ),
                   const SizedBox(height: 10),
-
-                  // ✅ قسم رسوم الشحن
                   if (_cartService.userGovernorate != null) ...[
                     if (_cartService.calculatedShippingCost > 0) ...[
                       Row(
@@ -1222,12 +1428,14 @@ class _CartScreenState extends State<CartScreen>
                         decoration: BoxDecoration(
                           color: Colors.orange.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                          border:
+                              Border.all(color: Colors.orange.withOpacity(0.2)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.warning_amber_rounded, size: 18, color: Colors.orange),
+                            Icon(Icons.warning_amber_rounded,
+                                size: 18, color: Colors.orange),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Column(
@@ -1235,33 +1443,48 @@ class _CartScreenState extends State<CartScreen>
                                 children: [
                                   Text(
                                     '${_cartService.pendingShippingItemsCount} منتجات بدون سعر توصيل',
-                                    style: GoogleFonts.cairo(fontSize: 13, color: Colors.orange, fontWeight: FontWeight.bold),
+                                    style: GoogleFonts.cairo(
+                                        fontSize: 13,
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     'سيتم تحديد رسوم التوصيل لهذه المنتجات لاحقاً',
-                                    style: GoogleFonts.cairo(fontSize: 11, color: Colors.orange.withOpacity(0.8)),
+                                    style: GoogleFonts.cairo(
+                                        fontSize: 11,
+                                        color: Colors.orange.withOpacity(0.8)),
                                   ),
                                   const SizedBox(height: 6),
                                   ..._cartService.items
-                                      .where((item) => item.isShippingPendingForCity(_cartService.userGovernorate))
+                                      .where((item) =>
+                                          item.isShippingPendingForCity(
+                                              _cartService.userGovernorate))
                                       .map((item) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 2),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.circle, size: 6, color: Colors.orange.withOpacity(0.6)),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            item.name,
-                                            style: GoogleFonts.cairo(fontSize: 10, color: Colors.orange.withOpacity(0.8)),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )),
+                                            padding: const EdgeInsets.only(
+                                                bottom: 2),
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.circle,
+                                                    size: 6,
+                                                    color: Colors.orange
+                                                        .withOpacity(0.6)),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Text(
+                                                    item.name,
+                                                    style: GoogleFonts.cairo(
+                                                        fontSize: 10,
+                                                        color: Colors.orange
+                                                            .withOpacity(0.8)),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )),
                                 ],
                               ),
                             ),
@@ -1311,7 +1534,6 @@ class _CartScreenState extends State<CartScreen>
                       ],
                     ),
                   ],
-
                   const SizedBox(height: 12),
                   Container(
                     height: 1.5,
@@ -1326,8 +1548,6 @@ class _CartScreenState extends State<CartScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // ✅ الإجمالي النهائي مع الشحن
                   Row(
                     children: [
                       Icon(Icons.monetization_on_rounded,
@@ -1343,8 +1563,7 @@ class _CartScreenState extends State<CartScreen>
                       ),
                       const Spacer(),
                       Text(
-                        Helpers.formatPrice(
-                            _cartService.totalPriceWithShipping),
+                        _fmt(_cartService.totalPriceWithShipping),
                         style: GoogleFonts.cairo(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -1387,7 +1606,7 @@ class _CartScreenState extends State<CartScreen>
                         builder: (context, child) {
                           return Transform.scale(
                             scale:
-                            1.0 + (_pulseAnimationController.value * 0.1),
+                                1.0 + (_pulseAnimationController.value * 0.1),
                             child: child,
                           );
                         },
@@ -1411,8 +1630,7 @@ class _CartScreenState extends State<CartScreen>
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          Helpers.formatPrice(
-                              _cartService.totalPriceWithShipping),
+                          _fmt(_cartService.totalPriceWithShipping),
                           style: GoogleFonts.cairo(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -1531,4 +1749,22 @@ class _CartScreenState extends State<CartScreen>
       },
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

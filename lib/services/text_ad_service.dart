@@ -1,7 +1,8 @@
 // lib/services/text_ad_service.dart
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:http/http.dart' as http;
 
 class TextAdService {
   final String baseUrl;
@@ -29,7 +30,7 @@ class TextAdService {
       }
       return [];
     } catch (e) {
-      print('❌ Error fetching text ads: $e');
+      // print('❌ Error fetching text ads: $e');
       return [];
     }
   }
@@ -51,7 +52,7 @@ class TextAdService {
       }
       return [];
     } catch (e) {
-      print('❌ Error fetching carousel text ads: $e');
+      // print('❌ Error fetching carousel text ads: $e');
       return [];
     }
   }

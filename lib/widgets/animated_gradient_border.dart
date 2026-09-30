@@ -1,5 +1,3 @@
-// ملف: widgets/animated_gradient_border.dart
-
 import 'package:flutter/material.dart';
 
 class AnimatedGradientBorder extends StatefulWidget {

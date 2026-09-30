@@ -1,12 +1,15 @@
 // lib/screens/comparison/comparison_screen.dart
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:flutter/services.dart';
-import 'package:GeniusHouse/services/comparison_service.dart';
+
+import 'dart:ui' as ui;
+
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/comparison_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ComparisonScreen extends StatefulWidget {
   final ApiService? apiService;
@@ -30,6 +33,7 @@ class _ComparisonScreenState extends State<ComparisonScreen>
   String? _comparisonResult;
   bool _isLoading = true;
   late AnimationController _pulseController;
+  late AnimationController _fadeController;
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
@@ -47,6 +51,10 @@ class _ComparisonScreenState extends State<ComparisonScreen>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
     _loadData();
   }
 
@@ -54,6 +62,7 @@ class _ComparisonScreenState extends State<ComparisonScreen>
   void dispose() {
     _tabController.dispose();
     _pulseController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -61,6 +70,7 @@ class _ComparisonScreenState extends State<ComparisonScreen>
     await _comparisonService.loadComparisonData();
     if (mounted) {
       setState(() => _isLoading = false);
+      _fadeController.forward(from: 0.0);
     }
   }
 
@@ -78,6 +88,7 @@ class _ComparisonScreenState extends State<ComparisonScreen>
     try {
       final productIds =
           _comparisonService.products.map((p) => p['id']).toList();
+
       final response = await widget.apiService?.post(
         '/v1/user/public/ai/products/compare-multiple',
         data: {'product_ids': productIds},
@@ -86,7 +97,40 @@ class _ComparisonScreenState extends State<ComparisonScreen>
 
       if (mounted) {
         if (response != null && response['success'] == true) {
-          setState(() => _comparisonResult = response['data']['comparison']);
+          final data = response['data'];
+          String? comparison;
+
+          if (data is Map<String, dynamic>) {
+            comparison = data['comparison']?.toString();
+
+            if (comparison == null || comparison!.isEmpty) {
+              comparison = data['result']?.toString();
+            }
+
+            if (comparison == null || comparison!.isEmpty) {
+              comparison = data['ai_comparison']?.toString();
+            }
+
+            if (comparison == null || comparison!.isEmpty) {
+              data.forEach((key, value) {
+                if (value is String &&
+                    value.length > 100 &&
+                    (comparison == null || comparison!.isEmpty)) {
+                  comparison = value;
+                }
+              });
+            }
+          } else if (data is String) {
+            comparison = data;
+          } else if (data != null) {
+            comparison = data.toString();
+          }
+
+          if (comparison != null && comparison!.isNotEmpty) {
+            setState(() => _comparisonResult = comparison);
+          } else {
+            _showSnackBar('لم يتم العثور على نتيجة المقارنة', Colors.red);
+          }
         } else {
           _showSnackBar(
               response?['message'] ?? 'حدث خطأ في المقارنة', Colors.red);
@@ -112,6 +156,7 @@ class _ComparisonScreenState extends State<ComparisonScreen>
 
     try {
       final offerIds = _comparisonService.offers.map((o) => o['id']).toList();
+
       final response = await widget.apiService?.post(
         '/v1/user/public/ai/offers/compare-multiple',
         data: {'offer_ids': offerIds},
@@ -120,7 +165,39 @@ class _ComparisonScreenState extends State<ComparisonScreen>
 
       if (mounted) {
         if (response != null && response['success'] == true) {
-          setState(() => _comparisonResult = response['data']['comparison']);
+          final data = response['data'];
+          String? comparison;
+
+          if (data is Map<String, dynamic>) {
+            comparison = data['comparison']?.toString();
+
+            if (comparison == null || comparison!.isEmpty) {
+              comparison = data['result']?.toString();
+            }
+
+            if (comparison == null || comparison!.isEmpty) {
+              comparison = data['ai_comparison']?.toString();
+            }
+
+            if (comparison == null || comparison!.isEmpty) {
+              data.forEach((key, value) {
+                if (value is String &&
+                    value.length > 100 &&
+                    (comparison == null || comparison!.isEmpty)) {
+                  comparison = value;
+                }
+              });
+            }
+          } else if (data is String) {
+            comparison = data;
+          } else if (data != null) {
+            comparison = data.toString();
+          }
+          if (comparison != null && comparison!.isNotEmpty) {
+            setState(() => _comparisonResult = comparison);
+          } else {
+            _showSnackBar('لم يتم العثور على نتيجة المقارنة', Colors.red);
+          }
         } else {
           _showSnackBar(
               response?['message'] ?? 'حدث خطأ في المقارنة', Colors.red);
@@ -232,107 +309,173 @@ class _ComparisonScreenState extends State<ComparisonScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFEFF6FF), Color(0xFFF5F7FA)],
             ),
           ),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) => Transform.scale(
-                scale: 1.0 + (_pulseController.value * 0.15),
-                child: child,
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back_rounded,
+                                      color: Colors.white),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Center(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      AnimatedBuilder(
+                                        animation: _pulseController,
+                                        builder: (context, child) =>
+                                            Transform.scale(
+                                          scale: 1.0 +
+                                              (_pulseController.value * 0.1),
+                                          child: child,
+                                        ),
+                                        child: const Icon(
+                                            Icons.compare_arrows_rounded,
+                                            color: Colors.yellow,
+                                            size: 24),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'المقارنات',
+                                        style: GoogleFonts.cairo(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  onPressed: _clearAllItems,
+                                  icon: const Icon(Icons.delete_sweep_rounded,
+                                      color: Colors.white, size: 22),
+                                  tooltip: 'إزالة الكل',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: TabBar(
+                            controller: _tabController,
+                            indicator: BoxDecoration(
+                              gradient: const LinearGradient(
+                                  colors: [primaryBlue, secondaryBlue]),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            indicatorSize: TabBarIndicatorSize.tab,
+                            dividerColor: Colors.transparent,
+                            labelColor: Colors.white,
+                            unselectedLabelColor: Colors.white70,
+                            labelStyle: GoogleFonts.cairo(
+                                fontSize: 14, fontWeight: FontWeight.bold),
+                            unselectedLabelStyle:
+                                GoogleFonts.cairo(fontSize: 13),
+                            tabs: const [
+                              Tab(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.shopping_bag_rounded, size: 18),
+                                    SizedBox(width: 8),
+                                    Text('المنتجات'),
+                                  ],
+                                ),
+                              ),
+                              Tab(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.local_offer_rounded, size: 18),
+                                    SizedBox(width: 8),
+                                    Text('العروض'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              child: const Icon(Icons.compare_arrows_rounded,
-                  color: Colors.yellow, size: 24),
-            ),
-            const SizedBox(width: 10),
-            Text('المقارنات',
-                style: GoogleFonts.cairo(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
-          ],
-        ),
-        elevation: 0,
-        centerTitle: true,
-        actions: [
-          Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12)),
-            child: IconButton(
-              onPressed: _clearAllItems,
-              icon: const Icon(Icons.delete_sweep_rounded,
-                  color: Colors.white, size: 22),
-              tooltip: 'إزالة الكل',
-            ),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(55),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20)),
-            child: TabBar(
-              controller: _tabController,
-              indicator: BoxDecoration(
-                gradient:
-                    const LinearGradient(colors: [primaryBlue, secondaryBlue]),
-                borderRadius: BorderRadius.circular(18),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : TweenAnimationBuilder(
+                        tween: Tween<double>(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 600),
+                        builder: (context, value, child) => Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 20 * (1 - value)),
+                            child: child,
+                          ),
+                        ),
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildComparisonTab(isProducts: true),
+                            _buildComparisonTab(isProducts: false),
+                          ],
+                        ),
+                      ),
               ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              labelStyle:
-                  GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.bold),
-              unselectedLabelStyle: GoogleFonts.cairo(fontSize: 13),
-              tabs: const [
-                Tab(
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                      Icon(Icons.shopping_bag_rounded, size: 18),
-                      SizedBox(width: 8),
-                      Text('المنتجات')
-                    ])),
-                Tab(
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                      Icon(Icons.local_offer_rounded, size: 18),
-                      SizedBox(width: 8),
-                      Text('العروض')
-                    ])),
-              ],
-            ),
+            ],
           ),
         ),
       ),
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildComparisonTab(isProducts: true),
-                _buildComparisonTab(isProducts: false),
-              ],
-            ),
     );
   }
 
@@ -342,30 +485,35 @@ class _ComparisonScreenState extends State<ComparisonScreen>
     final count = items.length;
     const maxItems = 4;
 
-    if (_comparisonResult != null && !_isComparing && count >= 2) {
+    if (_comparisonResult != null && _comparisonResult!.isNotEmpty) {
       return _buildComparisonResult(isProducts);
     }
 
-    return Column(children: [
-      if (count > 0) _buildHeaderBanner(isProducts, count, maxItems),
-      if (count > 0)
-        SizedBox(
-          height: 260,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: count,
-            itemBuilder: (context, index) =>
-                _buildComparisonCard(items[index], isProducts, index),
-          ),
-        )
-      else
-        Expanded(child: _buildEmptyState(isProducts)),
-      if (count >= 2 && (_comparisonResult == null || _isComparing))
-        _buildCompareButton(isProducts),
-      if (_comparisonResult == null && count > 0 && count < 2)
-        Expanded(child: _buildNoResultPlaceholder(isProducts, count)),
-    ]);
+    return Column(
+      children: [
+        if (count > 0) _buildHeaderBanner(isProducts, count, maxItems),
+        if (count > 0)
+          SizedBox(
+            height: 260,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: count,
+              itemBuilder: (context, index) =>
+                  _buildComparisonCard(items[index], isProducts, index),
+            ),
+          )
+        else
+          Expanded(child: _buildEmptyState(isProducts)),
+        if (count >= 2 &&
+            (_comparisonResult == null || _comparisonResult!.isEmpty))
+          _buildCompareButton(isProducts),
+        if ((_comparisonResult == null || _comparisonResult!.isEmpty) &&
+            count > 0 &&
+            count < 2)
+          Expanded(child: _buildNoResultPlaceholder(isProducts, count)),
+      ],
+    );
   }
 
   Widget _buildHeaderBanner(bool isProducts, int count, int maxItems) {
@@ -486,78 +634,84 @@ class _ComparisonScreenState extends State<ComparisonScreen>
         ],
         border: Border.all(color: Colors.grey.shade100),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                primaryBlue.withOpacity(0.06),
-                secondaryBlue.withOpacity(0.03)
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  primaryBlue.withOpacity(0.06),
+                  secondaryBlue.withOpacity(0.03)
+                ],
+              ),
+              borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(22), topRight: Radius.circular(22)),
+              border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [
+                      primaryBlue.withOpacity(0.15),
+                      secondaryBlue.withOpacity(0.08)
+                    ]),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.auto_awesome_rounded,
+                      color: primaryBlue, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('نتيجة المقارنة',
+                          style: GoogleFonts.cairo(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: darkColor)),
+                      const SizedBox(height: 1),
+                      Text(isProducts ? 'مقارنة المنتجات' : 'مقارنة العروض',
+                          style: GoogleFonts.cairo(
+                              fontSize: 11, color: mediumGray)),
+                    ],
+                  ),
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      setState(() => _comparisonResult = null);
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                          color: primaryBlue.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(10)),
+                      child: Icon(Icons.arrow_back_rounded,
+                          color: primaryBlue, size: 16),
+                    ),
+                  ),
+                ),
               ],
             ),
-            borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(22), topRight: Radius.circular(22)),
-            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
           ),
-          child: Row(children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  primaryBlue.withOpacity(0.15),
-                  secondaryBlue.withOpacity(0.08)
-                ]),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.auto_awesome_rounded,
-                  color: primaryBlue, size: 18),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(18),
+              child: _buildFormattedComparisonResult(),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('نتيجة المقارنة',
-                        style: GoogleFonts.cairo(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: darkColor)),
-                    const SizedBox(height: 1),
-                    Text(isProducts ? 'مقارنة المنتجات' : 'مقارنة العروض',
-                        style:
-                            GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
-                  ]),
-            ),
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  setState(() => _comparisonResult = null);
-                },
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.close_rounded,
-                      color: Colors.red.shade400, size: 16),
-                ),
-              ),
-            ),
-          ]),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(18),
-            child: _buildFormattedComparisonResult(),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 
@@ -1112,4 +1266,22 @@ class _ComparisonScreenState extends State<ComparisonScreen>
       ]),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

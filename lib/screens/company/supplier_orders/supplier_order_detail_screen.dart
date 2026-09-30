@@ -11,11 +11,12 @@ class SupplierOrderDetailScreen extends StatefulWidget {
   final StorageService storageService;
   final int orderId;
 
-  const SupplierOrderDetailScreen(
-      {super.key,
-      required this.authService,
-      required this.storageService,
-      required this.orderId});
+  const SupplierOrderDetailScreen({
+    super.key,
+    required this.authService,
+    required this.storageService,
+    required this.orderId,
+  });
 
   @override
   State<SupplierOrderDetailScreen> createState() =>
@@ -24,6 +25,7 @@ class SupplierOrderDetailScreen extends StatefulWidget {
 
 class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
   static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color darkColor = Color(0xFF111827);
   static const Color mediumGray = Color(0xFF4B5563);
   static const Color lightGray = Color(0xFFF3F4F6);
@@ -91,10 +93,15 @@ class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
 
   void _showSnackBar(String message, Color color) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
         content: Text(message, style: GoogleFonts.cairo()),
         backgroundColor: color,
-        behavior: SnackBarBehavior.floating));
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 
   Color _getStatusColor(String? status) {
@@ -131,22 +138,47 @@ class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-          backgroundColor: cardWhite,
-          elevation: 0,
-          leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: darkColor),
-              onPressed: () => Navigator.pop(context)),
-          title: Text(_order?['supplier_order_number'] ?? 'تفاصيل الطلب',
-              style: GoogleFonts.cairo(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: darkColor))),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryBlue))
-          : _buildContent(),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: lightGray,
+        appBar: _buildAppBar(),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: primaryBlue))
+            : _buildContent(),
+      ),
+    );
+  }
+
+  AppBar _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Text(
+        _order?['supplier_order_number'] ?? 'تفاصيل الطلب',
+        style: GoogleFonts.cairo(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+      centerTitle: true,
+      flexibleSpace: ClipPath(
+        clipper: _BottomCurveClipper(),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryBlue, secondaryBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -155,7 +187,6 @@ class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
     final items = order['items'] as List? ?? [];
     final statusColor = _getStatusColor(order['status']);
 
-    // ✅ استخراج بيانات العمولة
     final percentageAlaamol =
         (order['percentage_alaamol_mn_alshrkat'] ?? 0).toDouble();
     final alaamolAmount = (order['alaamol_mn_alshrkat'] ?? 0).toDouble();
@@ -167,158 +198,228 @@ class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
       color: primaryBlue,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Status Update Card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
                 color: cardWhite,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200)),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('تحديث حالة الطلب',
-                  style: GoogleFonts.cairo(
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'تحديث حالة الطلب',
+                    style: GoogleFonts.cairo(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: darkColor)),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _selectedStatus,
-                isExpanded: true,
-                decoration: InputDecoration(
-                    labelText: 'الحالة',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12))),
-                items: [
-                  DropdownMenuItem(
-                      value: 'confirmed',
-                      child: Text('✅ تم التأكيد', style: GoogleFonts.cairo())),
-                  DropdownMenuItem(
-                      value: 'shipped',
-                      child: Text('📦 تم الشحن', style: GoogleFonts.cairo())),
-                  DropdownMenuItem(
-                      value: 'delivered',
-                      child: Text('🎯 تم التسليم', style: GoogleFonts.cairo())),
-                ],
-                onChanged: (v) => setState(() => _selectedStatus = v ?? ''),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _notesController,
-                maxLines: 2,
-                decoration: InputDecoration(
-                    labelText: 'ملاحظات',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12))),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
+                      color: darkColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _selectedStatus,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'الحالة',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'confirmed',
+                        child: Text('✅ تم التأكيد', style: GoogleFonts.cairo()),
+                      ),
+                      DropdownMenuItem(
+                        value: 'shipped',
+                        child: Text('📦 تم الشحن', style: GoogleFonts.cairo()),
+                      ),
+                      DropdownMenuItem(
+                        value: 'delivered',
+                        child:
+                            Text('🎯 تم التسليم', style: GoogleFonts.cairo()),
+                      ),
+                    ],
+                    onChanged: (v) => setState(() => _selectedStatus = v ?? ''),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _notesController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      labelText: 'ملاحظات (اختياري)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
                       onPressed: _updateStatus,
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryBlue,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12))),
-                      child: Text('تحديث',
-                          style: GoogleFonts.cairo(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)))),
-            ]),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Info Cards
-          Row(children: [
-            Expanded(
-                child: _buildInfoCard(
+                        backgroundColor: primaryBlue,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 4,
+                        shadowColor: primaryBlue.withOpacity(0.3),
+                      ),
+                      child: Text(
+                        'تحديث',
+                        style: GoogleFonts.cairo(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildInfoCard(
                     'رقم الطلب',
                     order['supplier_order_number'] ?? '-',
                     Icons.receipt_long_rounded,
-                    primaryBlue)),
-            const SizedBox(width: 10),
-            Expanded(
-                child: _buildInfoCard('الحالة', _getStatusText(order['status']),
-                    Icons.circle_rounded, statusColor)),
-          ]),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(
-                child: _buildInfoCard(
+                    primaryBlue,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildInfoCard(
+                    'الحالة',
+                    _getStatusText(order['status']),
+                    Icons.circle_rounded,
+                    statusColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildInfoCard(
                     'الإجمالي',
                     '${totalAmount.toStringAsFixed(2)} \$',
                     Icons.attach_money_rounded,
-                    successGreen)),
-            const SizedBox(width: 10),
-            Expanded(
-                child: _buildInfoCard(
+                    successGreen,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildInfoCard(
                     'التاريخ',
                     order['created_at']?.toString().substring(0, 10) ?? '-',
                     Icons.calendar_today_rounded,
-                    mediumGray)),
-          ]),
-
-          const SizedBox(height: 20),
-
-          // ✅ عمولة المنصة Card
-          if (percentageAlaamol > 0 || alaamolAmount > 0)
-            _buildCommissionCard(
-                percentageAlaamol, alaamolAmount, totalAmount, netAmount),
-
-          const SizedBox(height: 20),
-
-          // Items
-          Text('المنتجات (${items.length})',
+                    mediumGray,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            if (percentageAlaamol > 0 || alaamolAmount > 0)
+              _buildCommissionCard(
+                percentageAlaamol,
+                alaamolAmount,
+                totalAmount,
+                netAmount,
+              ),
+            const SizedBox(height: 20),
+            Text(
+              'المنتجات (${items.length})',
               style: GoogleFonts.cairo(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: darkColor)),
-          const SizedBox(height: 10),
-          ...items.asMap().entries.map((entry) {
-            final index = entry.key;
-            final item = entry.value;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: darkColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
                   color: cardWhite,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade100)),
-              child: Row(children: [
-                Expanded(
-                    child: Column(
+                  border: Border.all(color: Colors.grey.shade100),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      Text('${index + 1}. ${item['name'] ?? ''}',
-                          style: GoogleFonts.cairo(
+                          Text(
+                            '${index + 1}. ${item['name'] ?? ''}',
+                            style: GoogleFonts.cairo(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: darkColor)),
-                      const SizedBox(height: 2),
-                      Text(
-                          '${item['quantity']} × ${(item['unit_price'] ?? 0).toStringAsFixed(2)} \$',
-                          style: GoogleFonts.cairo(
-                              fontSize: 11, color: mediumGray)),
-                    ])),
-                Text('${(item['total_price'] ?? 0).toStringAsFixed(2)} \$',
-                    style: GoogleFonts.cairo(
+                              color: darkColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${item['quantity']} × ${(item['unit_price'] ?? 0).toStringAsFixed(2)} \$',
+                            style: GoogleFonts.cairo(
+                              fontSize: 11,
+                              color: mediumGray,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${(item['total_price'] ?? 0).toStringAsFixed(2)} \$',
+                      style: GoogleFonts.cairo(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: successGreen)),
-              ]),
-            );
-          }),
-
-          const SizedBox(height: 30),
-        ]),
+                        color: successGreen,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 30),
+          ],
+        ),
       ),
     );
   }
 
-  // ✅ ودجت بطاقة العمولة
   Widget _buildCommissionCard(
-      double percentage, double amount, double total, double net) {
+    double percentage,
+    double amount,
+    double total,
+    double net,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -329,11 +430,17 @@ class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFFBBF24), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFBBF24).withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               Container(
@@ -342,8 +449,11 @@ class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
                   color: const Color(0xFFFBBF24).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.percent_rounded,
-                    color: goldColor, size: 22),
+                child: const Icon(
+                  Icons.percent_rounded,
+                  color: goldColor,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
@@ -357,8 +467,6 @@ class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // نسبة العمولة
           _buildCommissionRow(
             'نسبة العمولة',
             '% ${percentage.toStringAsFixed(2)}',
@@ -366,20 +474,15 @@ class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
             goldColor,
           ),
           const SizedBox(height: 10),
-
-          // قيمة العمولة
           _buildCommissionRow(
             'قيمة العمولة',
             '${amount.toStringAsFixed(2)} \$',
             Icons.calculate_rounded,
             dangerRed,
           ),
-
           const SizedBox(height: 12),
           const Divider(color: Color(0xFFFDE68A)),
           const SizedBox(height: 8),
-
-          // صافي المبلغ
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -419,9 +522,12 @@ class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
     );
   }
 
-  // ✅ صف معلومات العمولة
   Widget _buildCommissionRow(
-      String label, String value, IconData icon, Color color) {
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -451,29 +557,72 @@ class _SupplierOrderDetailScreenState extends State<SupplierOrderDetailScreen> {
   }
 
   Widget _buildInfoCard(
-      String label, String value, IconData icon, Color color) {
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-          color: cardWhite,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade100)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
+        color: cardWhite,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: color, size: 18)),
-        const SizedBox(height: 8),
-        Text(label, style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
-        const SizedBox(height: 2),
-        Text(value,
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: GoogleFonts.cairo(fontSize: 11, color: mediumGray),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
             style: GoogleFonts.cairo(
-                fontSize: 13, fontWeight: FontWeight.bold, color: darkColor),
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: darkColor,
+            ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis),
-      ]),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 20);
+    path.quadraticBezierTo(0, size.height, 20, size.height);
+    path.lineTo(size.width - 20, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 20);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

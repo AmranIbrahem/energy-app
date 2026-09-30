@@ -1,16 +1,21 @@
 // lib/screens/company/products/products_list_screen.dart
 
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:GeniusHouse/screens/company/products/add_battery_screen.dart';
+import 'package:GeniusHouse/screens/company/products/add_cable_screen.dart';
+import 'package:GeniusHouse/screens/company/products/add_circuit_breaker_screen.dart';
+import 'package:GeniusHouse/screens/company/products/add_home_appliance_screen.dart';
+import 'package:GeniusHouse/screens/company/products/add_inverter_screen.dart';
+import 'package:GeniusHouse/screens/company/products/add_lighting_unit_screen.dart';
 import 'package:GeniusHouse/screens/company/products/add_product_screen.dart';
+import 'package:GeniusHouse/screens/company/products/add_solar_panel_screen.dart';
 import 'package:GeniusHouse/screens/company/products/edit_product_screen.dart';
 import 'package:GeniusHouse/screens/company/products/product_detail_screen.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ProductsListScreen extends StatefulWidget {
   final AuthService authService;
@@ -95,15 +100,16 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
 
   Future<void> _fetchSubCategories() async {
     try {
-      final response = await _apiService.get(
-          '/v1/company/products/create-data', requiresAuth: true);
+      final response = await _apiService.get('/v1/company/products/create-data',
+          requiresAuth: true);
       if (response['data'] != null &&
-          response['data']['sub_categories'] != null && mounted) {
-        setState(() =>
-        _subCategories = response['data']['sub_categories'] ?? []);
+          response['data']['sub_categories'] != null &&
+          mounted) {
+        setState(
+            () => _subCategories = response['data']['sub_categories'] ?? []);
       }
     } catch (e) {
-      debugPrint('Error fetching subcategories: $e');
+      // debugPrint('Error fetching subcategories: $e');
     }
   }
 
@@ -117,10 +123,11 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
 
     try {
       final queryParams = _buildQueryParams();
-      final response = await _apiService.get(
-          '/v1/company/products', requiresAuth: true, queryParams: queryParams);
+      final response = await _apiService.get('/v1/company/products',
+          requiresAuth: true, queryParams: queryParams);
 
-      if (response['data'] != null && response['data']['products'] != null &&
+      if (response['data'] != null &&
+          response['data']['products'] != null &&
           mounted) {
         final data = response['data'];
         setState(() {
@@ -135,7 +142,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
-      debugPrint('Error fetching products: $e');
+      // debugPrint('Error fetching products: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -147,10 +154,11 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
 
     try {
       final queryParams = _buildQueryParams(page: _currentPage + 1);
-      final response = await _apiService.get(
-          '/v1/company/products', requiresAuth: true, queryParams: queryParams);
+      final response = await _apiService.get('/v1/company/products',
+          requiresAuth: true, queryParams: queryParams);
 
-      if (response['data'] != null && response['data']['products'] != null &&
+      if (response['data'] != null &&
+          response['data']['products'] != null &&
           mounted) {
         final data = response['data'];
         setState(() {
@@ -163,7 +171,7 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
         if (mounted) setState(() => _isLoadingMore = false);
       }
     } catch (e) {
-      debugPrint('Error loading more products: $e');
+      // debugPrint('Error loading more products: $e');
       if (mounted) setState(() => _isLoadingMore = false);
     }
   }
@@ -191,27 +199,297 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
 
   // ==================== Navigation ====================
 
-  void _navigateToAddProduct() async {
-    final result = await Navigator.push(context, MaterialPageRoute(
-        builder: (_) =>
-            AddProductScreen(authService: widget.authService,
+  void _navigateToAddProduct() {
+    _showAddProductOptions();
+  }
+
+  // ✅ عرض خيارات إضافة المنتج
+  void _showAddProductOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: cardWhite,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ✅ مقبض السحب
+            Container(
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // ✅ العنوان
+            Text(
+              'اختر نوع المنتج',
+              style: GoogleFonts.cairo(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: darkColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'ما نوع المنتج الذي تريد إضافته؟',
+              style: GoogleFonts.cairo(
+                fontSize: 13,
+                color: mediumGray,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // ✅ شبكة الخيارات
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.3,
+              children: [
+                _buildProductTypeOption(
+                  icon: Icons.inventory_2_rounded,
+                  label: 'منتج عادي',
+                  color: primaryBlue,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToAddRegularProduct();
+                  },
+                ),
+                _buildProductTypeOption(
+                  icon: Icons.home_repair_service_rounded,
+                  label: 'أداة منزلية',
+                  color: const Color(0xFF059669),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToAddHomeAppliance();
+                  },
+                ),
+                _buildProductTypeOption(
+                  icon: Icons.solar_power_rounded,
+                  label: 'لوح طاقة شمسية',
+                  color: const Color(0xFFF59E0B),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToAddSolarPanel();
+                  },
+                ),
+                _buildProductTypeOption(
+                  icon: Icons.electric_bolt_rounded,
+                  label: 'عاكس (انفرتر)',
+                  color: const Color(0xFF7C3AED),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToAddInverter();
+                  },
+                ),
+                _buildProductTypeOption(
+                  icon: Icons.battery_full_rounded,
+                  label: 'بطارية',
+                  color: const Color(0xFF059669),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToAddBattery();
+                  },
+                ),
+                _buildProductTypeOption(
+                  icon: Icons.cable_rounded,
+                  label: 'كابل',
+                  color: const Color(0xFF8B4513),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToAddCable();
+                  },
+                ),
+                _buildProductTypeOption(
+                  icon: Icons.toggle_off_rounded,
+                  label: 'قاطع كهربائي',
+                  color: const Color(0xFFDC2626),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToAddCircuitBreaker();
+                  },
+                ),
+                _buildProductTypeOption(
+                  icon: Icons.lightbulb_rounded,
+                  label: 'وحدة إنارة',
+                  color: const Color(0xFFD97706),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _navigateToAddLightingUnit();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ بطاقة خيار نوع المنتج
+  Widget _buildProductTypeOption({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.25), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withOpacity(0.2), color.withOpacity(0.1)],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.cairo(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: darkColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ التنقل للشاشات المختلفة
+  void _navigateToAddRegularProduct() async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => AddProductScreen(
+                authService: widget.authService,
+                storageService: widget.storageService)));
+    if (result == true) _fetchProducts(refresh: true);
+  }
+
+  void _navigateToAddHomeAppliance() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HomeApplianceTypeSelectorScreen(
+          authService: widget.authService,
+          storageService: widget.storageService,
+        ),
+      ),
+    );
+    if (result == true) _fetchProducts(refresh: true);
+  }
+
+  void _navigateToAddSolarPanel() async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => AddSolarPanelScreen(
+                authService: widget.authService,
+                storageService: widget.storageService)));
+    if (result == true) _fetchProducts(refresh: true);
+  }
+
+  void _navigateToAddInverter() async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => AddInverterScreen(
+                authService: widget.authService,
+                storageService: widget.storageService)));
+    if (result == true) _fetchProducts(refresh: true);
+  }
+
+  void _navigateToAddBattery() async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => AddBatteryScreen(
+                authService: widget.authService,
+                storageService: widget.storageService)));
+    if (result == true) _fetchProducts(refresh: true);
+  }
+
+  void _navigateToAddCable() async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => AddCableScreen(
+                authService: widget.authService,
+                storageService: widget.storageService)));
+    if (result == true) _fetchProducts(refresh: true);
+  }
+
+  void _navigateToAddCircuitBreaker() async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => AddCircuitBreakerScreen(
+                authService: widget.authService,
+                storageService: widget.storageService)));
+    if (result == true) _fetchProducts(refresh: true);
+  }
+
+  void _navigateToAddLightingUnit() async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => AddLightingUnitScreen(
+                authService: widget.authService,
                 storageService: widget.storageService)));
     if (result == true) _fetchProducts(refresh: true);
   }
 
   void _navigateToEditProduct(dynamic product) async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) =>
-        EditProductScreen(authService: widget.authService,
-            storageService: widget.storageService,
-            productId: product['id'])));
+    await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => EditProductScreen(
+                authService: widget.authService,
+                storageService: widget.storageService,
+                productId: product['id'])));
     _fetchProducts(refresh: true);
   }
 
   void _navigateToProductDetail(dynamic product) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) =>
-        ProductDetailScreen(authService: widget.authService,
-            storageService: widget.storageService,
-            productId: product['id'])));
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => ProductDetailScreen(
+                authService: widget.authService,
+                storageService: widget.storageService,
+                productId: product['id'])));
   }
 
   // ==================== Actions ====================
@@ -219,12 +497,15 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
   Future<void> _toggleProductStatus(int productId, bool currentStatus) async {
     try {
       final response = await _apiService.post(
-          '/v1/company/products/$productId/toggle-status', requiresAuth: true,
+          '/v1/company/products/$productId/toggle-status',
+          requiresAuth: true,
           data: {});
       if (response['data'] != null && mounted) {
-        _showSnackBar(response['message'] ?? 'تم تغيير الحالة',
-            response['data']?['is_active'] == true ? successGreen : Colors
-                .orange);
+        _showSnackBar(
+            response['message'] ?? 'تم تغيير الحالة',
+            response['data']?['is_active'] == true
+                ? successGreen
+                : Colors.orange);
         _fetchProducts(refresh: true);
       }
     } catch (e) {
@@ -235,37 +516,39 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
   Future<void> _deleteProduct(int productId, String productName) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) =>
-          AlertDialog(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20)),
-            title: Row(children: [
-              Icon(Icons.warning_rounded, color: dangerRed, size: 28),
-              const SizedBox(width: 10),
-              Text('تأكيد الحذف', style: GoogleFonts.cairo(
-                  fontWeight: FontWeight.bold, fontSize: 18))
-            ]),
-            content: Text(
-                'هل أنت متأكد من حذف المنتج "$productName"؟\nهذا الإجراء لا يمكن التراجع عنه.',
-                style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false),
-                  child: Text(
-                      'إلغاء', style: GoogleFonts.cairo(color: mediumGray))),
-              ElevatedButton(onPressed: () => Navigator.pop(context, true),
-                  style: ElevatedButton.styleFrom(backgroundColor: dangerRed,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12))),
-                  child: Text('نعم، احذف',
-                      style: GoogleFonts.cairo(color: Colors.white))),
-            ],
-          ),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Icon(Icons.warning_rounded, color: dangerRed, size: 28),
+          const SizedBox(width: 10),
+          Text('تأكيد الحذف',
+              style:
+                  GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 18))
+        ]),
+        content: Text(
+            'هل أنت متأكد من حذف المنتج "$productName"؟\nهذا الإجراء لا يمكن التراجع عنه.',
+            style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child:
+                  Text('إلغاء', style: GoogleFonts.cairo(color: mediumGray))),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: dangerRed,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12))),
+              child: Text('نعم، احذف',
+                  style: GoogleFonts.cairo(color: Colors.white))),
+        ],
+      ),
     );
 
     if (confirm == true) {
       try {
-        final response = await _apiService.delete(
-            '/v1/company/products/$productId', requiresAuth: true);
+        final response = await _apiService
+            .delete('/v1/company/products/$productId', requiresAuth: true);
         if (response['data'] != null && mounted) {
           _showSnackBar('تم حذف المنتج بنجاح', successGreen);
           _fetchProducts(refresh: true);
@@ -279,16 +562,22 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Row(children: [
-        Icon(color == successGreen ? Icons.check_circle_rounded : Icons
-            .info_rounded, color: Colors.white, size: 20),
-        const SizedBox(width: 10),
-        Expanded(child: Text(message, style: GoogleFonts.cairo(fontSize: 14)))
-      ]),
+      ..showSnackBar(SnackBar(
+          content: Row(children: [
+            Icon(
+                color == successGreen
+                    ? Icons.check_circle_rounded
+                    : Icons.info_rounded,
+                color: Colors.white,
+                size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Text(message, style: GoogleFonts.cairo(fontSize: 14)))
+          ]),
           backgroundColor: color,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 2)));
   }
@@ -310,46 +599,61 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
   // ==================== Build ====================
 
   @override
+// ==================== Build ====================
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      floatingActionButton: FloatingActionButton.extended(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: lightGray,
+        floatingActionButton: FloatingActionButton.extended(
           onPressed: _navigateToAddProduct,
           backgroundColor: primaryBlue,
           icon: const Icon(Icons.add_rounded, color: Colors.white),
-          label: Text('إضافة منتج', style: GoogleFonts.cairo(
-              color: Colors.white, fontWeight: FontWeight.w600))),
-      body: Column(children: [
-        _buildSearchBar(),
-        _buildFiltersSection(),
-        _buildHeaderInfo(),
-        Expanded(child: _buildProductsList()),
-      ]),
+          label: Text('إضافة منتج',
+              style: GoogleFonts.cairo(
+                  color: Colors.white, fontWeight: FontWeight.w600)),
+        ),
+        body: Column(
+          children: [
+            _buildSearchBar(), // ❌ تم إزالة شريط البحث
+            _buildFiltersSection(), // ❌ تم إزالة الفلاتر
+            _buildHeaderInfo(), // ❌ تم إزالة الهيدر
+            Expanded(child: _buildProductsList()), // ✅ فقط قائمة المنتجات
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.all(12), color: cardWhite,
+      padding: const EdgeInsets.all(12),
+      color: cardWhite,
       child: TextField(
         controller: _searchController,
         style: GoogleFonts.cairo(fontSize: 14),
         decoration: InputDecoration(
             hintText: '🔍 بحث عن منتج (اسم، SKU، علامة تجارية)...',
-            hintStyle: GoogleFonts.cairo(
-                fontSize: 13, color: Colors.grey.shade400),
+            hintStyle:
+                GoogleFonts.cairo(fontSize: 13, color: Colors.grey.shade400),
             prefixIcon: const Icon(Icons.search_rounded, color: primaryBlue),
-            suffixIcon: _searchController.text.isNotEmpty ? IconButton(
-                icon: const Icon(Icons.clear_rounded, size: 20), onPressed: () {
-              _searchController.clear();
-              _fetchProducts(refresh: true);
-            }) : null,
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 20),
+                    onPressed: () {
+                      _searchController.clear();
+                      _fetchProducts(refresh: true);
+                    })
+                : null,
             filled: true,
             fillColor: lightGray,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none),
-            contentPadding: const EdgeInsets.symmetric(
-                vertical: 12, horizontal: 16)),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 12, horizontal: 16)),
         onSubmitted: (_) => _fetchProducts(refresh: true),
         onChanged: (_) => setState(() {}),
       ),
@@ -363,134 +667,156 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
         title: Row(children: [
           Icon(Icons.filter_list_rounded, color: primaryBlue, size: 20),
           const SizedBox(width: 8),
-          Text('الفلاتر والتصفية', style: GoogleFonts.cairo(
-              fontSize: 14, fontWeight: FontWeight.w600, color: darkColor))
+          Text('الفلاتر والتصفية',
+              style: GoogleFonts.cairo(
+                  fontSize: 14, fontWeight: FontWeight.w600, color: darkColor))
         ]),
-        trailing: Row(mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_hasActiveFilters()) TextButton(onPressed: _clearFilters,
-                  child: Text('مسح الكل', style: GoogleFonts.cairo(
-                      fontSize: 12, color: dangerRed))),
-              const Icon(Icons.expand_more_rounded, color: mediumGray)
-            ]),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (_hasActiveFilters())
+            TextButton(
+                onPressed: _clearFilters,
+                child: Text('مسح الكل',
+                    style: GoogleFonts.cairo(fontSize: 12, color: dangerRed))),
+          const Icon(Icons.expand_more_rounded, color: mediumGray)
+        ]),
         initiallyExpanded: false,
         children: [
-          Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(children: [
                 const SizedBox(height: 8),
                 // الصف الأول
                 Row(children: [
-                  Expanded(child: _buildFilterDropdown(label: 'التصنيف الفرعي',
-                      value: _selectedSubCategoryId,
-                      items: [
-                        {'key': null, 'label': 'جميع التصنيفات'},
-                        ..._subCategories.map((s) =>
-                        {
-                          'key': s['id']?.toString(),
-                          'label': s['name_ar'] ?? ''
-                        })
-                      ],
-                      onChanged: (v) {
-                        setState(() => _selectedSubCategoryId = v);
-                        _fetchProducts(refresh: true);
-                      })),
+                  Expanded(
+                      child: _buildFilterDropdown(
+                          label: 'التصنيف الفرعي',
+                          value: _selectedSubCategoryId,
+                          items: [
+                            {'key': null, 'label': 'جميع التصنيفات'},
+                            ..._subCategories.map((s) => {
+                                  'key': s['id']?.toString(),
+                                  'label': s['name_ar'] ?? ''
+                                })
+                          ],
+                          onChanged: (v) {
+                            setState(() => _selectedSubCategoryId = v);
+                            _fetchProducts(refresh: true);
+                          })),
                   const SizedBox(width: 10),
-                  Expanded(child: _buildFilterDropdown(label: 'الحالة',
-                      value: _selectedStatus,
-                      items: [
-                        {'key': null, 'label': 'الكل'},
-                        {'key': 'active', 'label': 'نشط'},
-                        {'key': 'inactive', 'label': 'غير نشط'}
-                      ],
-                      onChanged: (v) {
-                        setState(() => _selectedStatus = v);
-                        _fetchProducts(refresh: true);
-                      }))
+                  Expanded(
+                      child: _buildFilterDropdown(
+                          label: 'الحالة',
+                          value: _selectedStatus,
+                          items: [
+                            {'key': null, 'label': 'الكل'},
+                            {'key': 'active', 'label': 'نشط'},
+                            {'key': 'inactive', 'label': 'غير نشط'}
+                          ],
+                          onChanged: (v) {
+                            setState(() => _selectedStatus = v);
+                            _fetchProducts(refresh: true);
+                          }))
                 ]),
                 const SizedBox(height: 10),
                 // ✅ الصف الثاني - الموافقة والكمية
                 Row(children: [
-                  Expanded(child: _buildFilterDropdown(label: 'الموافقة',
-                      value: _selectedApprovalStatus,
-                      items: [
-                        {'key': null, 'label': 'الكل'},
-                        {'key': 'approved', 'label': 'تمت الموافقة'},
-                        {'key': 'pending', 'label': 'قيد المراجعة'}
-                      ],
-                      onChanged: (v) {
-                        setState(() => _selectedApprovalStatus = v);
-                        _fetchProducts(refresh: true);
-                      })),
+                  Expanded(
+                      child: _buildFilterDropdown(
+                          label: 'الموافقة',
+                          value: _selectedApprovalStatus,
+                          items: [
+                            {'key': null, 'label': 'الكل'},
+                            {'key': 'approved', 'label': 'تمت الموافقة'},
+                            {'key': 'pending', 'label': 'قيد المراجعة'}
+                          ],
+                          onChanged: (v) {
+                            setState(() => _selectedApprovalStatus = v);
+                            _fetchProducts(refresh: true);
+                          })),
                   const SizedBox(width: 10),
-                  Expanded(child: _buildFilterDropdown(label: 'الكمية',
-                      value: _selectedStockStatus,
-                      items: [
-                        {'key': null, 'label': 'الكل'},
-                        {'key': 'in_stock', 'label': 'متوفر'},
-                        {'key': 'out_of_stock', 'label': 'غير متوفر'}
-                      ],
-                      onChanged: (v) {
-                        setState(() => _selectedStockStatus = v);
-                        _fetchProducts(refresh: true);
-                      })),
+                  Expanded(
+                      child: _buildFilterDropdown(
+                          label: 'الكمية',
+                          value: _selectedStockStatus,
+                          items: [
+                            {'key': null, 'label': 'الكل'},
+                            {'key': 'in_stock', 'label': 'متوفر'},
+                            {'key': 'out_of_stock', 'label': 'غير متوفر'}
+                          ],
+                          onChanged: (v) {
+                            setState(() => _selectedStockStatus = v);
+                            _fetchProducts(refresh: true);
+                          })),
                 ]),
                 const SizedBox(height: 10),
                 Row(children: [
-                  Expanded(child: _buildFilterDropdown(label: 'الترتيب',
-                      value: _selectedSort,
-                      items: [
-                        {'key': 'latest', 'label': 'الأحدث'},
-                        {'key': 'oldest', 'label': 'الأقدم'},
-                        {'key': 'price_asc', 'label': 'السعر (من الأقل)'},
-                        {'key': 'price_desc', 'label': 'السعر (من الأعلى)'},
-                        {'key': 'name_asc', 'label': 'الاسم (أ-ي)'},
-                        {'key': 'name_desc', 'label': 'الاسم (ي-أ)'},
-                        {'key': 'views_desc', 'label': 'الأكثر مشاهدة'}
-                      ],
-                      onChanged: (v) {
-                        setState(() => _selectedSort = v ?? 'latest');
-                        _fetchProducts(refresh: true);
-                      }))
+                  Expanded(
+                      child: _buildFilterDropdown(
+                          label: 'الترتيب',
+                          value: _selectedSort,
+                          items: [
+                            {'key': 'latest', 'label': 'الأحدث'},
+                            {'key': 'oldest', 'label': 'الأقدم'},
+                            {'key': 'price_asc', 'label': 'السعر (من الأقل)'},
+                            {'key': 'price_desc', 'label': 'السعر (من الأعلى)'},
+                            {'key': 'name_asc', 'label': 'الاسم (أ-ي)'},
+                            {'key': 'name_desc', 'label': 'الاسم (ي-أ)'},
+                            {'key': 'views_desc', 'label': 'الأكثر مشاهدة'}
+                          ],
+                          onChanged: (v) {
+                            setState(() => _selectedSort = v ?? 'latest');
+                            _fetchProducts(refresh: true);
+                          }))
                 ]),
                 const SizedBox(height: 10),
                 Row(children: [
-                  Expanded(child: TextField(controller: _minPriceController,
-                      keyboardType: TextInputType.number,
-                      style: GoogleFonts.cairo(fontSize: 13),
-                      decoration: InputDecoration(labelText: 'السعر من',
-                          labelStyle: GoogleFonts.cairo(
-                              fontSize: 11, color: mediumGray),
-                          filled: true,
-                          fillColor: lightGray,
-                          border: OutlineInputBorder(borderRadius: BorderRadius
-                              .circular(10), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 12),
-                          isDense: true))),
+                  Expanded(
+                      child: TextField(
+                          controller: _minPriceController,
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.cairo(fontSize: 13),
+                          decoration: InputDecoration(
+                              labelText: 'السعر من',
+                              labelStyle: GoogleFonts.cairo(
+                                  fontSize: 11, color: mediumGray),
+                              filled: true,
+                              fillColor: lightGray,
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide.none),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 12),
+                              isDense: true))),
                   const SizedBox(width: 10),
-                  Expanded(child: TextField(controller: _maxPriceController,
-                      keyboardType: TextInputType.number,
-                      style: GoogleFonts.cairo(fontSize: 13),
-                      decoration: InputDecoration(labelText: 'السعر إلى',
-                          labelStyle: GoogleFonts.cairo(
-                              fontSize: 11, color: mediumGray),
-                          filled: true,
-                          fillColor: lightGray,
-                          border: OutlineInputBorder(borderRadius: BorderRadius
-                              .circular(10), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 12),
-                          isDense: true))),
+                  Expanded(
+                      child: TextField(
+                          controller: _maxPriceController,
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.cairo(fontSize: 13),
+                          decoration: InputDecoration(
+                              labelText: 'السعر إلى',
+                              labelStyle: GoogleFonts.cairo(
+                                  fontSize: 11, color: mediumGray),
+                              filled: true,
+                              fillColor: lightGray,
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide.none),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 12),
+                              isDense: true))),
                   const SizedBox(width: 10),
-                  ElevatedButton(onPressed: () => _fetchProducts(refresh: true),
+                  ElevatedButton(
+                      onPressed: () => _fetchProducts(refresh: true),
                       style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBlue,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10)),
                           padding: const EdgeInsets.symmetric(
                               vertical: 10, horizontal: 16)),
-                      child: Text('تطبيق', style: GoogleFonts.cairo(
-                          fontSize: 13, color: Colors.white)))
+                      child: Text('تطبيق',
+                          style: GoogleFonts.cairo(
+                              fontSize: 13, color: Colors.white)))
                 ]),
               ]))
         ],
@@ -521,12 +847,13 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
               isExpanded: true,
               isDense: true,
               style: GoogleFonts.cairo(fontSize: 13, color: darkColor),
-              items: items.map((item) =>
-                  DropdownMenuItem<String>(
-                    value: item['key'],
-                    child: Text(item['label'] ?? '',
-                        style: GoogleFonts.cairo(fontSize: 13)),
-                  )).toList(),
+              items: items
+                  .map((item) => DropdownMenuItem<String>(
+                        value: item['key'],
+                        child: Text(item['label'] ?? '',
+                            style: GoogleFonts.cairo(fontSize: 13)),
+                      ))
+                  .toList(),
               onChanged: onChanged,
             ),
           ),
@@ -536,11 +863,14 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
   }
 
   bool _hasActiveFilters() =>
-      _selectedSubCategoryId != null || _selectedStatus != null ||
-          _selectedStockStatus != null || _selectedApprovalStatus != null || // ✅ جديد
-          _minPriceController.text.isNotEmpty ||
-          _maxPriceController.text.isNotEmpty || _selectedSort != 'latest' ||
-          _searchController.text.isNotEmpty;
+      _selectedSubCategoryId != null ||
+      _selectedStatus != null ||
+      _selectedStockStatus != null ||
+      _selectedApprovalStatus != null || // ✅ جديد
+      _minPriceController.text.isNotEmpty ||
+      _maxPriceController.text.isNotEmpty ||
+      _selectedSort != 'latest' ||
+      _searchController.text.isNotEmpty;
 
   Widget _buildHeaderInfo() {
     return Container(
@@ -588,7 +918,8 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
           color: isActive ? primaryBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(icon, size: 20, color: isActive ? Colors.white : mediumGray),
+        child:
+            Icon(icon, size: 20, color: isActive ? Colors.white : mediumGray),
       ),
     );
   }
@@ -615,8 +946,10 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
       itemCount: _products.length + (_isLoadingMore ? 2 : 0),
       itemBuilder: (context, index) {
         if (index >= _products.length) {
-          return const Center(child: Padding(padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(color: primaryBlue)));
+          return const Center(
+              child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: CircularProgressIndicator(color: primaryBlue)));
         }
         return _buildProductCard(_products[index]);
       },
@@ -630,8 +963,10 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
       itemCount: _products.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index >= _products.length) {
-          return const Center(child: Padding(padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(color: primaryBlue)));
+          return const Center(
+              child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: CircularProgressIndicator(color: primaryBlue)));
         }
         return _buildProductListItem(_products[index]);
       },
@@ -642,7 +977,8 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
     final String name = product['name_ar'] ?? '';
     final String sku = product['sku'] ?? '';
     final String price = product['final_price'] ?? '0';
-    final String? originalPrice = (product['discount_percentage'] ?? 0) > 0 ? product['price'] : null;
+    final String? originalPrice =
+        (product['discount_percentage'] ?? 0) > 0 ? product['price'] : null;
     final int stock = product['stock'] ?? 0;
     final bool isActive = product['is_active'] ?? false;
     final bool isApproved = product['is_approved'] ?? false; // ✅ جديد
@@ -656,7 +992,10 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
           color: cardWhite,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 3)),
+            BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3)),
           ],
           border: Border.all(color: Colors.grey.shade100),
         ),
@@ -669,18 +1008,25 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
               child: Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(16)),
                     child: Container(
                       width: double.infinity,
                       color: lightGray,
                       child: imageUrl != null
                           ? CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => const Center(child: CircularProgressIndicator(strokeWidth: 2, color: primaryBlue)),
-                        errorWidget: (_, __, ___) => const Center(child: Icon(Icons.image_not_supported_rounded, size: 40, color: Colors.grey)),
-                      )
-                          : const Center(child: Icon(Icons.image_rounded, size: 40, color: Colors.grey)),
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => const Center(
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: primaryBlue)),
+                              errorWidget: (_, __, ___) => const Center(
+                                  child: Icon(Icons.image_not_supported_rounded,
+                                      size: 40, color: Colors.grey)),
+                            )
+                          : const Center(
+                              child: Icon(Icons.image_rounded,
+                                  size: 40, color: Colors.grey)),
                     ),
                   ),
                   if (discountPercent > 0)
@@ -688,9 +1034,16 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                       top: 8,
                       left: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                        decoration: BoxDecoration(color: dangerRed, borderRadius: BorderRadius.circular(8)),
-                        child: Text('-$discountPercent%', style: GoogleFonts.cairo(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                            color: dangerRed,
+                            borderRadius: BorderRadius.circular(8)),
+                        child: Text('-$discountPercent%',
+                            style: GoogleFonts.cairo(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
                       ),
                     ),
                   // ✅ شارة الموافقة
@@ -698,14 +1051,20 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                     top: 8,
                     left: discountPercent > 0 ? 50 : 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
-                        color: isApproved ? successGreen.withOpacity(0.9) : warningColor.withOpacity(0.9),
+                        color: isApproved
+                            ? successGreen.withOpacity(0.9)
+                            : warningColor.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         isApproved ? '✓ موافق' : '⏳ مراجعة',
-                        style: GoogleFonts.cairo(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: GoogleFonts.cairo(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
                       ),
                     ),
                   ),
@@ -713,14 +1072,20 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                     top: 8,
                     right: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
-                        color: stock > 0 ? successGreen.withOpacity(0.9) : Colors.orange.withOpacity(0.9),
+                        color: stock > 0
+                            ? successGreen.withOpacity(0.9)
+                            : Colors.orange.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         stock > 0 ? '$stock قطعة' : 'غير متوفر',
-                        style: GoogleFonts.cairo(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: GoogleFonts.cairo(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
                       ),
                     ),
                   ),
@@ -736,9 +1101,17 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(name, style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.bold, color: darkColor), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(name,
+                        style: GoogleFonts.cairo(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: darkColor),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 2),
-                    Text('SKU: $sku', style: GoogleFonts.cairo(fontSize: 9, color: mediumGray)),
+                    Text('SKU: $sku',
+                        style:
+                            GoogleFonts.cairo(fontSize: 9, color: mediumGray)),
                     const SizedBox(height: 4),
                     Row(
                       children: [
@@ -747,30 +1120,47 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (originalPrice != null)
-                                Text(originalPrice, style: GoogleFonts.cairo(fontSize: 10, color: Colors.grey, decoration: TextDecoration.lineThrough)),
-                              Text('$price \$', style: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.bold, color: primaryBlue)),
+                                Text(originalPrice,
+                                    style: GoogleFonts.cairo(
+                                        fontSize: 10,
+                                        color: Colors.grey,
+                                        decoration:
+                                            TextDecoration.lineThrough)),
+                              Text('$price \$',
+                                  style: GoogleFonts.cairo(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryBlue)),
                             ],
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => _toggleProductStatus(product['id'], isActive),
+                          onTap: () =>
+                              _toggleProductStatus(product['id'], isActive),
                           child: Container(
                             width: 36,
                             height: 20,
                             decoration: BoxDecoration(
-                              color: isActive ? successGreen : Colors.grey.shade300,
+                              color: isActive
+                                  ? successGreen
+                                  : Colors.grey.shade300,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Stack(
                               children: [
                                 AnimatedAlign(
-                                  alignment: isActive ? Alignment.centerRight : Alignment.centerLeft,
+                                  alignment: isActive
+                                      ? Alignment.centerRight
+                                      : Alignment.centerLeft,
                                   duration: const Duration(milliseconds: 200),
                                   child: Container(
                                     width: 16,
                                     height: 16,
-                                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 2),
+                                    decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle),
                                   ),
                                 ),
                               ],
@@ -783,8 +1173,10 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildActionButton(Icons.edit_rounded, primaryBlue, () => _navigateToEditProduct(product)),
-                        _buildActionButton(Icons.delete_rounded, dangerRed, () => _deleteProduct(product['id'], name)),
+                        _buildActionButton(Icons.edit_rounded, primaryBlue,
+                            () => _navigateToEditProduct(product)),
+                        _buildActionButton(Icons.delete_rounded, dangerRed,
+                            () => _deleteProduct(product['id'], name)),
                       ],
                     ),
                   ],
@@ -808,38 +1200,53 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
 
     return GestureDetector(
       onTap: () => _navigateToProductDetail(product),
-      child: Container(margin: const EdgeInsets.only(bottom: 10),
+      child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: cardWhite,
+          decoration: BoxDecoration(
+              color: cardWhite,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.04),
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 2))
               ]),
           child: Row(children: [
-            ClipRRect(borderRadius: BorderRadius.circular(10),
-                child: SizedBox(width: 60,
+            ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                    width: 60,
                     height: 60,
-                    child: imageUrl != null ? CachedNetworkImage(
-                        imageUrl: imageUrl, fit: BoxFit.cover) : Container(
-                        color: lightGray,
-                        child: const Icon(
-                            Icons.image_rounded, color: Colors.grey)))),
+                    child: imageUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: imageUrl, fit: BoxFit.cover)
+                        : Container(
+                            color: lightGray,
+                            child: const Icon(Icons.image_rounded,
+                                color: Colors.grey)))),
             const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                   Row(children: [
-                    Expanded(child: Text(name, style: GoogleFonts.cairo(fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: darkColor),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis)),
+                    Expanded(
+                        child: Text(name,
+                            style: GoogleFonts.cairo(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: darkColor),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis)),
                     // ✅ شارة الموافقة
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isApproved ? successGreen.withOpacity(0.1) : warningColor.withOpacity(0.1),
+                        color: isApproved
+                            ? successGreen.withOpacity(0.1)
+                            : warningColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -858,31 +1265,34 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
             Column(children: [
               GestureDetector(
                   onTap: () => _toggleProductStatus(product['id'], isActive),
-                  child: Container(width: 36,
+                  child: Container(
+                      width: 36,
                       height: 20,
                       decoration: BoxDecoration(
                           color: isActive ? successGreen : Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(10)),
                       child: Stack(children: [
-                        AnimatedAlign(alignment: isActive
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
+                        AnimatedAlign(
+                            alignment: isActive
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
                             duration: const Duration(milliseconds: 200),
-                            child: Container(width: 16,
+                            child: Container(
+                                width: 16,
                                 height: 16,
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 2),
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 2),
                                 decoration: const BoxDecoration(
                                     color: Colors.white,
                                     shape: BoxShape.circle)))
                       ]))),
               const SizedBox(height: 8),
               Row(children: [
-                _buildActionButton(Icons.edit_rounded, primaryBlue, () =>
-                    _navigateToEditProduct(product)),
+                _buildActionButton(Icons.edit_rounded, primaryBlue,
+                    () => _navigateToEditProduct(product)),
                 const SizedBox(width: 4),
-                _buildActionButton(Icons.delete_rounded, dangerRed, () =>
-                    _deleteProduct(product['id'], name))
+                _buildActionButton(Icons.delete_rounded, dangerRed,
+                    () => _deleteProduct(product['id'], name))
               ])
             ]),
           ])),
@@ -905,37 +1315,61 @@ class _ProductsListScreenState extends State<ProductsListScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                  color: primaryBlue.withOpacity(0.08), shape: BoxShape.circle),
-              child: Icon(Icons.inventory_2_rounded, size: 64,
-                  color: primaryBlue.withOpacity(0.4))),
-          const SizedBox(height: 20),
-          Text('لا توجد منتجات', style: GoogleFonts.cairo(
+    return Center(
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+              color: primaryBlue.withOpacity(0.08), shape: BoxShape.circle),
+          child: Icon(Icons.inventory_2_rounded,
+              size: 64, color: primaryBlue.withOpacity(0.4))),
+      const SizedBox(height: 20),
+      Text('لا توجد منتجات',
+          style: GoogleFonts.cairo(
               fontSize: 20, fontWeight: FontWeight.bold, color: darkColor)),
-          const SizedBox(height: 8),
-          Text('لم يتم العثور على منتجات مطابقة',
-              style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
-          if (_hasActiveFilters()) ...[
-            const SizedBox(height: 16),
-            TextButton.icon(onPressed: _clearFilters,
-                icon: const Icon(Icons.clear_all_rounded, color: primaryBlue),
-                label: Text('مسح الفلاتر',
-                    style: GoogleFonts.cairo(color: primaryBlue)))
-          ]
-        ]));
+      const SizedBox(height: 8),
+      Text('لم يتم العثور على منتجات مطابقة',
+          style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
+      if (_hasActiveFilters()) ...[
+        const SizedBox(height: 16),
+        TextButton.icon(
+            onPressed: _clearFilters,
+            icon: const Icon(Icons.clear_all_rounded, color: primaryBlue),
+            label: Text('مسح الفلاتر',
+                style: GoogleFonts.cairo(color: primaryBlue)))
+      ]
+    ]));
   }
 
-  Widget _buildShimmerGrid() =>
-      GridView.count(crossAxisCount: 2,
-          padding: const EdgeInsets.all(12),
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 0.72,
-          children: List.generate(6, (index) =>
-              Container(decoration: BoxDecoration(
+  Widget _buildShimmerGrid() => GridView.count(
+      crossAxisCount: 2,
+      padding: const EdgeInsets.all(12),
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 0.72,
+      children: List.generate(
+          6,
+          (index) => Container(
+              decoration: BoxDecoration(
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(16)))));
+}
+
+// ✅ كلاس المنحنى السفلي للـ AppBar
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 20);
+    path.quadraticBezierTo(0, size.height, 20, size.height);
+    path.lineTo(size.width - 20, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 20);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

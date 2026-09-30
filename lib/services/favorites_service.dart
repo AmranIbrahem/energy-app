@@ -1,8 +1,10 @@
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FavoritesService {
   static final FavoritesService _instance = FavoritesService._internal();
+
   static FavoritesService get instance => _instance;
 
   FavoritesService._internal();
@@ -12,11 +14,14 @@ class FavoritesService {
 
   List<Map<String, dynamic>> get favoriteProducts =>
       List.unmodifiable(_favoriteProducts);
+
   List<Map<String, dynamic>> get favoriteOffers =>
       List.unmodifiable(_favoriteOffers);
 
   int get productsCount => _favoriteProducts.length;
+
   int get offersCount => _favoriteOffers.length;
+
   int get totalCount => _favoriteProducts.length + _favoriteOffers.length;
 
   Future<void> loadFavorites() async {
@@ -69,6 +74,13 @@ class FavoritesService {
             product['discount_price'] ??
             product['price'] ??
             0,
+        'price_syp': product['price_syp'] ?? 0,
+        'discount_price_syp':
+            product['discount_price_syp'] ?? product['final_price_syp'] ?? 0,
+        'final_price_syp': product['final_price_syp'] ??
+            product['discount_price_syp'] ??
+            product['price_syp'] ??
+            0,
         'main_image': product['main_image'] ??
             product['cover_image'] ??
             product['image'] ??
@@ -76,6 +88,9 @@ class FavoritesService {
         'cover_image': product['cover_image'] ?? product['main_image'] ?? '',
         'discount_percentage': product['discount_percentage'] ?? 0,
         'rate': product['rate'] ?? 0,
+        'brand': product['brand'] ?? '',
+        'stock': product['stock'] ?? 0,
+        'governorate_product': product['governorate_product'] ?? '',
         'has_discount': (product['discount_price'] != null &&
                 product['discount_price'] > 0) ||
             (product['discount_percentage'] != null &&
@@ -109,6 +124,13 @@ class FavoritesService {
             offer['discount_price'] ??
             offer['price'] ??
             0,
+        'price_syp': offer['price_syp'] ?? 0,
+        'discount_price_syp':
+            offer['discount_price_syp'] ?? offer['final_price_syp'] ?? 0,
+        'final_price_syp': offer['final_price_syp'] ??
+            offer['discount_price_syp'] ??
+            offer['price_syp'] ??
+            0,
         'cover_image':
             offer['cover_image'] ?? offer['main_image'] ?? offer['image'] ?? '',
         'main_image': offer['main_image'] ?? offer['cover_image'] ?? '',
@@ -116,6 +138,7 @@ class FavoritesService {
         'total_wattage': offer['total_wattage'] ?? 0,
         'total_capacity': offer['total_capacity'] ?? 0,
         'rate': offer['rate'] ?? 0,
+        'governorate_offer': offer['governorate_offer'] ?? '',
         'has_discount':
             (offer['discount_price'] != null && offer['discount_price'] > 0) ||
                 (offer['discount_percentage'] != null &&

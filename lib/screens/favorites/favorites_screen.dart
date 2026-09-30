@@ -1,15 +1,18 @@
 // lib/screens/favorites/favorites_screen.dart
 
+import 'dart:ui' as ui;
+
+import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
+import 'package:GeniusHouse/screens/products/product_details_screen.dart';
+import 'package:GeniusHouse/services/favorites_service.dart';
+import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:GeniusHouse/widgets/offer_card.dart';
+import 'package:GeniusHouse/widgets/product_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:flutter/services.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
-import 'package:GeniusHouse/services/favorites_service.dart';
-import 'package:GeniusHouse/screens/products/product_details_screen.dart';
-import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
-import 'package:GeniusHouse/widgets/product_card.dart';
-import 'package:GeniusHouse/widgets/offer_card.dart';
+
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 
@@ -242,213 +245,215 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     final bool hasOffers = _favoriteOffers.isNotEmpty;
     final bool isEmpty = !_isLoading && !hasProducts && !hasOffers;
 
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: 1.0 + (_pulseAnimationController.value * 0.15),
-                  child: child,
-                );
-              },
-              child: const Icon(Icons.favorite_rounded,
-                  color: Colors.red, size: 24),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'المفضلة',
-              style: GoogleFonts.cairo(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-        elevation: 0,
-        centerTitle: true,
-        actions: [
-          Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: PopupMenuButton<String>(
-              icon: const Icon(Icons.filter_list_rounded,
-                  color: Colors.white, size: 22),
-              offset: const Offset(0, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              color: cardWhite,
-              elevation: 10,
-              onSelected: (value) {
-                HapticFeedback.lightImpact();
-                setState(() => _selectedSection = value);
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'all',
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: _selectedSection == 'all'
-                              ? primaryBlue.withOpacity(0.1)
-                              : Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.grid_view_rounded,
-                          size: 18,
-                          color: _selectedSection == 'all'
-                              ? primaryBlue
-                              : Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text('الكل',
-                          style: GoogleFonts.cairo(
-                              fontSize: 14, color: darkColor)),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'products',
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: _selectedSection == 'products'
-                              ? primaryBlue.withOpacity(0.1)
-                              : Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.shopping_bag_rounded,
-                          size: 18,
-                          color: _selectedSection == 'products'
-                              ? primaryBlue
-                              : Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text('المنتجات فقط',
-                          style: GoogleFonts.cairo(
-                              fontSize: 14, color: darkColor)),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'offers',
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: _selectedSection == 'offers'
-                              ? primaryBlue.withOpacity(0.1)
-                              : Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.local_offer_rounded,
-                          size: 18,
-                          color: _selectedSection == 'offers'
-                              ? primaryBlue
-                              : Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text('العروض فقط',
-                          style: GoogleFonts.cairo(
-                              fontSize: 14, color: darkColor)),
-                    ],
-                  ),
-                ),
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFEFF6FF),
+                Color(0xFFF5F7FA),
               ],
             ),
           ),
-        ],
-      ),
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : RefreshIndicator(
-              onRefresh: _onRefresh,
-              color: primaryBlue,
-              backgroundColor: cardWhite,
-              child: isEmpty
-                  ? _buildEmptyState()
-                  : CustomScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: _buildStatsBanner(),
-                        ),
-                        if (showProducts && hasProducts) ...[
-                          SliverToBoxAdapter(
-                            child: _buildSectionHeader(
-                              title: 'المنتجات المفضلة',
-                              icon: Icons.shopping_bag_rounded,
-                              count: _favoriteProducts.length,
-                              color: primaryBlue,
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: PopupMenuButton<String>(
+                              icon: const Icon(Icons.filter_list_rounded,
+                                  color: Colors.white, size: 22),
+                              offset: const Offset(0, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              color: cardWhite,
+                              elevation: 10,
+                              onSelected: (value) {
+                                HapticFeedback.lightImpact();
+                                setState(() => _selectedSection = value);
+                              },
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: 'all',
+                                  child: _buildFilterItem(
+                                    label: 'الكل',
+                                    icon: Icons.grid_view_rounded,
+                                    isSelected: _selectedSection == 'all',
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'products',
+                                  child: _buildFilterItem(
+                                    label: 'المنتجات فقط',
+                                    icon: Icons.shopping_bag_rounded,
+                                    isSelected: _selectedSection == 'products',
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'offers',
+                                  child: _buildFilterItem(
+                                    label: 'العروض فقط',
+                                    icon: Icons.local_offer_rounded,
+                                    isSelected: _selectedSection == 'offers',
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          _buildProductsGrid(),
-                        ],
-                        if (showProducts &&
-                            showOffers &&
-                            hasProducts &&
-                            hasOffers)
-                          SliverToBoxAdapter(
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 12),
-                              height: 2,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.grey.shade200,
-                                    primaryBlue.withOpacity(0.3),
-                                    Colors.grey.shade200,
-                                  ],
-                                ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AnimatedBuilder(
+                                    animation: _pulseAnimationController,
+                                    builder: (context, child) {
+                                      return Transform.scale(
+                                          scale: 1.0 +
+                                              (_pulseAnimationController.value *
+                                                  0.1),
+                                          child: child);
+                                    },
+                                    child: const Icon(Icons.favorite_rounded,
+                                        color: Colors.red, size: 24),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text('المفضلة',
+                                      style: GoogleFonts.cairo(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white)),
+                                ],
                               ),
                             ),
                           ),
-                        if (showOffers && hasOffers) ...[
-                          SliverToBoxAdapter(
-                            child: _buildSectionHeader(
-                              title: 'العروض المفضلة',
-                              icon: Icons.local_offer_rounded,
-                              count: _favoriteOffers.length,
-                              color: Colors.orange,
-                            ),
-                          ),
-                          _buildOffersGrid(),
+                          const SizedBox(width: 48),
                         ],
-                        const SliverToBoxAdapter(child: SizedBox(height: 20)),
-                      ],
+                      ),
                     ),
-            ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : RefreshIndicator(
+                        onRefresh: _onRefresh,
+                        color: primaryBlue,
+                        backgroundColor: cardWhite,
+                        child: isEmpty
+                            ? _buildEmptyState()
+                            : CustomScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                slivers: [
+                                  SliverToBoxAdapter(
+                                    child: _buildStatsBanner(),
+                                  ),
+                                  if (showProducts && hasProducts) ...[
+                                    SliverToBoxAdapter(
+                                      child: _buildSectionHeader(
+                                        title: 'المنتجات المفضلة',
+                                        icon: Icons.shopping_bag_rounded,
+                                        count: _favoriteProducts.length,
+                                        color: primaryBlue,
+                                      ),
+                                    ),
+                                    _buildProductsGrid(),
+                                  ],
+                                  if (showProducts &&
+                                      showOffers &&
+                                      hasProducts &&
+                                      hasOffers)
+                                    SliverToBoxAdapter(
+                                      child: Container(
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 20, vertical: 12),
+                                        height: 2,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Colors.grey.shade200,
+                                              primaryBlue.withOpacity(0.3),
+                                              Colors.grey.shade200,
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  if (showOffers && hasOffers) ...[
+                                    SliverToBoxAdapter(
+                                      child: _buildSectionHeader(
+                                        title: 'العروض المفضلة',
+                                        icon: Icons.local_offer_rounded,
+                                        count: _favoriteOffers.length,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                    _buildOffersGrid(),
+                                  ],
+                                  const SliverToBoxAdapter(
+                                      child: SizedBox(height: 20)),
+                                ],
+                              ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterItem({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? primaryBlue.withOpacity(0.1)
+                : Colors.grey.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: isSelected ? primaryBlue : Colors.grey,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(label, style: GoogleFonts.cairo(fontSize: 14, color: darkColor)),
+      ],
     );
   }
 
@@ -691,25 +696,29 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                   Positioned(
                     top: 10,
                     right: 10,
-                    child: GestureDetector(
-                      onTap: () => _removeProduct(product['id']),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: cardWhite,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.favorite_rounded,
-                          color: Colors.red,
-                          size: 20,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _removeProduct(product['id']),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: cardWhite,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.red.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.favorite_rounded,
+                            color: Colors.red,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
@@ -766,25 +775,29 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                   Positioned(
                     top: 10,
                     right: 10,
-                    child: GestureDetector(
-                      onTap: () => _removeOffer(offer['id']),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: cardWhite,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.favorite_rounded,
-                          color: Colors.red,
-                          size: 20,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _removeOffer(offer['id']),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: cardWhite,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.red.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.favorite_rounded,
+                            color: Colors.red,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
@@ -924,4 +937,22 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

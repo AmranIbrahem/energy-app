@@ -1,15 +1,14 @@
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:lottie/lottie.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'
-    hide FadeInAnimation;
-import 'package:GeniusHouse/utils/constants.dart';
+
+import 'package:GeniusHouse/screens/auth/login_screen.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/screens/auth/login_screen.dart';
-import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'
+    hide FadeInAnimation;
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final AuthService authService;

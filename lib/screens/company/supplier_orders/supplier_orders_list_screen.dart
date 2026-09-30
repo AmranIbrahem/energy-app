@@ -24,6 +24,7 @@ class SupplierOrdersListScreen extends StatefulWidget {
 
 class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
   static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color darkColor = Color(0xFF111827);
   static const Color mediumGray = Color(0xFF4B5563);
   static const Color lightGray = Color(0xFFF3F4F6);
@@ -74,7 +75,7 @@ class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
         setState(() => _statistics = response['data']['statistics']);
       }
     } catch (e) {
-      debugPrint('Error: $e');
+      // debugPrint('Error: $e');
     }
   }
 
@@ -186,14 +187,20 @@ class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildSearchBar(),
-        _buildStatsRow(),
-        _buildFiltersRow(),
-        Expanded(child: _buildOrdersList()),
-        if (_currentPage < _lastPage && !_isLoading) _buildLoadMore(),
-      ],
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: lightGray,
+        body: Column(
+          children: [
+            _buildSearchBar(),
+            _buildStatsRow(),
+            _buildFiltersRow(),
+            Expanded(child: _buildOrdersList()),
+            if (_currentPage < _lastPage && !_isLoading) _buildLoadMore(),
+          ],
+        ),
+      ),
     );
   }
 
@@ -220,6 +227,10 @@ class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: primaryBlue, width: 2),
+          ),
         ),
         onSubmitted: (_) => _fetchOrders(refresh: true),
       ),
@@ -252,11 +263,15 @@ class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8)),
-      child: Text('$label: $value',
-          style: GoogleFonts.cairo(
-              fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: GoogleFonts.cairo(
+            fontSize: 11, fontWeight: FontWeight.w600, color: color),
+      ),
     );
   }
 
@@ -266,28 +281,30 @@ class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
       color: cardWhite,
       child: Row(children: [
         Expanded(
-            child: _buildDropdown('الحالة', _selectedStatus, [
-          {'key': null, 'label': 'الكل'},
-          {'key': 'pending', 'label': 'قيد الانتظار'},
-          {'key': 'confirmed', 'label': 'تم التأكيد'},
-          {'key': 'shipped', 'label': 'تم الشحن'},
-          {'key': 'delivered', 'label': 'تم التسليم'},
-          {'key': 'cancelled', 'label': 'ملغي'},
-        ], (v) {
-          _selectedStatus = v;
-          _fetchOrders(refresh: true);
-        })),
+          child: _buildDropdown('الحالة', _selectedStatus, [
+            {'key': null, 'label': 'الكل'},
+            {'key': 'pending', 'label': 'قيد الانتظار'},
+            {'key': 'confirmed', 'label': 'تم التأكيد'},
+            {'key': 'shipped', 'label': 'تم الشحن'},
+            {'key': 'delivered', 'label': 'تم التسليم'},
+            {'key': 'cancelled', 'label': 'ملغي'},
+          ], (v) {
+            _selectedStatus = v;
+            _fetchOrders(refresh: true);
+          }),
+        ),
         const SizedBox(width: 8),
         Expanded(
-            child: _buildDropdown('ترتيب', _selectedSort, [
-          {'key': 'latest', 'label': 'الأحدث'},
-          {'key': 'oldest', 'label': 'الأقدم'},
-          {'key': 'total_desc', 'label': 'الأعلى قيمة'},
-          {'key': 'total_asc', 'label': 'الأقل قيمة'},
-        ], (v) {
-          _selectedSort = v ?? 'latest';
-          _fetchOrders(refresh: true);
-        })),
+          child: _buildDropdown('ترتيب', _selectedSort, [
+            {'key': 'latest', 'label': 'الأحدث'},
+            {'key': 'oldest', 'label': 'الأقدم'},
+            {'key': 'total_desc', 'label': 'الأعلى قيمة'},
+            {'key': 'total_asc', 'label': 'الأقل قيمة'},
+          ], (v) {
+            _selectedSort = v ?? 'latest';
+            _fetchOrders(refresh: true);
+          }),
+        ),
         if (_hasActiveFilters())
           IconButton(
               icon: const Icon(Icons.clear_all_rounded, color: dangerRed),
@@ -299,11 +316,14 @@ class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
   Widget _buildDropdown(String label, String? value,
       List<Map<String, String?>> items, Function(String?) onChanged) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: GoogleFonts.cairo(fontSize: 10, color: mediumGray)),
+      Text(label,
+          style: GoogleFonts.cairo(
+              fontSize: 10, color: mediumGray, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 4),
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-            color: lightGray, borderRadius: BorderRadius.circular(8)),
+            color: lightGray, borderRadius: BorderRadius.circular(10)),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: value,
@@ -331,8 +351,15 @@ class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
       return const Center(child: CircularProgressIndicator(color: primaryBlue));
     if (_orders.isEmpty)
       return Center(
-          child: Text('لا توجد طلبات توريد',
-              style: GoogleFonts.cairo(color: mediumGray)));
+          child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inbox_rounded, size: 64, color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Text('لا توجد طلبات توريد',
+              style: GoogleFonts.cairo(fontSize: 16, color: mediumGray)),
+        ],
+      ));
     return RefreshIndicator(
       onRefresh: () => _fetchOrders(refresh: true),
       color: primaryBlue,
@@ -361,12 +388,28 @@ class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
             color: cardWhite,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)
-            ]),
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3)),
+              BoxShadow(
+                  color: statusColor.withOpacity(0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2)),
+            ],
+            border: Border.all(color: Colors.grey.shade100)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Row(children: [
-              Icon(Icons.receipt_long_rounded, color: primaryBlue, size: 20),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.receipt_long_rounded,
+                    color: primaryBlue, size: 20),
+              ),
               const SizedBox(width: 8),
               Text(order['supplier_order_number'] ?? '',
                   style: GoogleFonts.cairo(
@@ -379,32 +422,46 @@ class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8)),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: statusColor.withOpacity(0.2))),
                 child: Text(_getStatusText(order['status']),
                     style: GoogleFonts.cairo(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: statusColor))),
           ]),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(children: [
             Icon(Icons.description_rounded, size: 14, color: mediumGray),
             const SizedBox(width: 4),
-            Text(order['items_preview'] ?? '',
-                style: GoogleFonts.cairo(fontSize: 12, color: darkColor),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
+            Expanded(
+              child: Text(order['items_preview'] ?? '',
+                  style: GoogleFonts.cairo(fontSize: 12, color: darkColor),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ),
             if ((order['items_count'] ?? 0) > 2)
-              Text(' +${order['items_count'] - 2}',
-                  style: GoogleFonts.cairo(fontSize: 10, color: primaryBlue)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('+${order['items_count'] - 2}',
+                    style: GoogleFonts.cairo(fontSize: 10, color: primaryBlue)),
+              ),
           ]),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('${order['total_amount']} \$',
-                style: GoogleFonts.cairo(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: successGreen)),
+            Row(children: [
+              Icon(Icons.attach_money_rounded, color: successGreen, size: 16),
+              const SizedBox(width: 4),
+              Text('${order['total_amount']} \$',
+                  style: GoogleFonts.cairo(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: successGreen)),
+            ]),
             Text(
                 order['created_at'] != null
                     ? order['created_at'].toString().substring(0, 10)
@@ -425,17 +482,45 @@ class _SupplierOrdersListScreenState extends State<SupplierOrdersListScreen> {
             backgroundColor: primaryBlue,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            padding: const EdgeInsets.symmetric(vertical: 14)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            elevation: 4,
+            shadowColor: primaryBlue.withOpacity(0.3)),
         child: _isLoadingMore
             ? const SizedBox(
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
                     color: Colors.white, strokeWidth: 2))
-            : Text('تحميل المزيد',
-                style: GoogleFonts.cairo(
-                    color: Colors.white, fontWeight: FontWeight.w600)),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.download_rounded,
+                      color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text('تحميل المزيد',
+                      style: GoogleFonts.cairo(
+                          color: Colors.white, fontWeight: FontWeight.w600)),
+                ],
+              ),
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 20);
+    path.quadraticBezierTo(0, size.height, 20, size.height);
+    path.lineTo(size.width - 20, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 20);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

@@ -1,11 +1,11 @@
 // lib/services/auth_service.dart
-import 'dart:math';
 
-import 'package:flutter/foundation.dart';
+import 'dart:convert';
+
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService extends ChangeNotifier {
@@ -22,7 +22,9 @@ class AuthService extends ChangeNotifier {
   }
 
   String? get token => _token;
+
   bool get isAuthenticated => _isAuthenticated;
+
   bool get isGuest => _isGuest;
 
   Future<void> refreshAuthState() async {
@@ -39,7 +41,6 @@ class AuthService extends ChangeNotifier {
       _updateApiToken();
       notifyListeners();
     } catch (e) {
-      print('❌ Error loading auth state: $e');
       _isAuthenticated = false;
       _isGuest = false;
       _token = null;
@@ -63,7 +64,8 @@ class AuthService extends ChangeNotifier {
       });
 
       if (response['email_verification_required'] == true ||
-          (response['data'] != null && response['data']['email_verification_required'] == true)) {
+          (response['data'] != null &&
+              response['data']['email_verification_required'] == true)) {
         return {
           'success': false,
           'message': 'يجب تأكيد البريد الإلكتروني أولاً',
@@ -80,12 +82,11 @@ class AuthService extends ChangeNotifier {
         _isGuest = false;
 
         await storageService.saveToken(_token!);
-        await storageService.saveTokenCreatedAt(DateTime.now()); // ✅ أضف هذا
+        await storageService.saveTokenCreatedAt(DateTime.now());
         await storageService.setGuestMode(false);
         if (response.containsKey('remember_token')) {
           await storageService.saveRememberToken(response['remember_token']);
         }
-
 
         if (response.containsKey('data')) {
           await storageService.saveUserDataMap(response['data']);
@@ -103,7 +104,13 @@ class AuthService extends ChangeNotifier {
         _updateApiToken();
         notifyListeners();
 
-        return {'success': true, 'data': response};
+        final userData = response['data'] ?? {};
+        return {
+          'success': true,
+          'data': userData,
+          'user_type': userData['user_type'] ?? response['role'],
+          'token': response['token'],
+        };
       }
 
       return {
@@ -111,7 +118,6 @@ class AuthService extends ChangeNotifier {
         'message': response['message'] ?? 'فشل تسجيل الدخول'
       };
     } catch (e) {
-      print('❌ Login error: $e');
       return {'success': false, 'message': e.toString()};
     }
   }
@@ -178,7 +184,6 @@ class AuthService extends ChangeNotifier {
         'message': response['message'] ?? 'فشل إنشاء الحساب'
       };
     } catch (e) {
-      print('❌ Register error: $e');
       return {'success': false, 'message': e.toString()};
     }
   }
@@ -208,8 +213,10 @@ class AuthService extends ChangeNotifier {
         'message': response['message'] ?? 'فشل في تأكيد البريد الإلكتروني'
       };
     } catch (e) {
-      print('❌ Verify Email error: $e');
-      return {'success': false, 'message': 'حدث خطأ في التحقق من البريد الإلكتروني'};
+      return {
+        'success': false,
+        'message': 'حدث خطأ في التحقق من البريد الإلكتروني'
+      };
     }
   }
 
@@ -235,7 +242,6 @@ class AuthService extends ChangeNotifier {
         'message': response['message'] ?? 'فشل في إرسال رمز التحقق'
       };
     } catch (e) {
-      print('❌ Resend Verification Code error: $e');
       return {'success': false, 'message': 'حدث خطأ في إعادة إرسال الرمز'};
     }
   }
@@ -274,7 +280,7 @@ class AuthService extends ChangeNotifier {
         await _apiService.sendFcmToken(token);
       }
     } catch (e) {
-      print('❌ Error sending FCM token: $e');
+      //
     }
   }
 
@@ -294,7 +300,6 @@ class AuthService extends ChangeNotifier {
 
       return null;
     } catch (e) {
-      print('❌ Error getting user data: $e');
       return null;
     }
   }
@@ -303,13 +308,11 @@ class AuthService extends ChangeNotifier {
     try {
       final token = storageService.getToken();
       if (token == null || token.isEmpty) {
-        print('❌ No token found');
         return false;
       }
 
       return true;
     } catch (e) {
-      print('❌ Token validation error: $e');
       return false;
     }
   }
@@ -326,14 +329,16 @@ class AuthService extends ChangeNotifier {
         requiresAuth: false,
       );
 
-      print('📧 Send reset code response: $response');
-
       final isSuccess = response['status'] == true ||
           response['message']?.toString().contains('تم إرسال') == true ||
           response['message']?.toString().contains('success') == true;
 
       if (isSuccess) {
-        return {'success': true, 'message': response['message'] ?? 'تم إرسال رمز إعادة التعيين إلى بريدك الإلكتروني'};
+        return {
+          'success': true,
+          'message': response['message'] ??
+              'تم إرسال رمز إعادة التعيين إلى بريدك الإلكتروني'
+        };
       }
 
       return {
@@ -341,7 +346,6 @@ class AuthService extends ChangeNotifier {
         'message': response['message'] ?? 'فشل في إرسال رمز إعادة التعيين'
       };
     } catch (e) {
-      print('❌ Send Password Reset Code error: $e');
       return {'success': false, 'message': 'حدث خطأ في إرسال الرمز'};
     }
   }
@@ -360,9 +364,6 @@ class AuthService extends ChangeNotifier {
         requiresAuth: false,
       );
 
-      print('🔍 Verify reset code response: $response');
-
-      // التحقق من النجاح
       final isSuccess = response['status'] == true ||
           response['success'] == true ||
           (response['message']?.toString().contains('تم التحقق') ?? false) ||
@@ -372,7 +373,7 @@ class AuthService extends ChangeNotifier {
         return {
           'success': true,
           'message': response['message'] ?? 'تم التحقق من الرمز بنجاح',
-          'email': email, // إرجاع البريد الإلكتروني فقط
+          'email': email,
         };
       }
 
@@ -381,7 +382,6 @@ class AuthService extends ChangeNotifier {
         'message': response['message'] ?? 'رمز التحقق غير صحيح'
       };
     } catch (e) {
-      print('❌ Verify Password Reset Code error: $e');
       return {'success': false, 'message': 'حدث خطأ في التحقق من الرمز'};
     }
   }
@@ -402,9 +402,6 @@ class AuthService extends ChangeNotifier {
         requiresAuth: false,
       );
 
-      print('🔑 Reset password response: $response');
-
-      // التحقق من النجاح
       final isSuccess = response['status'] == true ||
           response['success'] == true ||
           (response['message']?.toString().contains('بنجاح') ?? false) ||
@@ -422,18 +419,17 @@ class AuthService extends ChangeNotifier {
         'message': response['message'] ?? 'فشل في إعادة تعيين كلمة المرور'
       };
     } catch (e) {
-      print('❌ Reset Password error: $e');
-      return {'success': false, 'message': 'حدث خطأ في إعادة تعيين كلمة المرور'};
+      return {
+        'success': false,
+        'message': 'حدث خطأ في إعادة تعيين كلمة المرور'
+      };
     }
   }
 
-
-  /// ✅ تجديد التوكن باستخدام remember_token
   Future<bool> refreshToken() async {
     try {
       final rememberToken = storageService.getRememberToken();
       if (rememberToken == null || rememberToken.isEmpty) {
-        print('❌ No remember token found');
         return false;
       }
 
@@ -447,12 +443,10 @@ class AuthService extends ChangeNotifier {
         final newToken = response['data']['token'];
         final newRememberToken = response['data']['remember_token'];
 
-        // حفظ التوكن الجديد
         _token = newToken;
         await storageService.saveToken(newToken!);
         await storageService.saveTokenCreatedAt(DateTime.now());
 
-        // حفظ remember_token الجديد
         if (newRememberToken != null) {
           await storageService.saveRememberToken(newRememberToken);
         }
@@ -462,43 +456,33 @@ class AuthService extends ChangeNotifier {
         _updateApiToken();
         notifyListeners();
 
-        print('✅ Token refreshed successfully using remember_token');
         return true;
       }
 
-      print('❌ Failed to refresh token: ${response['message']}');
       await _performLogout();
       return false;
     } catch (e) {
-      print('❌ Error refreshing token: $e');
       await _performLogout();
       return false;
     }
   }
 
-  /// ✅ التعامل مع انتهاء التوكن
   Future<bool> handleTokenExpiry() async {
     final token = storageService.getToken();
 
-    // لا يوجد توكن API - جرب remember_token
     if (token == null || token.isEmpty) {
       final rememberToken = storageService.getRememberToken();
       if (rememberToken != null && rememberToken.isNotEmpty) {
-        print('⚠️ No access token, trying remember_token...');
         return await refreshToken();
       }
       return false;
     }
 
-    // التوكن منتهي - جرب التجديد
     if (storageService.isTokenExpired()) {
-      print('⚠️ Token expired, trying to refresh...');
       return await refreshToken();
     }
 
-    // التوكن على وشك الانتهاء - جدد بشكل استباقي
     if (storageService.isTokenExpiringSoon()) {
-      print('⚠️ Token expiring soon, refreshing proactively...');
       await refreshToken();
     }
 
@@ -506,7 +490,6 @@ class AuthService extends ChangeNotifier {
     return true;
   }
 
-  /// ✅ تسجيل خروج داخلي (بدون UI)
   Future<void> _performLogout() async {
     _isAuthenticated = false;
     _isGuest = false;
@@ -516,7 +499,6 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ✅ تجديد التوكن مباشرة باستخدام remember_token (للـ Biometric Login)
   Future<bool> refreshTokenDirectly(String rememberToken) async {
     try {
       final response = await _apiService.post(
@@ -546,9 +528,7 @@ class AuthService extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print('❌ Error in refreshTokenDirectly: $e');
       return false;
     }
   }
-
 }

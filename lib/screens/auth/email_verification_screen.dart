@@ -1,19 +1,20 @@
 // lib/screens/auth/email_verification_screen.dart
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:GeniusHouse/screens/auth/login_screen.dart';
+import 'package:GeniusHouse/screens/home_screen.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/screens/home_screen.dart';
-import 'package:GeniusHouse/screens/auth/login_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   final AuthService authService;
   final StorageService storageService;
   final String email;
-  final String? token; // في حالة التسجيل، قد يكون لدينا توكن
-  final bool isFromLogin; // هل أتى من تسجيل الدخول أم التسجيل
+  final String? token;
+  final bool isFromLogin;
+  final bool returnToCheckout;
 
   const EmailVerificationScreen({
     super.key,
@@ -22,6 +23,7 @@ class EmailVerificationScreen extends StatefulWidget {
     required this.email,
     this.token,
     this.isFromLogin = false,
+    this.returnToCheckout = false,
   });
 
   @override
@@ -32,7 +34,7 @@ class EmailVerificationScreen extends StatefulWidget {
 class _EmailVerificationScreenState extends State<EmailVerificationScreen>
     with TickerProviderStateMixin {
   final List<TextEditingController> _codeControllers =
-  List.generate(6, (_) => TextEditingController());
+      List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
   bool _isLoading = false;
@@ -79,8 +81,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
     if (value.length == 1 && index < 5) {
       _focusNodes[index + 1].requestFocus();
     }
-
-    // تحقق تلقائي عند إدخال آخر رقم
     if (index == 5 && value.length == 1) {
       _verifyEmail();
     }
@@ -89,72 +89,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
   String _getVerificationCode() {
     return _codeControllers.map((controller) => controller.text).join();
   }
-
-  // Future<void> _verifyEmail() async {
-  //   final code = _getVerificationCode();
-  //   if (code.length != 6) {
-  //     _showError('الرجاء إدخال رمز التحقق كاملاً');
-  //     return;
-  //   }
-  //
-  //   setState(() => _isLoading = true);
-  //
-  //   try {
-  //     final result = await widget.authService.verifyEmail(
-  //       email: widget.email,
-  //       code: code,
-  //     );
-  //
-  //     if (mounted) {
-  //       setState(() => _isLoading = false);
-  //
-  //       if (result['success'] == true) {
-  //         _showSuccess('تم تأكيد البريد الإلكتروني بنجاح!');
-  //
-  //         // الانتظار قليلاً ثم الانتقال إلى الشاشة الرئيسية
-  //         await Future.delayed(const Duration(seconds: 1));
-  //
-  //         if (mounted) {
-  //           if (widget.isFromLogin) {
-  //             // إذا كان من تسجيل الدخول، نقوم بتسجيل الدخول الآن
-  //             Navigator.pushReplacement(
-  //               context,
-  //               MaterialPageRoute(
-  //                 builder: (context) => HomeScreen(
-  //                   authService: widget.authService,
-  //                   storageService: widget.storageService,
-  //                 ),
-  //               ),
-  //             );
-  //           } else {
-  //             // إذا كان من التسجيل، ننتقل مباشرة
-  //             Navigator.pushReplacement(
-  //               context,
-  //               MaterialPageRoute(
-  //                 builder: (context) => HomeScreen(
-  //                   authService: widget.authService,
-  //                   storageService: widget.storageService,
-  //                 ),
-  //               ),
-  //             );
-  //           }
-  //         }
-  //       } else {
-  //         _showError(result['message'] ?? 'رمز التحقق غير صحيح');
-  //         _clearAllFields();
-  //         _focusNodes[0].requestFocus();
-  //       }
-  //     }
-  //   } catch (e) {
-  //     if (mounted) {
-  //       setState(() => _isLoading = false);
-  //       _showError('حدث خطأ في التحقق. الرجاء المحاولة مرة أخرى');
-  //       _clearAllFields();
-  //       _focusNodes[0].requestFocus();
-  //     }
-  //   }
-  // }
-
 
   Future<void> _verifyEmail() async {
     final code = _getVerificationCode();
@@ -180,8 +114,12 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
           await Future.delayed(const Duration(seconds: 1));
 
           if (mounted) {
+            if (widget.returnToCheckout) {
+              Navigator.pop(context);
+              return;
+            }
+
             if (widget.isFromLogin) {
-              // ✅ من تسجيل الدخول → اذهب للتطبيق مباشرة
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
@@ -190,19 +128,19 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                     storageService: widget.storageService,
                   ),
                 ),
-                    (route) => false,
+                (route) => false,
               );
             } else {
-              // ✅ من التسجيل → اذهب إلى شاشة تسجيل الدخول
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
                   builder: (context) => LoginScreen(
                     authService: widget.authService,
                     storageService: widget.storageService,
+                    returnToCheckout: widget.returnToCheckout,
                   ),
                 ),
-                    (route) => false,
+                (route) => false,
               );
             }
           }
@@ -324,6 +262,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
         pageBuilder: (_, __, ___) => LoginScreen(
           authService: widget.authService,
           storageService: widget.storageService,
+          returnToCheckout: widget.returnToCheckout,
         ),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(
@@ -355,8 +294,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
-                    children:
-                    AnimationConfiguration.toStaggeredList(
+                    children: AnimationConfiguration.toStaggeredList(
                       duration: const Duration(milliseconds: 800),
                       childAnimationBuilder: (widget) => SlideAnimation(
                         verticalOffset: 50,
@@ -550,8 +488,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.info_outline_rounded,
-                  color: primaryBlue, size: 20),
+              Icon(Icons.info_outline_rounded, color: primaryBlue, size: 20),
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
@@ -676,32 +613,32 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
               ),
               child: _isLoading
                   ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2.5,
-                ),
-              )
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
                   : const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.verified_user_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'تأكيد البريد الإلكتروني',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.verified_user_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'تأكيد البريد الإلكتروني',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         );
@@ -725,31 +662,29 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
             const SizedBox(width: 4),
             _isResending
                 ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: primaryBlue,
-              ),
-            )
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: primaryBlue,
+                    ),
+                  )
                 : TextButton(
-              onPressed: _resendCountdown > 0 ? null : _resendCode,
-              style: TextButton.styleFrom(
-                foregroundColor: primaryBlue,
-              ),
-              child: Text(
-                _resendCountdown > 0
-                    ? 'إعادة الإرسال ($_resendCountdown ثانية)'
-                    : 'إعادة إرسال الرمز',
-                style: GoogleFonts.cairo(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: _resendCountdown > 0
-                      ? mediumGray
-                      : primaryBlue,
-                ),
-              ),
-            ),
+                    onPressed: _resendCountdown > 0 ? null : _resendCode,
+                    style: TextButton.styleFrom(
+                      foregroundColor: primaryBlue,
+                    ),
+                    child: Text(
+                      _resendCountdown > 0
+                          ? 'إعادة الإرسال ($_resendCountdown ثانية)'
+                          : 'إعادة إرسال الرمز',
+                      style: GoogleFonts.cairo(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: _resendCountdown > 0 ? mediumGray : primaryBlue,
+                      ),
+                    ),
+                  ),
           ],
         ),
       ],

@@ -1,19 +1,20 @@
 // lib/screens/search/search_screen.dart
 
 import 'dart:async';
+import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:speech_to_text/speech_recognition_result.dart';
-import 'package:speech_to_text/speech_recognition_error.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:GeniusHouse/utils/constants.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/utils/constants.dart';
 import 'package:GeniusHouse/widgets/product_card.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:speech_to_text/speech_recognition_error.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class SearchScreen extends StatefulWidget {
   final ApiService apiService;
@@ -29,7 +30,8 @@ class SearchScreen extends StatefulWidget {
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class _SearchScreenState extends State<SearchScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -39,12 +41,24 @@ class _SearchScreenState extends State<SearchScreen> {
   String _sortBy = 'created_at';
   String _sortOrder = 'desc';
   double _minRate = 0;
+  String _selectedSortLabel = 'الأحدث';
 
-  // ✅ متغيرات فلترة المحافظة
   List<String> _selectedGovernorates = [];
   final List<String> _syrianGovernorates = [
-    'دمشق', 'ريف دمشق', 'حلب', 'حمص', 'اللاذقية', 'طرطوس', 'حماة', 'درعا',
-    'السويداء', 'القنيطرة', 'دير الزور', 'الرقة', 'الحسكة', 'إدلب'
+    'دمشق',
+    'ريف دمشق',
+    'حلب',
+    'حمص',
+    'اللاذقية',
+    'طرطوس',
+    'حماة',
+    'درعا',
+    'السويداء',
+    'القنيطرة',
+    'دير الزور',
+    'الرقة',
+    'الحسكة',
+    'إدلب'
   ];
 
   List<dynamic> _products = [];
@@ -57,7 +71,6 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _isGridView = true;
   bool _showFilters = false;
 
-  // ✅ متغيرات التعرف على الكلام
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isRecording = false;
   bool _isProcessingAudio = false;
@@ -76,6 +89,7 @@ class _SearchScreenState extends State<SearchScreen> {
   static const Color successGreen = Color(0xFF10B981);
   static const Color dangerRed = Color(0xFFEF4444);
   static const Color warningOrange = Color(0xFFF59E0B);
+  static const Color purple = Color(0xFF7C3AED);
 
   final List<Map<String, dynamic>> _sortOptions = [
     {'value': 'created_at', 'label': 'الأحدث', 'icon': Icons.fiber_new_rounded},
@@ -95,11 +109,30 @@ class _SearchScreenState extends State<SearchScreen> {
     {'value': 2, 'label': 'نجمتان فما فوق', 'icon': Icons.star_outline_rounded},
   ];
 
+  late AnimationController _pulseController;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+
   @override
   void initState() {
     super.initState();
     _loadRecentSearches();
     _initSpeechToText();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..forward();
+
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..forward();
   }
 
   @override
@@ -109,12 +142,12 @@ class _SearchScreenState extends State<SearchScreen> {
     _recordingTimer?.cancel();
     _speech.stop();
     _speech.cancel();
+    _pulseController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
-  // ==================== ✅ التعرف على الكلام ====================
-
-  // ✅ تهيئة خدمة التعرف على الكلام
   Future<void> _initSpeechToText() async {
     if (_isInitializingSpeech) return;
     _isInitializingSpeech = true;
@@ -128,13 +161,9 @@ class _SearchScreenState extends State<SearchScreen> {
       if (mounted) {
         setState(() {});
         if (!_isSpeechAvailable) {
-          debugPrint('⚠️ Speech recognition not available on this device');
-        } else {
-          debugPrint('✅ Speech recognition initialized successfully');
-        }
+        } else {}
       }
     } catch (e) {
-      debugPrint('❌ Error initializing speech: $e');
       if (mounted) {
         setState(() => _isSpeechAvailable = false);
       }
@@ -143,10 +172,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  // ✅ معالجة حالة التسجيل
   void _onSpeechStatus(String status) {
-    debugPrint('🎤 Speech status: $status');
-
     if (!mounted) return;
 
     if (status == 'done' || status == 'notListening') {
@@ -160,11 +186,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  // ✅ معالجة الأخطاء
-// ✅ معالجة الأخطاء - النسخة الصحيحة
   void _onSpeechError(SpeechRecognitionError error) {
-    debugPrint('❌ Speech error: ${error.errorMsg}');
-
     if (!mounted) return;
 
     setState(() {
@@ -173,7 +195,6 @@ class _SearchScreenState extends State<SearchScreen> {
     });
     _recordingTimer?.cancel();
 
-    // ✅ رسائل خطأ واضحة بالعربي - نفحص errorMsg بدلاً من errorCode
     String message;
     final errorMsg = error.errorMsg.toLowerCase();
 
@@ -194,25 +215,28 @@ class _SearchScreenState extends State<SearchScreen> {
     } else if (errorMsg.contains('permission') ||
         errorMsg.contains('permissions') ||
         errorMsg.contains('denied')) {
-      message = 'صلاحية الميكروفون غير ممنوحة.\nيرجى منح الصلاحية من الإعدادات.';
+      message =
+          'صلاحية الميكروفون غير ممنوحة.\nيرجى منح الصلاحية من الإعدادات.';
     } else if (errorMsg.contains('network') ||
         errorMsg.contains('internet') ||
         errorMsg.contains('timeout') ||
         errorMsg.contains('connection')) {
-      message = 'انقطع الاتصال بالإنترنت.\nخدمة التعرف على الكلام تحتاج اتصالاً بالإنترنت.';
+      message =
+          'انقطع الاتصال بالإنترنت.\nخدمة التعرف على الكلام تحتاج اتصالاً بالإنترنت.';
     } else if (errorMsg.contains('timeout') ||
         errorMsg.contains('speech_timeout')) {
       message = 'انتهت مهلة الاستماع.\nاضغط على الميكروفون وحاول مرة أخرى.';
-    } else if (errorMsg.contains('busy') ||
-        errorMsg.contains('already')) {
-      message = 'خدمة التعرف على الكلام مشغولة حالياً.\nحاول مرة أخرى بعد قليل.';
+    } else if (errorMsg.contains('busy') || errorMsg.contains('already')) {
+      message =
+          'خدمة التعرف على الكلام مشغولة حالياً.\nحاول مرة أخرى بعد قليل.';
     } else {
-      message = 'تعذر تحويل الصوت إلى نص.\nيرجى المحاولة مرة أخرى.\n(${error.errorMsg})';
+      message =
+          'تعذر تحويل الصوت إلى نص.\nيرجى المحاولة مرة أخرى.\n(${error.errorMsg})';
     }
 
     _showSnackBar(message, dangerRed);
   }
-  // ✅ طلب إذن الميكروفون
+
   Future<bool> _requestMicrophonePermission() async {
     try {
       final status = await Permission.microphone.request();
@@ -226,12 +250,10 @@ class _SearchScreenState extends State<SearchScreen> {
         return false;
       }
     } catch (e) {
-      debugPrint('Error requesting permission: $e');
       return false;
     }
   }
 
-  // ✅ عرض نافذة عند رفض الصلاحية نهائياً
   void _showPermissionDialog() {
     showDialog(
       context: context,
@@ -262,8 +284,9 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
         content: Text(
           'يحتاج التطبيق إلى الوصول إلى الميكروفون لاستخدام خاصية البحث الصوتي.\n\n'
-              'يمكنك تفعيل الصلاحية من إعدادات التطبيق.',
-          style: GoogleFonts.cairo(fontSize: 14, color: mediumGray, height: 1.6),
+          'يمكنك تفعيل الصلاحية من إعدادات التطبيق.',
+          style:
+              GoogleFonts.cairo(fontSize: 14, color: mediumGray, height: 1.6),
         ),
         actions: [
           TextButton(
@@ -282,8 +305,7 @@ class _SearchScreenState extends State<SearchScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
-              padding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             child: Text('فتح الإعدادات',
                 style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
@@ -293,16 +315,13 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  // ✅ بدء التسجيل
   Future<void> _startRecording() async {
     if (_isRecording || _isProcessingAudio) return;
 
     try {
-      // ✅ طلب إذن الميكروفون
       final hasPermission = await _requestMicrophonePermission();
       if (!hasPermission) return;
 
-      // ✅ إذا لم تكن الخدمة مهيأة، حاول التهيئة مرة أخرى
       if (!_isSpeechAvailable) {
         _showSnackBar('جاري فحص خاصية التعرف على الكلام...', warningOrange);
         await _initSpeechToText();
@@ -310,7 +329,7 @@ class _SearchScreenState extends State<SearchScreen> {
         if (!_isSpeechAvailable) {
           _showSnackBar(
             'عذراً، جهازك لا يدعم خاصية التعرف على الكلام.\n'
-                'تأكد من تثبيت تطبيق Google وتفعيل اللغة العربية في الإعدادات.',
+            'تأكد من تثبيت تطبيق Google وتفعيل اللغة العربية في الإعدادات.',
             dangerRed,
           );
           return;
@@ -326,7 +345,6 @@ class _SearchScreenState extends State<SearchScreen> {
 
       _startRecordingTimer();
 
-      // ✅ بدء الاستماع مع تحديد اللغة العربية
       await _speech.listen(
         onResult: _onSpeechResult,
         listenFor: const Duration(seconds: 15),
@@ -334,10 +352,9 @@ class _SearchScreenState extends State<SearchScreen> {
         partialResults: true,
         cancelOnError: true,
         listenMode: stt.ListenMode.dictation,
-        localeId: 'ar_SY', // ✅ العربية السورية
+        localeId: 'ar_SY',
       );
     } catch (e) {
-      debugPrint('Error starting recording: $e');
       if (mounted) {
         setState(() {
           _isRecording = false;
@@ -349,21 +366,14 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  // ✅ معالجة نتيجة التعرف على الكلام
   void _onSpeechResult(SpeechRecognitionResult result) {
-    debugPrint('🎤 Recognized: ${result.recognizedWords}');
-    debugPrint('🎤 Final: ${result.finalResult}');
-
     if (!mounted) return;
 
-    // ✅ تحديث النص الجزئي أثناء التحدث
     if (result.recognizedWords.isNotEmpty) {
       setState(() {
         _lastRecognizedText = result.recognizedWords;
       });
     }
-
-    // ✅ عند اكتمال التعرف
     if (result.finalResult && result.recognizedWords.isNotEmpty) {
       final recognizedText = result.recognizedWords.trim();
 
@@ -384,7 +394,6 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  // ✅ إيقاف التسجيل يدوياً
   Future<void> _stopRecording() async {
     if (!_isRecording) return;
 
@@ -397,7 +406,6 @@ class _SearchScreenState extends State<SearchScreen> {
       _recordingTimer?.cancel();
       await _speech.stop();
 
-      // ✅ استخدام النص الأخير إذا لم تكن هناك نتيجة نهائية
       if (_lastRecognizedText != null && _lastRecognizedText!.isNotEmpty) {
         setState(() {
           _searchController.text = _lastRecognizedText!;
@@ -405,7 +413,8 @@ class _SearchScreenState extends State<SearchScreen> {
         });
         _search();
       } else {
-        _showSnackBar('لم يتم التعرف على أي كلام. حاول مرة أخرى.', warningOrange);
+        _showSnackBar(
+            'لم يتم التعرف على أي كلام. حاول مرة أخرى.', warningOrange);
       }
 
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -414,7 +423,6 @@ class _SearchScreenState extends State<SearchScreen> {
         }
       });
     } catch (e) {
-      debugPrint('Error stopping recording: $e');
       setState(() {
         _isRecording = false;
         _isProcessingAudio = false;
@@ -422,7 +430,6 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  // ✅ إلغاء التسجيل
   Future<void> _cancelRecording() async {
     try {
       _recordingTimer?.cancel();
@@ -436,29 +443,27 @@ class _SearchScreenState extends State<SearchScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error canceling recording: $e');
+      //
     }
   }
 
-  // ✅ مؤقت شريط التقدم
   void _startRecordingTimer() {
     _recordingTimer?.cancel();
     _recordingTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
-          if (mounted && _isRecording) {
-            setState(() {
-              _recordingProgress += 0.01;
-              if (_recordingProgress >= 1.0) {
-                _recordingProgress = 0.0;
-              }
-            });
-          } else {
-            timer.cancel();
+      if (mounted && _isRecording) {
+        setState(() {
+          _recordingProgress += 0.01;
+          if (_recordingProgress >= 1.0) {
+            _recordingProgress = 0.0;
           }
         });
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
-  // ✅ عرض رسالة
   void _showSnackBar(String message, [Color? color]) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -471,10 +476,10 @@ class _SearchScreenState extends State<SearchScreen> {
               color == successGreen
                   ? Icons.check_circle_rounded
                   : color == warningOrange
-                  ? Icons.warning_rounded
-                  : color == dangerRed
-                  ? Icons.error_rounded
-                  : Icons.info_rounded,
+                      ? Icons.warning_rounded
+                      : color == dangerRed
+                          ? Icons.error_rounded
+                          : Icons.info_rounded,
               color: Colors.white,
               size: 20,
             ),
@@ -492,8 +497,6 @@ class _SearchScreenState extends State<SearchScreen> {
         duration: const Duration(seconds: 4),
       ));
   }
-
-  // ==================== ✅ البحث ====================
 
   void _loadRecentSearches() {
     _recentSearches = [];
@@ -631,6 +634,20 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  void _applySort(String sortBy, String sortLabel) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _sortBy = sortBy;
+      if (sortBy == 'price') {
+        _sortOrder = (_sortOrder == 'asc') ? 'desc' : 'asc';
+      } else {
+        _sortOrder = 'desc';
+      }
+      _selectedSortLabel = sortLabel;
+    });
+    _search();
+  }
+
   void _applyFilters() {
     setState(() => _showFilters = false);
     _search();
@@ -644,6 +661,7 @@ class _SearchScreenState extends State<SearchScreen> {
       _sortOrder = 'desc';
       _minRate = 0;
       _selectedGovernorates = [];
+      _selectedSortLabel = 'الأحدث';
     });
     _search();
   }
@@ -652,234 +670,604 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() => _isGridView = !_isGridView);
   }
 
-  // ==================== ✅ Build ====================
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFEFF6FF), Color(0xFFF5F7FA)],
             ),
           ),
-        ),
-        title: Container(
-          height: 42,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: TextField(
-            controller: _searchController,
-            focusNode: _searchFocusNode,
-            style: GoogleFonts.cairo(fontSize: 15, color: Colors.white),
-            decoration: InputDecoration(
-              hintText: _isRecording
-                  ? 'استمع... تحدث الآن'
-                  : 'ابحث عن منتج...',
-              hintStyle: GoogleFonts.cairo(color: Colors.white70, fontSize: 14),
-              border: InputBorder.none,
-              contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              prefixIcon: const Icon(Icons.search_rounded,
-                  color: Colors.white70, size: 20),
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_searchController.text.isNotEmpty)
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded,
-                          color: Colors.white70, size: 20),
-                      onPressed: () {
-                        setState(() {
-                          _searchController.clear();
-                          _searchQuery = '';
-                        });
-                      },
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  // ✅ زر التسجيل الصوتي
-                  IconButton(
-                    icon: _isRecording
-                        ? Icon(Icons.stop_rounded,
-                        color: Colors.red.shade300, size: 24)
-                        : _isProcessingAudio
-                        ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                        : const Icon(Icons.mic_rounded,
-                        color: Colors.white70, size: 20),
-                    onPressed: _isRecording
-                        ? _stopRecording
-                        : _isProcessingAudio
-                        ? null
-                        : _startRecording,
                   ),
-                ],
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back_rounded,
+                                      color: Colors.white),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Center(
+                                  child: Text(
+                                    'البحث',
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    _isGridView
+                                        ? Icons.view_list_rounded
+                                        : Icons.grid_view_rounded,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: _toggleViewMode,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              focusNode: _searchFocusNode,
+                              style: GoogleFonts.cairo(
+                                  fontSize: 14, color: darkColor),
+                              textAlign: TextAlign.right,
+                              decoration: InputDecoration(
+                                hintText: _isRecording
+                                    ? 'استمع... تحدث الآن'
+                                    : 'ابحث عن منتج...',
+                                hintStyle: GoogleFonts.cairo(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                ),
+                                prefixIcon: Container(
+                                  margin: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.search_rounded,
+                                      size: 20, color: Colors.white),
+                                ),
+                                suffixIcon: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_searchController.text.isNotEmpty)
+                                      IconButton(
+                                        icon: const Icon(Icons.clear_rounded,
+                                            color: Colors.white70, size: 20),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() => _searchQuery = '');
+                                        },
+                                      ),
+                                    IconButton(
+                                      icon: _isRecording
+                                          ? Icon(Icons.stop_rounded,
+                                              color: Colors.red.shade300,
+                                              size: 24)
+                                          : _isProcessingAudio
+                                              ? const SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: Colors.white))
+                                              : const Icon(Icons.mic_rounded,
+                                                  color: Colors.white70,
+                                                  size: 20),
+                                      onPressed: _isRecording
+                                          ? _stopRecording
+                                          : (_isProcessingAudio
+                                              ? null
+                                              : _startRecording),
+                                    ),
+                                  ],
+                                ),
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.1),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: const BorderSide(
+                                      color: Colors.white, width: 2),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 12, horizontal: 16),
+                              ),
+                              onSubmitted: (value) {
+                                setState(() => _searchQuery = value);
+                                _search();
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          height: 50,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            itemCount: _sortOptions.length,
+                            itemBuilder: (context, index) {
+                              final option = _sortOptions[index];
+                              final isSelected =
+                                  _selectedSortLabel == option['label'];
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: TweenAnimationBuilder(
+                                  tween: Tween<double>(begin: 0.0, end: 1.0),
+                                  duration: Duration(
+                                      milliseconds: 400 + (index * 50)),
+                                  curve: Curves.easeOut,
+                                  builder: (context, double value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Transform.scale(
+                                        scale: 0.8 + (0.2 * value),
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: GestureDetector(
+                                    onTap: () => _applySort(
+                                        option['value'], option['label']),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        gradient: isSelected
+                                            ? const LinearGradient(colors: [
+                                                primaryBlue,
+                                                secondaryBlue
+                                              ])
+                                            : LinearGradient(colors: [
+                                                Colors.white.withOpacity(0.2),
+                                                Colors.white.withOpacity(0.1)
+                                              ]),
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: isSelected
+                                            ? [
+                                                BoxShadow(
+                                                  color: primaryBlue
+                                                      .withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(option['icon'],
+                                              size: 14,
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : Colors.white70),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            option['label'],
+                                            style: GoogleFonts.cairo(
+                                              fontSize: 11,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500,
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : Colors.white70,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-            onSubmitted: (value) {
-              setState(() => _searchQuery = value);
-              _search();
-            },
+              if (_isRecording) _buildRecordingIndicator(),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : _errorMessage != null
+                        ? _buildErrorWidget()
+                        : _products.isEmpty &&
+                                _searchQuery.isEmpty &&
+                                _selectedGovernorates.isEmpty
+                            ? _buildInitialWidget()
+                            : _products.isEmpty
+                                ? _buildEmptyWidget()
+                                : _isGridView
+                                    ? _buildGridView()
+                                    : _buildListView(),
+              ),
+            ],
           ),
         ),
-        elevation: 0,
-        centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(
-                _showFilters
-                    ? Icons.filter_list_off_rounded
-                    : Icons.filter_list_rounded,
-                color: Colors.white,
-                size: 22,
+        floatingActionButton: _showFilters
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () => _showFiltersSheet(),
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.filter_list_rounded),
+                label: Text('فلترة',
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                elevation: 5,
               ),
-              onPressed: () => setState(() => _showFilters = !_showFilters),
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.only(right: 4, top: 8, bottom: 8, left: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(
-                _isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
-                color: Colors.white,
-                size: 22,
-              ),
-              onPressed: _toggleViewMode,
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ✅ مؤشر التسجيل
-          if (_isRecording) _buildRecordingIndicator(),
-          if (_showFilters) _buildFiltersPanel(),
-          // ✅ عرض المحافظات المحددة كـ Chips
-          if (_selectedGovernorates.isNotEmpty && !_showFilters)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: cardWhite,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: _selectedGovernorates.map((gov) {
-                  return Chip(
-                    label: Text(gov,
-                        style: GoogleFonts.cairo(
-                            fontSize: 12, color: primaryBlue)),
-                    onDeleted: () {
-                      setState(() => _selectedGovernorates.remove(gov));
-                      _search();
-                    },
-                    deleteIcon: const Icon(Icons.close_rounded,
-                        size: 14, color: primaryBlue),
-                    backgroundColor: primaryBlue.withOpacity(0.08),
-                    side: BorderSide(color: primaryBlue.withOpacity(0.2)),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                    visualDensity: VisualDensity.compact,
-                  );
-                }).toList(),
-              ),
-            ),
-          Expanded(
-            child: _isLoading
-                ? _buildShimmerLoading()
-                : _errorMessage != null
-                ? _buildErrorWidget()
-                : _products.isEmpty &&
-                _searchQuery.isEmpty &&
-                _selectedGovernorates.isEmpty
-                ? _buildInitialWidget()
-                : _products.isEmpty
-                ? _buildEmptyWidget()
-                : _isGridView
-                ? _buildGridView()
-                : _buildListView(),
-          ),
-        ],
       ),
     );
   }
 
-  // ✅ واجهة مؤشر التسجيل
+  void _showFiltersSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: cardWhite,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black12, blurRadius: 10, offset: Offset(0, -2)),
+          ],
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        purple.withOpacity(0.12),
+                        purple.withOpacity(0.06)
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.filter_alt_rounded,
+                      size: 20, color: purple),
+                ),
+                const SizedBox(width: 10),
+                Text('الفلاتر',
+                    style: GoogleFonts.cairo(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: darkColor)),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildGovernorateFilter(),
+            const SizedBox(height: 16),
+            _buildPriceFilter(),
+            const SizedBox(height: 16),
+            _buildRateFilter(),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _resetFilters,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.grey.shade400),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: Text('إعادة تعيين',
+                        style: GoogleFonts.cairo(
+                            color: mediumGray, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _applyFilters();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 3,
+                      shadowColor: primaryBlue.withOpacity(0.3),
+                    ),
+                    child: Text('تطبيق',
+                        style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGovernorateFilter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('المحافظة',
+            style: GoogleFonts.cairo(
+                fontSize: 14, fontWeight: FontWeight.bold, color: darkColor)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _syrianGovernorates.map((gov) {
+            final isSelected = _selectedGovernorates.contains(gov);
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (isSelected) {
+                    _selectedGovernorates.remove(gov);
+                  } else {
+                    _selectedGovernorates.add(gov);
+                  }
+                });
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? purple.withOpacity(0.1) : lightGray,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: isSelected ? purple : Colors.grey.shade300,
+                      width: isSelected ? 1.5 : 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isSelected
+                          ? Icons.check_circle_rounded
+                          : Icons.circle_outlined,
+                      color: isSelected ? purple : Colors.grey,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(gov,
+                        style: GoogleFonts.cairo(
+                          fontSize: 12,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected ? purple : mediumGray,
+                        )),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPriceFilter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('السعر (ل.س)',
+            style: GoogleFonts.cairo(
+                fontSize: 14, fontWeight: FontWeight.bold, color: darkColor)),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'الحد الأدنى',
+                  labelStyle:
+                      GoogleFonts.cairo(fontSize: 12, color: mediumGray),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onChanged: (value) => _minPrice = double.tryParse(value),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'الحد الأعلى',
+                  labelStyle:
+                      GoogleFonts.cairo(fontSize: 12, color: mediumGray),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onChanged: (value) => _maxPrice = double.tryParse(value),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRateFilter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('التقييم',
+            style: GoogleFonts.cairo(
+                fontSize: 14, fontWeight: FontWeight.bold, color: darkColor)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _rateOptions.map((option) {
+            final isSelected = _minRate == option['value'];
+            return GestureDetector(
+              onTap: () => setState(() => _minRate = option['value']),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color:
+                      isSelected ? warningOrange.withOpacity(0.1) : lightGray,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: isSelected ? warningOrange : Colors.grey.shade300,
+                      width: isSelected ? 1.5 : 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(option['icon'],
+                        size: 16,
+                        color: isSelected ? warningOrange : mediumGray),
+                    const SizedBox(width: 6),
+                    Text(option['label'],
+                        style: GoogleFonts.cairo(
+                          fontSize: 12,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                          color: isSelected ? warningOrange : mediumGray,
+                        )),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
   Widget _buildRecordingIndicator() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.red.withOpacity(0.1),
-        border: Border(
-          bottom: BorderSide(color: Colors.red.withOpacity(0.3)),
-        ),
+        border: Border(bottom: BorderSide(color: Colors.red.withOpacity(0.3))),
       ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.red.withOpacity(0.2),
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) => Transform.scale(
+              scale: 1.0 + (_pulseController.value * 0.15),
+              child: child,
             ),
-            child: const Icon(Icons.mic_rounded, color: Colors.red, size: 24),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.red.withOpacity(0.2),
+              ),
+              child: const Icon(Icons.mic_rounded, color: Colors.red, size: 24),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'جاري التسجيل... تحدث الآن',
-                  style: GoogleFonts.cairo(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: darkColor,
-                  ),
-                ),
+                Text('جاري التسجيل... تحدث الآن',
+                    style: GoogleFonts.cairo(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: darkColor)),
                 const SizedBox(height: 4),
-                // ✅ عرض النص الجزئي أثناء التحدث
                 if (_lastRecognizedText != null &&
                     _lastRecognizedText!.isNotEmpty)
-                  Text(
-                    _lastRecognizedText!,
-                    style: GoogleFonts.cairo(
-                      fontSize: 12,
-                      color: primaryBlue,
-                      fontStyle: FontStyle.italic,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(_lastRecognizedText!,
+                      style: GoogleFonts.cairo(
+                          fontSize: 12,
+                          color: primaryBlue,
+                          fontStyle: FontStyle.italic),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
@@ -895,204 +1283,248 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           const SizedBox(width: 12),
           IconButton(
-            icon: const Icon(Icons.cancel_rounded, color: Colors.red),
-            onPressed: _cancelRecording,
-          ),
+              icon: const Icon(Icons.cancel_rounded, color: Colors.red),
+              onPressed: _cancelRecording),
         ],
       ),
     );
   }
 
-  Widget _buildFiltersPanel() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardWhite,
-        boxShadow: [
-          BoxShadow(
-            color: primaryBlue.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+  Widget _buildGridView() {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollInfo) {
+        if (scrollInfo.metrics.pixels >=
+                scrollInfo.metrics.maxScrollExtent - 200 &&
+            !_isLoadingMore &&
+            _hasMore) {
+          _search(loadMore: true);
+        }
+        return false;
+      },
+      child: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.72,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+        ),
+        itemCount: _products.length + (_hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _products.length) return _buildLoadingMoreIndicator();
+          return TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: Duration(milliseconds: 500 + (index * 80)),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 30 * (1 - value)),
+                child:
+                    Transform.scale(scale: 0.9 + (0.1 * value), child: child),
+              ),
+            ),
+            child: ProductCard(
+              product: _products[index],
+              apiService: widget.apiService,
+              authService: widget.authService,
+            ),
+          );
+        },
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ✅ قسم فلترة المحافظة
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF7C3AED).withOpacity(0.12),
-                      const Color(0xFF7C3AED).withOpacity(0.06)
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.location_on_rounded,
-                    size: 18, color: Color(0xFF7C3AED)),
+    );
+  }
+
+  Widget _buildListView() {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollInfo) {
+        if (scrollInfo.metrics.pixels >=
+                scrollInfo.metrics.maxScrollExtent - 200 &&
+            !_isLoadingMore &&
+            _hasMore) {
+          _search(loadMore: true);
+        }
+        return false;
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _products.length + (_hasMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _products.length) return _buildLoadingMoreIndicator();
+          return TweenAnimationBuilder(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: Duration(milliseconds: 400 + (index * 80)),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) => Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(30 * (1 - value), 0),
+                child: child,
               ),
-              const SizedBox(width: 10),
-              Text(
-                'المحافظة',
-                style: GoogleFonts.cairo(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: darkColor),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: ProductCard(
+                product: _products[index],
+                apiService: widget.apiService,
+                authService: widget.authService,
               ),
-              const Spacer(),
-              if (_selectedGovernorates.isNotEmpty)
-                TextButton(
-                  onPressed: () =>
-                      setState(() => _selectedGovernorates.clear()),
-                  child: Text('إلغاء الكل',
-                      style: GoogleFonts.cairo(
-                          color: Colors.red,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600)),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _syrianGovernorates.map((governorate) {
-              final isSelected = _selectedGovernorates.contains(governorate);
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    if (isSelected) {
-                      _selectedGovernorates.remove(governorate);
-                    } else {
-                      _selectedGovernorates.add(governorate);
-                    }
-                  });
-                },
-                child: Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF7C3AED).withOpacity(0.1)
-                        : lightGray,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFF7C3AED)
-                          : Colors.grey.shade300,
-                      width: isSelected ? 1.5 : 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isSelected
-                            ? Icons.check_circle_rounded
-                            : Icons.circle_outlined,
-                        color: isSelected
-                            ? const Color(0xFF7C3AED)
-                            : Colors.grey,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        governorate,
-                        style: GoogleFonts.cairo(
-                          fontSize: 12,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                          color: isSelected
-                              ? const Color(0xFF7C3AED)
-                              : mediumGray,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 20),
-          // ✅ أزرار التطبيق
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _resetFilters,
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: Colors.grey.shade400),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text('إعادة تعيين',
-                      style: GoogleFonts.cairo(
-                          color: mediumGray, fontWeight: FontWeight.w600)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _applyFilters,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    elevation: 3,
-                    shadowColor: primaryBlue.withOpacity(0.3),
-                  ),
-                  child: Text('تطبيق',
-                      style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildInitialWidget() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: cardWhite,
-              boxShadow: [
-                BoxShadow(
-                    color: primaryBlue.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 5))
-              ],
+      child: TweenAnimationBuilder(
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 800),
+        builder: (context, value, child) => Opacity(
+          opacity: value,
+          child: Transform.scale(scale: 0.8 + (0.2 * value), child: child),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    primaryBlue.withOpacity(0.05),
+                    secondaryBlue.withOpacity(0.1)
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                      color: primaryBlue.withOpacity(0.1),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10)),
+                ],
+              ),
+              child: Icon(Icons.search_rounded,
+                  size: 60, color: primaryBlue.withOpacity(0.3)),
             ),
-            child:
-            Icon(Icons.search_rounded, size: 50, color: Colors.grey.shade400),
-          ),
-          const SizedBox(height: 20),
-          Text('ابحث عن منتج',
-              style: GoogleFonts.cairo(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: darkColor)),
-          const SizedBox(height: 8),
-          Text('اكتب اسم المنتج الذي تبحث عنه أو استخدم البحث الصوتي',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
-        ],
+            const SizedBox(height: 24),
+            Text('ابحث عن منتج',
+                style: GoogleFonts.cairo(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor)),
+            const SizedBox(height: 8),
+            Text('اكتب اسم المنتج أو استخدم البحث الصوتي',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyWidget() {
+    return Center(
+      child: TweenAnimationBuilder(
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 800),
+        builder: (context, value, child) => Opacity(
+          opacity: value,
+          child: Transform.scale(scale: 0.8 + (0.2 * value), child: child),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    primaryBlue.withOpacity(0.05),
+                    secondaryBlue.withOpacity(0.1)
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                      color: primaryBlue.withOpacity(0.08),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10)),
+                ],
+              ),
+              child: Icon(Icons.search_off_rounded,
+                  size: 70, color: primaryBlue.withOpacity(0.3)),
+            ),
+            const SizedBox(height: 24),
+            Text('لا توجد نتائج',
+                style: GoogleFonts.cairo(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor)),
+            const SizedBox(height: 8),
+            Text('جرب البحث بكلمة مختلفة',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Center(
+      child: TweenAnimationBuilder(
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 800),
+        builder: (context, value, child) => Opacity(
+          opacity: value,
+          child: Transform.scale(scale: 0.8 + (0.2 * value), child: child),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cardWhite,
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.red.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 5)),
+                ],
+              ),
+              child: Icon(Icons.error_outline_rounded,
+                  size: 50, color: Colors.red.shade300),
+            ),
+            const SizedBox(height: 20),
+            Text(_errorMessage!,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.cairo(fontSize: 16, color: mediumGray)),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => _search(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text('إعادة المحاولة',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                elevation: 5,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15)),
+                shadowColor: primaryBlue.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1102,7 +1534,7 @@ class _SearchScreenState extends State<SearchScreen> {
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.75,
+        childAspectRatio: 0.72,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
@@ -1113,130 +1545,9 @@ class _SearchScreenState extends State<SearchScreen> {
           highlightColor: Colors.grey.shade100,
           child: Container(
             decoration: BoxDecoration(
-                color: cardWhite, borderRadius: BorderRadius.circular(20)),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
               color: cardWhite,
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.red.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 5))
-              ],
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Icon(Icons.error_outline_rounded,
-                size: 50, color: Colors.red.shade300),
-          ),
-          const SizedBox(height: 20),
-          Text(_errorMessage!,
-              style: GoogleFonts.cairo(fontSize: 16, color: mediumGray)),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _search(),
-            icon: const Icon(Icons.refresh_rounded),
-            label: Text('إعادة المحاولة',
-                style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: cardWhite,
-              boxShadow: [
-                BoxShadow(
-                    color: primaryBlue.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 5))
-              ],
-            ),
-            child: Icon(Icons.search_off_rounded,
-                size: 50, color: Colors.grey.shade400),
-          ),
-          const SizedBox(height: 20),
-          Text('لا توجد نتائج',
-              style: GoogleFonts.cairo(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: darkColor)),
-          const SizedBox(height: 8),
-          Text('جرب البحث بكلمة مختلفة',
-              style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGridView() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: _products.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _products.length) {
-          return _buildLoadingMoreIndicator();
-        }
-        final product = _products[index];
-        return ProductCard(
-          product: product,
-          apiService: widget.apiService,
-          authService: widget.authService,
-        );
-      },
-    );
-  }
-
-  Widget _buildListView() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _products.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _products.length) {
-          return _buildLoadingMoreIndicator();
-        }
-        final product = _products[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: ProductCard(
-            product: product,
-            apiService: widget.apiService,
-            authService: widget.authService,
           ),
         );
       },
@@ -1245,12 +1556,60 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildLoadingMoreIndicator() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Center(
         child: _isLoadingMore
-            ? const CircularProgressIndicator(color: primaryBlue)
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) => Transform.scale(
+                      scale: 1.0 + (_pulseController.value * 0.2),
+                      child: child,
+                    ),
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            primaryBlue.withOpacity(0.15),
+                            secondaryBlue.withOpacity(0.08)
+                          ],
+                        ),
+                      ),
+                      child: const CircularProgressIndicator(
+                          color: primaryBlue, strokeWidth: 3),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text('جاري تحميل المزيد...',
+                      style:
+                          GoogleFonts.cairo(fontSize: 13, color: mediumGray)),
+                ],
+              )
             : const SizedBox.shrink(),
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

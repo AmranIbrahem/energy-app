@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/favorites_service.dart';
-import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
+import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 
 class OfferCard extends StatefulWidget {
   final dynamic offer;
@@ -38,6 +38,54 @@ class _OfferCardState extends State<OfferCard> {
     _isFavorite = _favoritesService.isOfferFavorite(widget.offer['id']);
   }
 
+  bool get _isSypPreferred {
+    final storage = widget.authService?.storageService;
+    if (storage == null) return false;
+    try {
+      return storage.isSypPreferred();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  double _getOriginalPrice() {
+    return _isSypPreferred
+        ? (double.tryParse(widget.offer['price_syp']?.toString() ?? '0') ?? 0)
+        : (double.tryParse(widget.offer['price']?.toString() ?? '0') ?? 0);
+  }
+
+  double _getFinalPrice() {
+    return _isSypPreferred
+        ? (double.tryParse(
+                widget.offer['final_price_syp']?.toString() ?? '0') ??
+            0)
+        : (double.tryParse(widget.offer['final_price']?.toString() ?? '0') ??
+            0);
+  }
+
+  String _fmt(double price) {
+    if (_isSypPreferred) {
+      return '${_formatNumber(price)} SYP';
+    }
+    return '\$${_formatNumber(price)}';
+  }
+
+  String _formatNumber(double number) {
+    final parts = number.toStringAsFixed(2).split('.');
+    final intPart = parts[0];
+    final decimalPart = parts[1];
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < intPart.length; i++) {
+      if (i > 0 && (intPart.length - i) % 3 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(intPart[i]);
+    }
+
+    return '${buffer.toString()}.$decimalPart';
+  }
+
   Future<void> _toggleFavorite() async {
     setState(() => _isUpdatingFavorite = true);
 
@@ -55,6 +103,9 @@ class _OfferCardState extends State<OfferCard> {
           'slug': widget.offer['slug'],
           'price': widget.offer['price'],
           'final_price': widget.offer['final_price'],
+          'price_syp': widget.offer['price_syp'],
+          'final_price_syp': widget.offer['final_price_syp'],
+          'discount_price_syp': widget.offer['discount_price_syp'],
           'cover_image': widget.offer['cover_image'],
           'discount_percentage': widget.offer['discount_percentage'],
           'total_wattage': widget.offer['total_wattage'],
@@ -69,7 +120,7 @@ class _OfferCardState extends State<OfferCard> {
       }
     } catch (e) {
       _showSnackBar('حدث خطأ، حاول مرة أخرى', Colors.red);
-      debugPrint('Error toggling favorite: $e');
+      // debugPrint('Error toggling favorite: $e');
     } finally {
       if (mounted) setState(() => _isUpdatingFavorite = false);
     }
@@ -93,10 +144,10 @@ class _OfferCardState extends State<OfferCard> {
 
   Widget _buildGridViewCard() {
     final bool hasDiscount = (widget.offer['discount_percentage'] ?? 0) > 0;
-    final double finalPrice =
-        double.tryParse(widget.offer['final_price']?.toString() ?? '0') ?? 0;
-    final double originalPrice =
-        double.tryParse(widget.offer['price']?.toString() ?? '0') ?? 0;
+
+    final double finalPrice = _getFinalPrice();
+    final double originalPrice = _getOriginalPrice();
+
     final int totalWattage = widget.offer['total_wattage'] ?? 0;
     final int totalCapacity = widget.offer['total_capacity'] ?? 0;
     final String name = widget.offer['name_ar']?.toString() ?? 'غير معروف';
@@ -104,7 +155,6 @@ class _OfferCardState extends State<OfferCard> {
     final int views = widget.offer['views'] ?? 0;
     final double rate =
         double.tryParse(widget.offer['rate']?.toString() ?? '0') ?? 0;
-    // ✅ استخراج اسم المحافظة للعرض
     final String governorate =
         widget.offer['governorate_offer']?.toString() ?? '';
 
@@ -152,29 +202,29 @@ class _OfferCardState extends State<OfferCard> {
                   ),
                   child: imageUrl.isNotEmpty
                       ? CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    height: 130,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Shimmer.fromColors(
-                      baseColor: Colors.grey.shade300,
-                      highlightColor: Colors.grey.shade100,
-                      child: Container(
-                          height: 130, color: Colors.grey.shade300),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      height: 130,
-                      color: const Color(0xFF4CAF50).withOpacity(0.1),
-                      child: const Icon(Icons.local_offer,
-                          size: 40, color: Color(0xFF4CAF50)),
-                    ),
-                  )
+                          imageUrl: imageUrl,
+                          height: 130,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Shimmer.fromColors(
+                            baseColor: Colors.grey.shade300,
+                            highlightColor: Colors.grey.shade100,
+                            child: Container(
+                                height: 130, color: Colors.grey.shade300),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            height: 130,
+                            color: const Color(0xFF4CAF50).withOpacity(0.1),
+                            child: const Icon(Icons.local_offer,
+                                size: 40, color: Color(0xFF4CAF50)),
+                          ),
+                        )
                       : Container(
-                    height: 130,
-                    color: const Color(0xFF4CAF50).withOpacity(0.1),
-                    child: const Icon(Icons.local_offer,
-                        size: 40, color: Color(0xFF4CAF50)),
-                  ),
+                          height: 130,
+                          color: const Color(0xFF4CAF50).withOpacity(0.1),
+                          child: const Icon(Icons.local_offer,
+                              size: 40, color: Color(0xFF4CAF50)),
+                        ),
                 ),
                 if (hasDiscount)
                   Positioned(
@@ -226,23 +276,22 @@ class _OfferCardState extends State<OfferCard> {
                           padding: const EdgeInsets.all(6),
                           child: _isUpdatingFavorite
                               ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Color(0xFF4CAF50)))
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Color(0xFF4CAF50)))
                               : Icon(
-                            _isFavorite
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            color: _isFavorite ? Colors.red : Colors.grey,
-                            size: 16,
-                          ),
+                                  _isFavorite
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: _isFavorite ? Colors.red : Colors.grey,
+                                  size: 16,
+                                ),
                         ),
                       ),
                     ),
                   ),
                 ),
-                // ✅ عرض الشبكة: المحافظة + الواط في الأسفل
                 if (totalWattage > 0 || governorate.isNotEmpty)
                   Positioned(
                     bottom: 12,
@@ -251,7 +300,6 @@ class _OfferCardState extends State<OfferCard> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // ✅ المحافظة في الأسفل يسار
                         if (governorate.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -280,7 +328,6 @@ class _OfferCardState extends State<OfferCard> {
                               ],
                             ),
                           ),
-                        // ✅ الواط في الأسفل يمين
                         if (totalWattage > 0)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -353,7 +400,7 @@ class _OfferCardState extends State<OfferCard> {
                           children: [
                             if (hasDiscount) ...[
                               Text(
-                                Helpers.formatPrice(originalPrice),
+                                _fmt(originalPrice),
                                 style: GoogleFonts.cairo(
                                     fontSize: 10,
                                     color: Colors.grey,
@@ -362,7 +409,7 @@ class _OfferCardState extends State<OfferCard> {
                               const SizedBox(height: 2),
                             ],
                             Text(
-                              Helpers.formatPrice(finalPrice),
+                              _fmt(finalPrice),
                               style: GoogleFonts.cairo(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -409,10 +456,10 @@ class _OfferCardState extends State<OfferCard> {
 
   Widget _buildListViewCard() {
     final bool hasDiscount = (widget.offer['discount_percentage'] ?? 0) > 0;
-    final double finalPrice =
-        double.tryParse(widget.offer['final_price']?.toString() ?? '0') ?? 0;
-    final double originalPrice =
-        double.tryParse(widget.offer['price']?.toString() ?? '0') ?? 0;
+
+    final double finalPrice = _getFinalPrice();
+    final double originalPrice = _getOriginalPrice();
+
     final int totalWattage = widget.offer['total_wattage'] ?? 0;
     final int totalCapacity = widget.offer['total_capacity'] ?? 0;
     final String name = widget.offer['name_ar']?.toString() ?? 'غير معروف';
@@ -420,7 +467,6 @@ class _OfferCardState extends State<OfferCard> {
     final int views = widget.offer['views'] ?? 0;
     final double rate =
         double.tryParse(widget.offer['rate']?.toString() ?? '0') ?? 0;
-    // ✅ استخراج اسم المحافظة للعرض
     final String governorate =
         widget.offer['governorate_offer']?.toString() ?? '';
 
@@ -466,36 +512,36 @@ class _OfferCardState extends State<OfferCard> {
                   ),
                   child: imageUrl.isNotEmpty
                       ? CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    width: 100,
-                    height: 125,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      width: 100,
-                      height: 125,
-                      color: Colors.grey.shade200,
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFF4CAF50),
-                        ),
-                      ),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      width: 100,
-                      height: 125,
-                      color: const Color(0xFF4CAF50).withOpacity(0.1),
-                      child: const Icon(Icons.local_offer,
-                          size: 30, color: Color(0xFF4CAF50)),
-                    ),
-                  )
+                          imageUrl: imageUrl,
+                          width: 100,
+                          height: 125,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(
+                            width: 100,
+                            height: 125,
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF4CAF50),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            width: 100,
+                            height: 125,
+                            color: const Color(0xFF4CAF50).withOpacity(0.1),
+                            child: const Icon(Icons.local_offer,
+                                size: 30, color: Color(0xFF4CAF50)),
+                          ),
+                        )
                       : Container(
-                    width: 100,
-                    height: 125,
-                    color: const Color(0xFF4CAF50).withOpacity(0.1),
-                    child: const Icon(Icons.local_offer,
-                        size: 30, color: Color(0xFF4CAF50)),
-                  ),
+                          width: 100,
+                          height: 125,
+                          color: const Color(0xFF4CAF50).withOpacity(0.1),
+                          child: const Icon(Icons.local_offer,
+                              size: 30, color: Color(0xFF4CAF50)),
+                        ),
                 ),
                 if (hasDiscount)
                   Positioned(
@@ -518,7 +564,6 @@ class _OfferCardState extends State<OfferCard> {
                       ),
                     ),
                   ),
-                // ✅ عرض القائمة: المحافظة + الواط في الأسفل
                 if (totalWattage > 0 || governorate.isNotEmpty)
                   Positioned(
                     bottom: 8,
@@ -527,7 +572,6 @@ class _OfferCardState extends State<OfferCard> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // ✅ المحافظة في الأسفل يسار
                         if (governorate.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -556,7 +600,6 @@ class _OfferCardState extends State<OfferCard> {
                               ],
                             ),
                           ),
-                        // ✅ الواط في الأسفل يمين
                         if (totalWattage > 0)
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -603,21 +646,21 @@ class _OfferCardState extends State<OfferCard> {
                             ),
                             child: _isUpdatingFavorite
                                 ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF4CAF50),
-                              ),
-                            )
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFF4CAF50),
+                                    ),
+                                  )
                                 : Icon(
-                              _isFavorite
-                                  ? Icons.favorite
-                                  : Icons.favorite_border,
-                              color:
-                              _isFavorite ? Colors.red : Colors.grey,
-                              size: 16,
-                            ),
+                                    _isFavorite
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color:
+                                        _isFavorite ? Colors.red : Colors.grey,
+                                    size: 16,
+                                  ),
                           ),
                         ),
                       ],
@@ -660,7 +703,7 @@ class _OfferCardState extends State<OfferCard> {
                       children: [
                         if (hasDiscount) ...[
                           Text(
-                            Helpers.formatPrice(originalPrice),
+                            _fmt(originalPrice),
                             style: GoogleFonts.cairo(
                               fontSize: 10,
                               color: Colors.grey,
@@ -670,7 +713,7 @@ class _OfferCardState extends State<OfferCard> {
                           const SizedBox(width: 6),
                         ],
                         Text(
-                          Helpers.formatPrice(finalPrice),
+                          _fmt(finalPrice),
                           style: GoogleFonts.cairo(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,

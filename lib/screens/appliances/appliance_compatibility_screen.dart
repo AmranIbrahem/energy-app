@@ -1,10 +1,10 @@
 // lib/screens/appliances/appliance_compatibility_screen.dart
 
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
 
 class ApplianceCompatibilityScreen extends StatefulWidget {
   final AuthService authService;
@@ -17,20 +17,21 @@ class ApplianceCompatibilityScreen extends StatefulWidget {
   });
 
   @override
-  State<ApplianceCompatibilityScreen> createState() => _ApplianceCompatibilityScreenState();
+  State<ApplianceCompatibilityScreen> createState() =>
+      _ApplianceCompatibilityScreenState();
 }
 
-class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScreen> {
+class _ApplianceCompatibilityScreenState
+    extends State<ApplianceCompatibilityScreen> {
   int _currentStep = 0;
 
   String? _systemVoltage;
   String? _inverterPower;
   String? _batteryType;
 
-  // قيم الألواح الشمسية
   String? _panelCount;
   String? _panelWatts;
-  // قيم البطاريات
+
   String? _batteryCount;
   String? _batteryAh;
 
@@ -40,19 +41,21 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
 
   final TextEditingController _deviceNameController = TextEditingController();
   final TextEditingController _devicePowerController = TextEditingController();
-  final TextEditingController _deviceDayHoursController = TextEditingController();
-  final TextEditingController _deviceNightHoursController = TextEditingController();
+  final TextEditingController _deviceDayHoursController =
+      TextEditingController();
+  final TextEditingController _deviceNightHoursController =
+      TextEditingController();
 
-  // متغيرات للقيم اليدوية
   final TextEditingController _panelCountController = TextEditingController();
   final TextEditingController _panelWattsController = TextEditingController();
   final TextEditingController _batteryCountController = TextEditingController();
   final TextEditingController _batteryAhController = TextEditingController();
+  final TextEditingController _inverterPowerController =
+      TextEditingController();
 
   bool _isChecking = false;
   Map<String, dynamic>? _result;
 
-  // ألوان محدثة
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color accentCyan = Color(0xFF06B6D4);
@@ -64,20 +67,65 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
   static const Color nightColor = Color(0xFF6366F1);
   static const Color successGreen = Color(0xFF10B981);
 
-  // خيارات الاختيارات
   final List<String> _voltages = ['12', '24', '48'];
-  final List<String> _inverterPowers = [
-    'أقل من 1000W',
-    '1000W - 3000W',
-    'أكثر من 3000W'
-  ];
   final List<String> _batteryTypes = ['أسيد', 'جل', 'ليثيوم'];
 
-  // خيارات القوائم المنسدلة (اختيار من 1-10 أو "أخرى" للكتابة)
-  final List<String> _panelCountOptions = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'أخرى'];
-  final List<String> _panelWattsOptions = ['450W', '550W', '590W', '620W', '710W', 'أخرى'];
-  final List<String> _batteryCountOptions = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'أخرى'];
-  final List<String> _batteryAhOptions = ['100Ah', '150Ah', '200Ah', '250Ah', '300Ah', 'أخرى'];
+  final List<String> _inverterPowers = [
+    'أقل من 1000W',
+    '1000W - 2000W',
+    '2000W - 3000W',
+    '3000W - 4000W',
+    '4000W - 5000W',
+    '5000W - 6000W',
+    '6000W - 7000W',
+    '7000W - 8000W',
+    '8000W - 9000W',
+    '9000W - 10000W',
+    'إدخال قيمة يدوي',
+  ];
+
+  final List<String> _panelCountOptions = [
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '10',
+    'أخرى'
+  ];
+  final List<String> _panelWattsOptions = [
+    '450W',
+    '550W',
+    '590W',
+    '620W',
+    '710W',
+    'أخرى'
+  ];
+  final List<String> _batteryCountOptions = [
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '10',
+    'أخرى'
+  ];
+  final List<String> _batteryAhOptions = [
+    '100Ah',
+    '150Ah',
+    '200Ah',
+    '250Ah',
+    '300Ah',
+    'أخرى'
+  ];
 
   @override
   void initState() {
@@ -95,6 +143,7 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     _panelWattsController.dispose();
     _batteryCountController.dispose();
     _batteryAhController.dispose();
+    _inverterPowerController.dispose();
     super.dispose();
   }
 
@@ -134,20 +183,34 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
 
   IconData _getIconFromString(String iconName) {
     switch (iconName) {
-      case 'ac_unit': return Icons.ac_unit_rounded;
-      case 'kitchen': return Icons.kitchen_rounded;
-      case 'local_laundry_service': return Icons.local_laundry_service_rounded;
-      case 'microwave': return Icons.microwave_rounded;
-      case 'tv': return Icons.tv_rounded;
-      case 'laptop': return Icons.laptop_rounded;
-      case 'desktop_windows': return Icons.desktop_windows_rounded;
-      case 'router': return Icons.router_rounded;
-      case 'phone_android': return Icons.phone_android_rounded;
-      case 'water_drop': return Icons.water_drop_rounded;
-      case 'air': return Icons.air_rounded;
-      case 'lightbulb': return Icons.lightbulb_rounded;
-      case 'light': return Icons.light_rounded;
-      default: return Icons.devices_rounded;
+      case 'ac_unit':
+        return Icons.ac_unit_rounded;
+      case 'kitchen':
+        return Icons.kitchen_rounded;
+      case 'local_laundry_service':
+        return Icons.local_laundry_service_rounded;
+      case 'microwave':
+        return Icons.microwave_rounded;
+      case 'tv':
+        return Icons.tv_rounded;
+      case 'laptop':
+        return Icons.laptop_rounded;
+      case 'desktop_windows':
+        return Icons.desktop_windows_rounded;
+      case 'router':
+        return Icons.router_rounded;
+      case 'phone_android':
+        return Icons.phone_android_rounded;
+      case 'water_drop':
+        return Icons.water_drop_rounded;
+      case 'air':
+        return Icons.air_rounded;
+      case 'lightbulb':
+        return Icons.lightbulb_rounded;
+      case 'light':
+        return Icons.light_rounded;
+      default:
+        return Icons.devices_rounded;
     }
   }
 
@@ -156,8 +219,10 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     setState(() {
       _deviceNameController.text = device['name_ar'] ?? '';
       _devicePowerController.text = (device['power_watts'] ?? 0).toString();
-      _deviceDayHoursController.text = (device['default_day_hours'] ?? 1).toString();
-      _deviceNightHoursController.text = (device['default_night_hours'] ?? 0).toString();
+      _deviceDayHoursController.text =
+          (device['default_day_hours'] ?? 1).toString();
+      _deviceNightHoursController.text =
+          (device['default_night_hours'] ?? 0).toString();
     });
   }
 
@@ -215,7 +280,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
         return parts.join(' - ');
       }).join('\n');
 
-      // ✅ استخراج القيم اليدوية إن وجدت
       int? panelCount;
       if (_panelCount == 'أخرى') {
         panelCount = int.tryParse(_panelCountController.text.trim());
@@ -244,12 +308,22 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
         batteryAh = int.tryParse(_batteryAh!.replaceAll('Ah', ''));
       }
 
+      String? inverterPowerValue;
+      if (_inverterPower == 'إدخال قيمة يدوي') {
+        final manual = _inverterPowerController.text.trim();
+        if (manual.isNotEmpty) {
+          inverterPowerValue = '${manual}W';
+        }
+      } else if (_inverterPower != null) {
+        inverterPowerValue = _inverterPower;
+      }
+
       final response = await widget.apiService.post(
         '/v1/user/appliance-compatibility/check',
         requiresAuth: true,
         data: {
           'system_voltage': _systemVoltage,
-          'inverter_power': _inverterPower,
+          'inverter_power': inverterPowerValue,
           'battery_type': _batteryType,
           'panel_count': panelCount,
           'panel_watts': panelWatts,
@@ -268,7 +342,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
         setState(() => _isChecking = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['message'] ?? 'حدث خطأ', style: GoogleFonts.cairo()),
+            content: Text(response['message'] ?? 'حدث خطأ',
+                style: GoogleFonts.cairo()),
             backgroundColor: Colors.red,
           ),
         );
@@ -284,51 +359,74 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     }
   }
 
+  Widget _buildCurvedHeader(BuildContext context) {
+    return ClipPath(
+      clipper: _BottomCurveClipper(),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [primaryBlue, secondaryBlue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'فحص التوافق',
+                      style: GoogleFonts.cairo(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 48),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue, accentCyan],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: primaryBlue.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-        ),
-        title: Text(
-          'فحص التوافق',
-          style: GoogleFonts.cairo(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            shadows: [
-              Shadow(
-                offset: const Offset(0, 2),
-                blurRadius: 4,
-                color: Colors.black.withOpacity(0.2),
-              ),
-            ],
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-      ),
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: _isChecking
-            ? _buildLoadingScreen()
-            : _result != null
-            ? _buildResult()
-            : _buildWizard(),
+        child: Column(
+          children: [
+            _buildCurvedHeader(context),
+            Expanded(
+              child: _isChecking
+                  ? _buildLoadingScreen()
+                  : _result != null
+                      ? _buildResult()
+                      : _buildWizard(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -383,7 +481,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
   Widget _buildWizard() {
     return Column(
       children: [
-        // مؤشر الخطوات المتقدم
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(
@@ -413,32 +510,44 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                       height: 8,
                       decoration: BoxDecoration(
                         gradient: isCompleted
-                            ? LinearGradient(colors: [successGreen, successGreen.withOpacity(0.7)])
+                            ? LinearGradient(colors: [
+                                successGreen,
+                                successGreen.withOpacity(0.7)
+                              ])
                             : isCurrent
-                            ? LinearGradient(colors: [primaryBlue, secondaryBlue])
+                                ? LinearGradient(
+                                    colors: [primaryBlue, secondaryBlue])
+                                : null,
+                        color: !isCompleted && !isCurrent
+                            ? Colors.grey.shade300
                             : null,
-                        color: !isCompleted && !isCurrent ? Colors.grey.shade300 : null,
                         borderRadius: BorderRadius.circular(4),
                         boxShadow: isCurrent
                             ? [
-                          BoxShadow(
-                            color: primaryBlue.withOpacity(0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
+                                BoxShadow(
+                                  color: primaryBlue.withOpacity(0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
                             : [],
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      index == 0 ? 'الفولتية' :
-                      index == 1 ? 'الألواح' :
-                      index == 2 ? 'البطاريات' :
-                      index == 3 ? 'الإنفرتر' : 'الأجهزة',
+                      index == 0
+                          ? 'الفولتية'
+                          : index == 1
+                              ? 'الألواح'
+                              : index == 2
+                                  ? 'البطاريات'
+                                  : index == 3
+                                      ? 'الإنفرتر'
+                                      : 'الأجهزة',
                       style: GoogleFonts.cairo(
                         fontSize: 10,
-                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            isCurrent ? FontWeight.bold : FontWeight.normal,
                         color: isCurrent ? primaryBlue : mediumGray,
                       ),
                     ),
@@ -448,8 +557,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             }),
           ),
         ),
-
-        // المحتوى
         Expanded(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
@@ -468,8 +575,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             child: _buildStep(),
           ),
         ),
-
-        // الأزرار السفلية
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -501,7 +606,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.arrow_forward, size: 18, color: primaryBlue),
+                        const Icon(Icons.arrow_forward,
+                            size: 18, color: primaryBlue),
                         const SizedBox(width: 6),
                         Text(
                           'السابق',
@@ -521,19 +627,22 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                 child: ElevatedButton(
                   onPressed: _isStepValid()
                       ? () {
-                    if (_currentStep < 4) {
-                      setState(() => _currentStep++);
-                    } else {
-                      _checkCompatibility();
-                    }
-                  }
+                          if (_currentStep < 4) {
+                            setState(() => _currentStep++);
+                          } else {
+                            _checkCompatibility();
+                          }
+                        }
                       : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isStepValid() ? primaryBlue : Colors.grey.shade300,
-                    foregroundColor: _isStepValid() ? Colors.white : Colors.grey.shade500,
+                    backgroundColor:
+                        _isStepValid() ? primaryBlue : Colors.grey.shade300,
+                    foregroundColor:
+                        _isStepValid() ? Colors.white : Colors.grey.shade500,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: _isStepValid() ? 2 : 0,
-                    shadowColor: _isStepValid() ? primaryBlue.withOpacity(0.3) : null,
+                    shadowColor:
+                        _isStepValid() ? primaryBlue.withOpacity(0.3) : null,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -545,14 +654,18 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                         _currentStep < 4 ? 'التالي' : 'فحص التوافق',
                         style: GoogleFonts.cairo(
                           fontWeight: FontWeight.bold,
-                          color: _isStepValid() ? Colors.white : Colors.grey.shade500,
+                          color: _isStepValid()
+                              ? Colors.white
+                              : Colors.grey.shade500,
                           fontSize: 16,
                         ),
                       ),
                       if (_isStepValid()) ...[
                         const SizedBox(width: 6),
                         Icon(
-                          _currentStep < 4 ? Icons.arrow_back : Icons.check_circle_rounded,
+                          _currentStep < 4
+                              ? Icons.arrow_back
+                              : Icons.check_circle_rounded,
                           size: 18,
                         ),
                       ],
@@ -573,16 +686,24 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
         return _systemVoltage != null && _systemVoltage!.isNotEmpty;
       case 1:
         if (_panelCount == null || _panelWatts == null) return false;
-        if (_panelCount == 'أخرى' && _panelCountController.text.trim().isEmpty) return false;
-        if (_panelWatts == 'أخرى' && _panelWattsController.text.trim().isEmpty) return false;
+        if (_panelCount == 'أخرى' && _panelCountController.text.trim().isEmpty)
+          return false;
+        if (_panelWatts == 'أخرى' && _panelWattsController.text.trim().isEmpty)
+          return false;
         return true;
       case 2:
-        if (_batteryCount == null || _batteryAh == null || _batteryType == null) return false;
-        if (_batteryCount == 'أخرى' && _batteryCountController.text.trim().isEmpty) return false;
-        if (_batteryAh == 'أخرى' && _batteryAhController.text.trim().isEmpty) return false;
+        if (_batteryCount == null || _batteryAh == null || _batteryType == null)
+          return false;
+        if (_batteryCount == 'أخرى' &&
+            _batteryCountController.text.trim().isEmpty) return false;
+        if (_batteryAh == 'أخرى' && _batteryAhController.text.trim().isEmpty)
+          return false;
         return true;
       case 3:
-        return _inverterPower != null && _inverterPower!.isNotEmpty;
+        if (_inverterPower == null || _inverterPower!.isEmpty) return false;
+        if (_inverterPower == 'إدخال قيمة يدوي' &&
+            _inverterPowerController.text.trim().isEmpty) return false;
+        return true;
       case 4:
         return _devices.isNotEmpty;
       default:
@@ -607,15 +728,7 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
       case 2:
         return _buildBatteriesStep();
       case 3:
-        return _buildSelectionStep(
-          key: const ValueKey('inverter'),
-          title: 'قدرة الإنفرتر',
-          subtitle: 'ما هي قدرة الإنفرتر لديك؟',
-          icon: Icons.power_rounded,
-          options: _inverterPowers,
-          selected: _inverterPower,
-          onSelect: (value) => setState(() => _inverterPower = value),
-        );
+        return _buildInverterStep();
       case 4:
         return _buildDevicesStep();
       default:
@@ -623,20 +736,22 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     }
   }
 
-  // ✅ خطوة الألواح الشمسية مع قوائم منسدلة
-  Widget _buildPanelsStep() {
+  Widget _buildInverterStep() {
     return SingleChildScrollView(
+      key: const ValueKey('inverter'),
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // أيقونة دائرية متدرجة
           Container(
             width: 90,
             height: 90,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryBlue.withOpacity(0.1), accentCyan.withOpacity(0.05)],
+                colors: [
+                  primaryBlue.withOpacity(0.1),
+                  accentCyan.withOpacity(0.05)
+                ],
               ),
               shape: BoxShape.circle,
               boxShadow: [
@@ -647,10 +762,82 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                 ),
               ],
             ),
-            child: Icon(Icons.solar_power_rounded, size: 45, color: primaryBlue),
+            child: Icon(Icons.power_rounded, size: 45, color: primaryBlue),
           ),
           const SizedBox(height: 24),
+          Text(
+            'قدرة الإنفرتر',
+            style: GoogleFonts.cairo(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: darkColor,
+              shadows: [
+                Shadow(
+                  offset: const Offset(0, 2),
+                  blurRadius: 4,
+                  color: Colors.black.withOpacity(0.05),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'اختر نطاق قدرة الإنفرتر لديك، أو أدخل قيمة دقيقة يدوياً',
+            style: GoogleFonts.cairo(fontSize: 14, color: mediumGray),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'القدرة (واط)',
+            style: GoogleFonts.cairo(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: darkColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildDropdownField(
+            value: _inverterPower,
+            options: _inverterPowers,
+            hint: 'اختر نطاق القدرة أو اضغط "إدخال قيمة يدوي"',
+            icon: Icons.power_rounded,
+            onChanged: (value) => setState(() => _inverterPower = value),
+            manualController: _inverterPowerController,
+            manualHint: 'أدخل قدرة الإنفرتر بالواط',
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildPanelsStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  primaryBlue.withOpacity(0.1),
+                  accentCyan.withOpacity(0.05)
+                ],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: primaryBlue.withOpacity(0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child:
+                Icon(Icons.solar_power_rounded, size: 45, color: primaryBlue),
+          ),
+          const SizedBox(height: 24),
           Text(
             'الألواح الشمسية',
             style: GoogleFonts.cairo(
@@ -672,8 +859,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             style: GoogleFonts.cairo(fontSize: 14, color: mediumGray),
           ),
           const SizedBox(height: 32),
-
-          // عدد الألواح - قائمة منسدلة
           Text(
             'عدد الألواح',
             style: GoogleFonts.cairo(
@@ -692,10 +877,7 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             manualController: _panelCountController,
             manualHint: 'أدخل عدد الألواح',
           ),
-
           const SizedBox(height: 24),
-
-          // قدرة اللوح - قائمة منسدلة
           Text(
             'قدرة اللوح (واط)',
             style: GoogleFonts.cairo(
@@ -719,20 +901,21 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     );
   }
 
-  // ✅ خطوة البطاريات مع قوائم منسدلة
   Widget _buildBatteriesStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // أيقونة دائرية متدرجة
           Container(
             width: 90,
             height: 90,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryBlue.withOpacity(0.1), accentCyan.withOpacity(0.05)],
+                colors: [
+                  primaryBlue.withOpacity(0.1),
+                  accentCyan.withOpacity(0.05)
+                ],
               ),
               shape: BoxShape.circle,
               boxShadow: [
@@ -743,10 +926,10 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                 ),
               ],
             ),
-            child: Icon(Icons.battery_charging_full_rounded, size: 45, color: primaryBlue),
+            child: Icon(Icons.battery_charging_full_rounded,
+                size: 45, color: primaryBlue),
           ),
           const SizedBox(height: 24),
-
           Text(
             'البطاريات',
             style: GoogleFonts.cairo(
@@ -768,8 +951,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             style: GoogleFonts.cairo(fontSize: 14, color: mediumGray),
           ),
           const SizedBox(height: 32),
-
-          // عدد البطاريات - قائمة منسدلة
           Text(
             'عدد البطاريات',
             style: GoogleFonts.cairo(
@@ -788,10 +969,7 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             manualController: _batteryCountController,
             manualHint: 'أدخل عدد البطاريات',
           ),
-
           const SizedBox(height: 24),
-
-          // سعة البطارية - قائمة منسدلة
           Text(
             'سعة البطارية (Ah)',
             style: GoogleFonts.cairo(
@@ -810,10 +988,7 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             manualController: _batteryAhController,
             manualHint: 'أدخل سعة البطارية بالأمبير',
           ),
-
           const SizedBox(height: 24),
-
-          // نوع البطاريات
           Text(
             'نوع البطاريات',
             style: GoogleFonts.cairo(
@@ -823,7 +998,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             ),
           ),
           const SizedBox(height: 12),
-
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -833,36 +1007,39 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                 onTap: () => setState(() => _batteryType = type),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
                     gradient: isSelected
                         ? LinearGradient(
-                      colors: [primaryBlue, secondaryBlue],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    )
+                            colors: [primaryBlue, secondaryBlue],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          )
                         : null,
                     color: isSelected ? null : Colors.white,
                     borderRadius: BorderRadius.circular(25),
                     border: Border.all(
-                      color: isSelected ? Colors.transparent : Colors.grey.shade200,
+                      color: isSelected
+                          ? Colors.transparent
+                          : Colors.grey.shade200,
                       width: 1.5,
                     ),
                     boxShadow: isSelected
                         ? [
-                      BoxShadow(
-                        color: primaryBlue.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
+                            BoxShadow(
+                              color: primaryBlue.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
                         : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                   ),
                   child: Text(
                     type,
@@ -881,7 +1058,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     );
   }
 
-  // ✅ حقل قائمة منسدلة موحد
   Widget _buildDropdownField({
     required String? value,
     required List<String> options,
@@ -891,6 +1067,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     TextEditingController? manualController,
     String? manualHint,
   }) {
+    final bool isManual = value == 'أخرى' || value == 'إدخال قيمة يدوي';
+
     return Column(
       children: [
         Container(
@@ -913,9 +1091,12 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                 children: [
                   Icon(icon, size: 20, color: primaryBlue),
                   const SizedBox(width: 8),
-                  Text(
-                    hint,
-                    style: GoogleFonts.cairo(fontSize: 13, color: mediumGray),
+                  Flexible(
+                    child: Text(
+                      hint,
+                      style: GoogleFonts.cairo(fontSize: 13, color: mediumGray),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
@@ -928,7 +1109,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                       const SizedBox(width: 8),
                       Text(
                         option,
-                        style: GoogleFonts.cairo(fontSize: 14, color: darkColor),
+                        style:
+                            GoogleFonts.cairo(fontSize: 14, color: darkColor),
                       ),
                     ],
                   ),
@@ -947,8 +1129,7 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             ),
           ),
         ),
-        // حقل الإدخال اليدوي يظهر فقط عند اختيار "أخرى"
-        if (value == 'أخرى' && manualController != null) ...[
+        if (isManual && manualController != null) ...[
           const SizedBox(height: 12),
           TextField(
             controller: manualController,
@@ -979,7 +1160,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     );
   }
 
-  // ✅ خطوة اختيار عامة (Voltage / Inverter)
   Widget _buildSelectionStep({
     required Key key,
     required String title,
@@ -995,13 +1175,15 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // أيقونة دائرية متدرجة
           Container(
             width: 90,
             height: 90,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryBlue.withOpacity(0.1), accentCyan.withOpacity(0.05)],
+                colors: [
+                  primaryBlue.withOpacity(0.1),
+                  accentCyan.withOpacity(0.05)
+                ],
               ),
               shape: BoxShape.circle,
               boxShadow: [
@@ -1015,7 +1197,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             child: Icon(icon, size: 45, color: primaryBlue),
           ),
           const SizedBox(height: 24),
-
           Text(
             title,
             style: GoogleFonts.cairo(
@@ -1037,8 +1218,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             style: GoogleFonts.cairo(fontSize: 14, color: mediumGray),
           ),
           const SizedBox(height: 32),
-
-          // خيارات الاختيار
           ...options.map((option) {
             final isSelected = selected == option;
             return GestureDetector(
@@ -1050,32 +1229,33 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                 decoration: BoxDecoration(
                   gradient: isSelected
                       ? LinearGradient(
-                    colors: [primaryBlue, secondaryBlue],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  )
+                          colors: [primaryBlue, secondaryBlue],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        )
                       : null,
                   color: isSelected ? null : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isSelected ? Colors.transparent : Colors.grey.shade200,
+                    color:
+                        isSelected ? Colors.transparent : Colors.grey.shade200,
                     width: 1.5,
                   ),
                   boxShadow: isSelected
                       ? [
-                    BoxShadow(
-                      color: primaryBlue.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
+                          BoxShadow(
+                            color: primaryBlue.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
                       : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                 ),
                 child: Row(
                   children: [
@@ -1084,10 +1264,14 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
+                        color: isSelected
+                            ? Colors.white.withOpacity(0.2)
+                            : Colors.transparent,
                       ),
                       child: Icon(
-                        isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                        isSelected
+                            ? Icons.check_circle_rounded
+                            : Icons.circle_outlined,
                         color: isSelected ? Colors.white : Colors.grey.shade400,
                         size: 24,
                       ),
@@ -1111,19 +1295,20 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     );
   }
 
-  // ✅ خطوة الأجهزة
   Widget _buildDevicesStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // عنوان القسم
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [primaryBlue.withOpacity(0.05), accentCyan.withOpacity(0.02)],
+                colors: [
+                  primaryBlue.withOpacity(0.05),
+                  accentCyan.withOpacity(0.02)
+                ],
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: primaryBlue.withOpacity(0.1)),
@@ -1143,7 +1328,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.devices_rounded, color: Colors.white, size: 22),
+                  child: const Icon(Icons.devices_rounded,
+                      color: Colors.white, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1161,14 +1347,16 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                       const SizedBox(height: 2),
                       Text(
                         'اختر من القائمة أو أضف يدوياً',
-                        style: GoogleFonts.cairo(fontSize: 13, color: mediumGray),
+                        style:
+                            GoogleFonts.cairo(fontSize: 13, color: mediumGray),
                       ),
                     ],
                   ),
                 ),
                 if (_devices.isNotEmpty)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: successGreen,
                       borderRadius: BorderRadius.circular(20),
@@ -1186,8 +1374,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             ),
           ),
           const SizedBox(height: 16),
-
-          // الأجهزة الجاهزة
           Text(
             'أجهزة شائعة:',
             style: GoogleFonts.cairo(
@@ -1197,7 +1383,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             ),
           ),
           const SizedBox(height: 12),
-
           if (_isLoadingDevices)
             Center(
               child: Padding(
@@ -1242,7 +1427,10 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [primaryBlue.withOpacity(0.1), accentCyan.withOpacity(0.05)],
+                                colors: [
+                                  primaryBlue.withOpacity(0.1),
+                                  accentCyan.withOpacity(0.05)
+                                ],
                               ),
                               shape: BoxShape.circle,
                             ),
@@ -1276,10 +1464,7 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                 },
               ),
             ),
-
           const SizedBox(height: 20),
-
-          // منطقة الإضافة اليدوية
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -1304,8 +1489,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             ),
           ),
           const SizedBox(height: 12),
-
-          // حقول الإضافة اليدوية
           TextField(
             controller: _deviceNameController,
             style: GoogleFonts.cairo(fontSize: 14),
@@ -1329,7 +1512,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             ),
           ),
           const SizedBox(height: 8),
-
           TextField(
             controller: _devicePowerController,
             keyboardType: TextInputType.number,
@@ -1354,7 +1536,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             ),
           ),
           const SizedBox(height: 8),
-
           Row(
             children: [
               Expanded(
@@ -1364,7 +1545,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                   style: GoogleFonts.cairo(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'ساعات النهار ☀️',
-                    hintStyle: GoogleFonts.cairo(fontSize: 13, color: mediumGray),
+                    hintStyle:
+                        GoogleFonts.cairo(fontSize: 13, color: mediumGray),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
@@ -1390,7 +1572,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                   style: GoogleFonts.cairo(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'ساعات الليل 🌙',
-                    hintStyle: GoogleFonts.cairo(fontSize: 13, color: mediumGray),
+                    hintStyle:
+                        GoogleFonts.cairo(fontSize: 13, color: mediumGray),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
@@ -1411,8 +1594,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             ],
           ),
           const SizedBox(height: 12),
-
-          // زر إضافة الجهاز
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -1434,10 +1615,7 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // الأجهزة المضافة
           if (_devices.isNotEmpty) ...[
             Row(
               children: [
@@ -1451,7 +1629,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                 ),
                 const SizedBox(width: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: primaryBlue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -1492,7 +1671,10 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [primaryBlue.withOpacity(0.08), accentCyan.withOpacity(0.03)],
+                          colors: [
+                            primaryBlue.withOpacity(0.08),
+                            accentCyan.withOpacity(0.03)
+                          ],
                         ),
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -1528,7 +1710,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                     if (d.dayHours > 0)
                       Container(
                         margin: const EdgeInsets.only(right: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: dayColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -1545,7 +1728,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                     if (d.nightHours > 0)
                       Container(
                         margin: const EdgeInsets.only(right: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: nightColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -1579,14 +1763,15 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
               );
             }),
           ],
-
-          // رسالة تحفيزية
           const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [successGreen.withOpacity(0.1), accentCyan.withOpacity(0.05)],
+                colors: [
+                  successGreen.withOpacity(0.1),
+                  accentCyan.withOpacity(0.05)
+                ],
               ),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: successGreen.withOpacity(0.2)),
@@ -1612,7 +1797,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     );
   }
 
-  // ✅ شاشة النتائج
   Widget _buildResult() {
     final compatible = (_result?['compatible'] as List?) ?? [];
     final warning = (_result?['warning'] as List?) ?? [];
@@ -1624,7 +1808,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ملخص النتائج
           if (summary.isNotEmpty) ...[
             Container(
               padding: const EdgeInsets.all(16),
@@ -1663,33 +1846,27 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             ),
             const SizedBox(height: 20),
           ],
-
-          // الأجهزة المتوافقة
           if (compatible.isNotEmpty) ...[
-            _buildSectionHeader('الأجهزة المتوافقة', Icons.check_circle_rounded, Colors.green, compatible.length),
+            _buildSectionHeader('الأجهزة المتوافقة', Icons.check_circle_rounded,
+                Colors.green, compatible.length),
             const SizedBox(height: 8),
             ...compatible.map((item) => _buildResultCard(item, Colors.green)),
             const SizedBox(height: 16),
           ],
-
-          // تحتاج انتباه
           if (warning.isNotEmpty) ...[
-            _buildSectionHeader('تحتاج انتباه', Icons.warning_rounded, Colors.orange, warning.length),
+            _buildSectionHeader('تحتاج انتباه', Icons.warning_rounded,
+                Colors.orange, warning.length),
             const SizedBox(height: 8),
             ...warning.map((item) => _buildResultCard(item, Colors.orange)),
             const SizedBox(height: 16),
           ],
-
-          // غير متوافقة
           if (incompatible.isNotEmpty) ...[
-            _buildSectionHeader('غير متوافقة', Icons.cancel_rounded, Colors.red, incompatible.length),
+            _buildSectionHeader('غير متوافقة', Icons.cancel_rounded, Colors.red,
+                incompatible.length),
             const SizedBox(height: 8),
             ...incompatible.map((item) => _buildResultCard(item, Colors.red)),
           ],
-
           const SizedBox(height: 24),
-
-          // زر فحص جديد
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -1709,9 +1886,11 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                   _panelWattsController.clear();
                   _batteryCountController.clear();
                   _batteryAhController.clear();
+                  _inverterPowerController.clear();
                 });
               },
-              icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+              icon: const Icon(Icons.refresh_rounded,
+                  color: Colors.white, size: 20),
               label: Text(
                 'فحص جديد',
                 style: GoogleFonts.cairo(
@@ -1734,7 +1913,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon, MaterialColor color, int count) {
+  Widget _buildSectionHeader(
+      String title, IconData icon, MaterialColor color, int count) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -1816,7 +1996,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
               ),
               if (watts.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: color.shade100,
                     borderRadius: BorderRadius.circular(8),
@@ -1861,4 +2042,22 @@ class DeviceItem {
     this.dayHours = 0,
     this.nightHours = 0,
   });
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

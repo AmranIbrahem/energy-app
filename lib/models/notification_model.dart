@@ -29,6 +29,7 @@ class NotificationModel {
   }
 
   bool get isRead => readAt != null;
+
   String get formattedDate {
     final now = DateTime.now();
     final diff = now.difference(createdAt);

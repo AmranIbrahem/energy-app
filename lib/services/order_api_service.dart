@@ -1,9 +1,9 @@
 // lib/services/order_api_service.dart
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:GeniusHouse/models/cart_item_model.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class OrderApiService {
   final String baseUrl;
@@ -20,13 +20,13 @@ class OrderApiService {
       final token = authService.token;
 
       if (token == null || token.isEmpty) {
-        print('❌ No valid token found');
+        // print('❌ No valid token found');
         return null;
       }
 
       return token;
     } catch (e) {
-      print('❌ Error getting token: $e');
+      // print('❌ Error getting token: $e');
       return null;
     }
   }
@@ -40,7 +40,9 @@ class OrderApiService {
     required List<CartItemModel> items,
     String? couponCode,
     String? userNotes,
-    bool isPrepaid = false, // ✅ جديد
+    bool isPrepaid = false,
+    bool isSyp = false,
+    String? governorate,
   }) async {
     try {
       final token = await _getToken();
@@ -50,10 +52,10 @@ class OrderApiService {
 
       final itemsData = items
           .map((item) => {
-        'type': item.itemType,
-        'id': item.id,
-        'quantity': item.quantity,
-      })
+                'type': item.itemType,
+                'id': item.id,
+                'quantity': item.quantity,
+              })
           .toList();
 
       final body = {
@@ -63,9 +65,13 @@ class OrderApiService {
         'shipping_address': shippingAddress,
         'payment_method': paymentMethod,
         'items': itemsData,
-        // ✅ إضافة الدفع المسبق
         'is_prepaid': isPrepaid,
+        'is_syp': isSyp,
       };
+
+      if (governorate != null && governorate.isNotEmpty) {
+        body['governorate'] = governorate;
+      }
 
       if (couponCode != null && couponCode.isNotEmpty) {
         body['coupon_code'] = couponCode;
@@ -98,7 +104,7 @@ class OrderApiService {
         'errors': data['errors'] ?? null,
       };
     } catch (e) {
-      print('Error creating order: $e');
+      // print('Error creating order: $e');
       return {'success': false, 'message': 'حدث خطأ في الاتصال بالخادم: $e'};
     }
   }
@@ -137,7 +143,7 @@ class OrderApiService {
         'message': data['message'] ?? 'حدث خطأ في جلب الطلبات',
       };
     } catch (e) {
-      print('❌ Error fetching orders: $e');
+      // print('❌ Error fetching orders: $e');
       return {'success': false, 'message': 'حدث خطأ في الاتصال بالخادم'};
     }
   }
@@ -169,7 +175,7 @@ class OrderApiService {
         'message': data['message'] ?? 'حدث خطأ في جلب تفاصيل الطلب',
       };
     } catch (e) {
-      print('❌ Error fetching order details: $e');
+      // print('❌ Error fetching order details: $e');
       return {'success': false, 'message': 'حدث خطأ في الاتصال بالخادم'};
     }
   }
@@ -201,7 +207,7 @@ class OrderApiService {
         'message': data['message'] ?? 'حدث خطأ في إلغاء الطلب',
       };
     } catch (e) {
-      print('❌ Error cancelling order: $e');
+      // print('❌ Error cancelling order: $e');
       return {'success': false, 'message': 'حدث خطأ في الاتصال بالخادم'};
     }
   }
@@ -238,7 +244,7 @@ class OrderApiService {
         'message': data['message'] ?? 'كود الخصم غير صالح',
       };
     } catch (e) {
-      print('❌ Error validating coupon: $e');
+      // print('❌ Error validating coupon: $e');
       return {'success': false, 'message': 'حدث خطأ في التحقق من الكود'};
     }
   }
@@ -270,7 +276,7 @@ class OrderApiService {
         'message': data['message'] ?? 'حدث خطأ في جلب الإحصائيات',
       };
     } catch (e) {
-      print('❌ Error fetching order stats: $e');
+      // print('❌ Error fetching order stats: $e');
       return {'success': false, 'message': 'حدث خطأ في الاتصال بالخادم'};
     }
   }

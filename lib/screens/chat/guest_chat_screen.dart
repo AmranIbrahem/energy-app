@@ -1,33 +1,36 @@
 // lib/screens/chat/guest_chat_screen.dart
 
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:flutter_sound/flutter_sound.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:GeniusHouse/services/permission_service.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/screens/chat/message_bubble.dart';
+import 'dart:ui' as ui;
+
 import 'package:GeniusHouse/screens/chat/governorate_picker.dart';
-import 'package:GeniusHouse/screens/chat/system_builder_sheet.dart';
+import 'package:GeniusHouse/screens/chat/message_bubble.dart';
 import 'package:GeniusHouse/screens/offers/offer_details_screen.dart';
 import 'package:GeniusHouse/screens/products/product_details_screen.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/permission_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 
 class GuestChatScreen extends StatefulWidget {
   final ApiService apiService;
   final StorageService storageService;
   final String? initialGovernorate;
+  final String? initialMessage;
 
   const GuestChatScreen({
     super.key,
     required this.apiService,
     required this.storageService,
     this.initialGovernorate,
+    this.initialMessage,
   });
 
   @override
@@ -40,7 +43,6 @@ class _GuestChatScreenState extends State<GuestChatScreen>
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
-  // ✅ التسجيل الصوتي
   final FlutterSoundRecorder _audioRecorder = FlutterSoundRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   File? _recordedAudioFile;
@@ -90,8 +92,22 @@ class _GuestChatScreenState extends State<GuestChatScreen>
     super.initState();
     _initAnimations();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initGuestSession();
+      _initGuestSession().then((_) {
+        if (widget.initialMessage != null &&
+            widget.initialMessage!.isNotEmpty) {
+          Future.delayed(const Duration(milliseconds: 800), () {
+            _sendMessage(customMessage: widget.initialMessage);
+          });
+        }
+      });
     });
+  }
+
+  Future<void> _clearChatOnExit() async {
+    if (_sessionId == null) return;
+    try {
+      await widget.apiService.clearGuestChat(_sessionId!);
+    } catch (e) {}
   }
 
   void _initAnimations() {
@@ -135,31 +151,30 @@ class _GuestChatScreenState extends State<GuestChatScreen>
     _typingAnimationController.dispose();
     _pulseAnimationController.dispose();
     _audioPlayer.dispose();
+
+    _clearChatOnExit();
+
     super.dispose();
   }
 
-  // ✅ طلب صلاحية الميكروفون
   Future<bool> _requestMicrophonePermission() async {
     return await PermissionService.requestMicrophone();
   }
-// ✅ بدء التسجيل
-// ✅ بدء التسجيل مع طلب الصلاحية
+
   Future<void> _startRecording() async {
     try {
-      // ✅ أولاً: التحقق من صلاحية الميكروفون وطلبها إذا لزم
       final hasPermission = await _requestMicrophonePermission();
 
       if (!hasPermission) {
-        // ✅ إذا رفض المستخدم الصلاحية
         _showPermissionDeniedDialog();
         return;
       }
 
-      // ✅ إذا تم منح الصلاحية - ابدأ التسجيل
       await _audioRecorder.openRecorder();
 
       final tempDir = await getTemporaryDirectory();
-      final filePath = '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final filePath =
+          '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.wav';
 
       await _audioRecorder.startRecorder(
         toFile: filePath,
@@ -172,23 +187,19 @@ class _GuestChatScreenState extends State<GuestChatScreen>
         _isRecording = true;
       });
 
-      // ✅ رسالة تأكيد بدء التسجيل
       HapticFeedback.mediumImpact();
-
     } catch (e) {
-      debugPrint('❌ Error starting recording: $e');
       _showErrorSnackBar('فشل بدء التسجيل');
     }
   }
 
-
-  // ✅ دالة عرض نافذة عند رفض صلاحية الميكروفون
   void _showPermissionDeniedDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
           title: Column(
             children: [
               Container(
@@ -239,7 +250,6 @@ class _GuestChatScreenState extends State<GuestChatScreen>
             ElevatedButton.icon(
               onPressed: () async {
                 Navigator.pop(context);
-                // ✅ فتح إعدادات التطبيق
                 await PermissionService.openAppSettings();
               },
               icon: const Icon(Icons.settings_rounded, size: 18),
@@ -252,7 +262,8 @@ class _GuestChatScreenState extends State<GuestChatScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -264,7 +275,6 @@ class _GuestChatScreenState extends State<GuestChatScreen>
     );
   }
 
-  // ✅ إيقاف التسجيل
   Future<void> _stopRecording() async {
     try {
       final path = await _audioRecorder.stopRecorder();
@@ -281,6 +291,7 @@ class _GuestChatScreenState extends State<GuestChatScreen>
       _showErrorSnackBar('فشل إيقاف التسجيل: $e');
     }
   }
+
   Future<void> _sendVoiceMessage() async {
     if (_recordedAudioFile == null || _isSending) return;
 
@@ -304,7 +315,6 @@ class _GuestChatScreenState extends State<GuestChatScreen>
           _isAiTyping = false;
           _isSending = false;
 
-          // إضافة رسالة المستخدم (الصوت)
           _messages.add({
             'me': true,
             'role': 'user',
@@ -315,7 +325,6 @@ class _GuestChatScreenState extends State<GuestChatScreen>
             'audio_url': response['data']['audio_url'],
           });
 
-          // إضافة رد المساعد
           _messages.add({
             'me': false,
             'role': 'assistant',
@@ -482,11 +491,13 @@ class _GuestChatScreenState extends State<GuestChatScreen>
           }
 
           _hasMore = pagination?['has_more'] ?? false;
-          _currentOffset = pagination?['next_offset'] ?? _currentOffset + currentLimit;
+          _currentOffset =
+              pagination?['next_offset'] ?? _currentOffset + currentLimit;
 
           if (_messages.isNotEmpty && !loadMore) {
             final lastMessage = _messages.last;
-            if (!(lastMessage['me'] ?? false) && lastMessage.containsKey('data')) {
+            if (!(lastMessage['me'] ?? false) &&
+                lastMessage.containsKey('data')) {
               _suggestedQuestions = List<String>.from(
                 lastMessage['data']?['suggested_questions'] ?? [],
               );
@@ -604,7 +615,8 @@ class _GuestChatScreenState extends State<GuestChatScreen>
 
     HapticFeedback.mediumImpact();
 
-    final List<String> imagePaths = _selectedImages.map((file) => file.path).toList();
+    final List<String> imagePaths =
+        _selectedImages.map((file) => file.path).toList();
     final List<File> imagesCopy = List<File>.from(_selectedImages);
 
     final userMessage = {
@@ -746,20 +758,6 @@ class _GuestChatScreenState extends State<GuestChatScreen>
     }
   }
 
-  void _openSystemBuilder() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => SystemBuilderSheet(
-        onSend: (message) {
-          Navigator.pop(context);
-          _sendMessage(customMessage: message);
-        },
-        apiService: widget.apiService,
-      ),
-    );
-  }
   Future<void> _clearChat() async {
     if (_sessionId == null) return;
 
@@ -990,117 +988,157 @@ class _GuestChatScreenState extends State<GuestChatScreen>
     }
   }
 
+  Widget _buildCurvedHeader(BuildContext context) {
+    return ClipPath(
+      clipper: _BottomCurveClipper(),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [primaryBlue, secondaryBlue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                AnimatedBuilder(
+                  animation: _pulseAnimationController,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: 1.0 + (_pulseAnimationController.value * 0.08),
+                      child: child,
+                    );
+                  },
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded,
+                        color: Colors.white, size: 24),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'المساعد الذكي',
+                        style: GoogleFonts.cairo(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'وضع الزوار • ${_governorate ?? "دمشق"}',
+                        style: GoogleFonts.cairo(
+                          fontSize: 10,
+                          color: Colors.white.withOpacity(0.85),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (_fontScale != 1.0)
+                  Container(
+                    margin: const EdgeInsets.only(right: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.text_fields_rounded,
+                          color: Colors.white, size: 20),
+                      onPressed: _resetFontScale,
+                      tooltip: 'إعادة تعيين حجم الخط',
+                    ),
+                  ),
+                if (_governorate != null)
+                  Container(
+                    margin: const EdgeInsets.only(right: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.location_on_outlined,
+                          color: Colors.white, size: 22),
+                      onPressed: _showGovernoratePicker,
+                      tooltip: 'تغيير المحافظة',
+                    ),
+                  ),
+                if (_messages.isNotEmpty)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: Colors.white, size: 22),
+                      onPressed: _clearChat,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: Row(
+      body: Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: Column(
           children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: 1.0 + (_pulseAnimationController.value * 0.1),
-                  child: child,
-                );
-              },
-              child: Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Icons.auto_awesome_rounded,
-                    color: Colors.white, size: 24),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('المساعد الذكي',
-                    style: GoogleFonts.cairo(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white)),
-                Text('وضع الزوار • ${_governorate ?? "دمشق"}',
-                    style: GoogleFonts.cairo(
-                        fontSize: 11, color: Colors.white.withOpacity(0.85))),
-              ],
+            _buildCurvedHeader(context),
+            Expanded(
+              child: _isLoading
+                  ? _buildLoadingState()
+                  : _errorMessage != null
+                      ? _buildErrorState()
+                      : Column(
+                          children: [
+                            Expanded(
+                              child: _messages.isEmpty
+                                  ? _buildEmptyState()
+                                  : _buildMessagesList(),
+                            ),
+                            if (_suggestedQuestions.isNotEmpty && !_isSending)
+                              _buildSuggestedQuestions(),
+                            _buildInputBar(),
+                          ],
+                        ),
             ),
           ],
         ),
-        elevation: 0,
-        actions: [
-          if (_fontScale != 1.0)
-            Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.text_fields_rounded,
-                    color: Colors.white, size: 20),
-                onPressed: _resetFontScale,
-                tooltip: 'إعادة تعيين حجم الخط',
-              ),
-            ),
-          if (_governorate != null)
-            Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.location_on_outlined,
-                    color: Colors.white, size: 22),
-                onPressed: _showGovernoratePicker,
-                tooltip: 'تغيير المحافظة',
-              ),
-            ),
-          if (_messages.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.white, size: 22),
-                onPressed: _clearChat,
-              ),
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? _buildLoadingState()
-          : _errorMessage != null
-          ? _buildErrorState()
-          : Column(
-        children: [
-          Expanded(
-            child: _messages.isEmpty
-                ? _buildEmptyState()
-                : _buildMessagesList(),
-          ),
-          if (_suggestedQuestions.isNotEmpty && !_isSending)
-            _buildSuggestedQuestions(),
-          _buildInputBar(),
-        ],
       ),
     );
   }
@@ -1109,7 +1147,8 @@ class _GuestChatScreenState extends State<GuestChatScreen>
     return GestureDetector(
       onScaleUpdate: (details) {
         setState(() {
-          _fontScale = (_fontScale * details.scale).clamp(_minFontScale, _maxFontScale);
+          _fontScale =
+              (_fontScale * details.scale).clamp(_minFontScale, _maxFontScale);
         });
       },
       onScaleEnd: (_) {
@@ -1119,7 +1158,8 @@ class _GuestChatScreenState extends State<GuestChatScreen>
         controller: _scrollController,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         cacheExtent: 300,
-        itemCount: _messages.length + (_hasMore ? 1 : 0) + (_isAiTyping ? 1 : 0),
+        itemCount:
+            _messages.length + (_hasMore ? 1 : 0) + (_isAiTyping ? 1 : 0),
         itemBuilder: (context, index) {
           if (_hasMore && index == 0) {
             return _buildLoadMoreButton();
@@ -1137,14 +1177,14 @@ class _GuestChatScreenState extends State<GuestChatScreen>
             List<String> imageList = [];
             if (message['images'] != null && message['images'] is List) {
               imageList = List<String>.from(message['images']);
-            } else if (message['image_path'] != null && message['image_path'] is String) {
+            } else if (message['image_path'] != null &&
+                message['image_path'] is String) {
               final imageUrl = message['image_url'] ?? message['image_path'];
               if (imageUrl is String && imageUrl.isNotEmpty) {
                 imageList = [imageUrl];
               }
             }
 
-            // ✅ استخراج audio_url
             final audioUrl = message['audio_url'] ?? message['audio_path'];
 
             return MessageBubble(
@@ -1177,41 +1217,41 @@ class _GuestChatScreenState extends State<GuestChatScreen>
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Center(
           child: _isLoadingMore
-              ? SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(
-                color: primaryBlue, strokeWidth: 2),
-          )
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                      color: primaryBlue, strokeWidth: 2),
+                )
               : Container(
-            padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  primaryBlue.withOpacity(0.08),
-                  secondaryBlue.withOpacity(0.04)
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: primaryBlue.withOpacity(0.15)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.arrow_upward_rounded,
-                    size: 14, color: primaryBlue),
-                const SizedBox(width: 6),
-                Text(
-                  'تحميل الرسائل السابقة',
-                  style: GoogleFonts.cairo(
-                      fontSize: 12 * _fontScale,
-                      color: primaryBlue,
-                      fontWeight: FontWeight.w600),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        primaryBlue.withOpacity(0.08),
+                        secondaryBlue.withOpacity(0.04)
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: primaryBlue.withOpacity(0.15)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.arrow_upward_rounded,
+                          size: 14, color: primaryBlue),
+                      const SizedBox(width: 6),
+                      Text(
+                        'تحميل الرسائل السابقة',
+                        style: GoogleFonts.cairo(
+                            fontSize: 12 * _fontScale,
+                            color: primaryBlue,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -1283,167 +1323,154 @@ class _GuestChatScreenState extends State<GuestChatScreen>
     );
   }
 
-  // ✅ شريط الإدخال مع دعم الصور والصوت
-// ✅ شريط الإدخال مع دعم الصور والصوت
   Widget _buildInputBar() {
-    return Column(
-      children: [
-        if (_showImageGrid && _selectedImages.isNotEmpty) _buildImageGrid(),
-
-        if (_isRecording) _buildRecordingIndicator(),
-
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: cardWhite,
-            boxShadow: [
-              BoxShadow(color: primaryBlue.withOpacity(0.06), blurRadius: 10)
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: cardWhite,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
           ),
-          child: SafeArea(
-            child: _isRecording
-                ? _buildRecordingStopButton()
-                : Row(
-              children: [
-                // ✅ زر الميكروفون - مع طلب الصلاحية
-                GestureDetector(
-                  onLongPressStart: (_) async {
-                    // ✅ طلب الصلاحية أولاً عند الضغط المطول
-                    final hasPermission = await _requestMicrophonePermission();
-
-                    if (hasPermission) {
-                      // ✅ إذا تم منح الصلاحية - ابدأ التسجيل مباشرة
-                      await _startRecording();
-                    } else {
-                      // ✅ إذا رفض المستخدم - عرض نافذة مخصصة
-                      _showPermissionDeniedDialog();
-                    }
-                  },
-                  onLongPressEnd: (_) async {
-                    // ✅ إيقاف التسجيل فقط إذا كان قيد التشغيل
-                    if (_isRecording) {
-                      await _stopRecording();
-                    }
-                  },
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _isRecording ? Colors.red.withOpacity(0.1) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _isRecording ? Icons.mic_rounded : Icons.mic_none_rounded,
-                      color: _isRecording ? Colors.red : Colors.grey.shade600,
-                      size: 24,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-
-                // زر الصور
-                GestureDetector(
-                  onTap: _toggleImagePicker,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _selectedImages.isNotEmpty
-                          ? primaryBlue.withOpacity(0.1)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _selectedImages.isNotEmpty
-                          ? Icons.close_rounded
-                          : Icons.photo_library_rounded,
-                      color: _selectedImages.isNotEmpty
-                          ? primaryBlue
-                          : Colors.grey.shade600,
-                      size: 24,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-
-                // حقل النص
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: lightGray,
-                      borderRadius: BorderRadius.circular(25),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: TextField(
-                      controller: _messageController,
-                      focusNode: _focusNode,
-                      style: GoogleFonts.cairo(
-                          fontSize: 14 * _fontScale, color: darkColor),
-                      maxLines: 3,
-                      minLines: 1,
-                      decoration: InputDecoration(
-                        hintText: _selectedImages.isNotEmpty
-                            ? 'أضف وصفاً للصورة (اختياري)...'
-                            : 'اكتب استفسارك...',
-                        hintStyle: GoogleFonts.cairo(
-                            fontSize: 14 * _fontScale,
-                            color: Colors.grey.shade400),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // زر المصمم
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: [Color(0xFFFF9800), Color(0xFFF57C00)]),
-                    shape: BoxShape.circle,
-                  ),
-                  child: InkWell(
-                    onTap: _openSystemBuilder,
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      child: const Icon(Icons.solar_power_rounded,
-                          color: Colors.white, size: 22),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // زر الإرسال
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: [primaryBlue, secondaryBlue]),
-                    shape: BoxShape.circle,
-                  ),
-                  child: InkWell(
-                    onTap: _isSending ? null : () => _sendMessage(),
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      child: _isSending
-                          ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 20),
-                    ),
-                  ),
-                ),
-              ],
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_showImageGrid && _selectedImages.isNotEmpty) _buildImageGrid(),
+          if (_isRecording) _buildRecordingIndicator(),
+          SafeArea(
+            top: false,
+            bottom: true,
+            minimum: const EdgeInsets.only(bottom: 0),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+              child:
+                  _isRecording ? _buildRecordingStopButton() : _buildInputRow(),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputRow() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        GestureDetector(
+          onLongPressStart: (_) async {
+            final hasPermission = await _requestMicrophonePermission();
+            if (hasPermission) {
+              await _startRecording();
+            } else {
+              _showPermissionDeniedDialog();
+            }
+          },
+          onLongPressEnd: (_) async {
+            if (_isRecording) await _stopRecording();
+          },
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: _isRecording
+                  ? Colors.red.withOpacity(0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(19),
+            ),
+            child: Icon(
+              _isRecording ? Icons.mic_rounded : Icons.mic_none_rounded,
+              color: _isRecording ? Colors.red : Colors.grey.shade600,
+              size: 22,
+            ),
+          ),
+        ),
+        const SizedBox(width: 2),
+        GestureDetector(
+          onTap: _toggleImagePicker,
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: _selectedImages.isNotEmpty
+                  ? primaryBlue.withOpacity(0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(19),
+            ),
+            child: Icon(
+              _selectedImages.isNotEmpty
+                  ? Icons.close_rounded
+                  : Icons.photo_library_rounded,
+              color: _selectedImages.isNotEmpty
+                  ? primaryBlue
+                  : Colors.grey.shade600,
+              size: 22,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 38, maxHeight: 100),
+            decoration: BoxDecoration(
+              color: lightGray,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: TextField(
+              controller: _messageController,
+              focusNode: _focusNode,
+              style: GoogleFonts.cairo(
+                  fontSize: 14 * _fontScale, color: darkColor),
+              maxLines: 4,
+              minLines: 1,
+              textInputAction: TextInputAction.newline,
+              decoration: InputDecoration(
+                hintText: _selectedImages.isNotEmpty
+                    ? 'أضف وصفاً للصورة...'
+                    : 'اكتب استفسارك...',
+                hintStyle: GoogleFonts.cairo(
+                  fontSize: 13 * _fontScale,
+                  color: Colors.grey.shade400,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+              ),
+              onSubmitted: (_) => _sendMessage(),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        GestureDetector(
+          onTap: _isSending ? null : () => _sendMessage(),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryBlue, secondaryBlue],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: _isSending
+                ? const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
           ),
         ),
       ],
@@ -1451,49 +1478,54 @@ class _GuestChatScreenState extends State<GuestChatScreen>
   }
 
   Widget _buildRecordingStopButton() {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: _stopRecording,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.red,
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.stop_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'إيقاف التسجيل',
-                  style: GoogleFonts.cairo(
-                    fontSize: 14,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
+    return GestureDetector(
+      onTap: _stopRecording,
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(20),
         ),
-      ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.stop_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'إيقاف التسجيل وإرسال',
+              style: GoogleFonts.cairo(
+                fontSize: 14,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
-  // ✅ مؤشر التسجيل
+
   Widget _buildRecordingIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       color: Colors.red.withOpacity(0.05),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
+          FadeTransition(
+            opacity: _pulseAnimationController.drive(
+              Tween<double>(begin: 0.4, end: 1.0).chain(
+                CurveTween(curve: Curves.easeInOut),
+              ),
+            ),
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -1511,13 +1543,15 @@ class _GuestChatScreenState extends State<GuestChatScreen>
             builder: (context, child) {
               return Row(
                 children: List.generate(5, (index) {
-                  final height = 10.0 + (_pulseAnimationController.value * 20) * (index % 2 == 0 ? 1 : 0.5);
+                  final height = 8.0 +
+                      (_pulseAnimationController.value * 12) *
+                          (index % 2 == 0 ? 1 : 0.5);
                   return Container(
-                    width: 3,
+                    width: 2.5,
                     height: height,
                     margin: const EdgeInsets.symmetric(horizontal: 1),
                     decoration: BoxDecoration(
-                      color: Colors.red,
+                      color: Colors.red.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   );
@@ -1533,7 +1567,7 @@ class _GuestChatScreenState extends State<GuestChatScreen>
   Widget _buildImageGrid() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      height: 120,
+      height: 110,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _selectedImages.length,
@@ -1542,8 +1576,8 @@ class _GuestChatScreenState extends State<GuestChatScreen>
           return Stack(
             children: [
               Container(
-                width: 100,
-                height: 100,
+                width: 90,
+                height: 90,
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
@@ -1568,7 +1602,7 @@ class _GuestChatScreenState extends State<GuestChatScreen>
                     child: const Icon(
                       Icons.close_rounded,
                       color: Colors.white,
-                      size: 16,
+                      size: 14,
                     ),
                   ),
                 ),
@@ -1582,13 +1616,13 @@ class _GuestChatScreenState extends State<GuestChatScreen>
 
   Widget _buildSuggestedQuestions() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: cardWhite,
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: SizedBox(
-        height: 40 * _fontScale,
+        height: 38 * _fontScale,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           itemCount: _suggestedQuestions.length,
@@ -1600,7 +1634,7 @@ class _GuestChatScreenState extends State<GuestChatScreen>
                 onTap: () => _sendSuggestedQuestion(question),
                 child: Container(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -1735,7 +1769,7 @@ class _GuestChatScreenState extends State<GuestChatScreen>
             ),
           ),
           const SizedBox(height: 20),
-          Text('المساعد الذكي للطاقة الشمسية',
+          Text('المساعد الذكي',
               style: GoogleFonts.cairo(
                   fontSize: 20 * _fontScale,
                   fontWeight: FontWeight.bold,
@@ -1788,8 +1822,26 @@ class _GuestChatScreenState extends State<GuestChatScreen>
         ),
         child: Text(text,
             style:
-            GoogleFonts.cairo(fontSize: 12 * _fontScale, color: darkColor)),
+                GoogleFonts.cairo(fontSize: 12 * _fontScale, color: darkColor)),
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

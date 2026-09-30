@@ -1,12 +1,14 @@
 // lib/screens/notifications/notifications_screen.dart
 
+import 'dart:ui' as ui;
+
+import 'package:GeniusHouse/models/notification_model.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/models/notification_model.dart';
-import 'package:GeniusHouse/services/storage_service.dart';
+
 import '../auth/login_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -23,7 +25,8 @@ class NotificationsScreen extends StatefulWidget {
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
+class _NotificationsScreenState extends State<NotificationsScreen>
+    with TickerProviderStateMixin {
   List<NotificationModel> _notifications = [];
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -40,12 +43,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   static const Color lightGray = Color(0xFFF3F4F6);
   static const Color cardWhite = Color(0xFFFFFFFF);
 
+  late AnimationController _pulseController;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+
   bool get _isGuest => !widget.authService.isAuthenticated;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..forward();
+
     _initLoad();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
   }
 
   void _initLoad() {
@@ -318,7 +346,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  // ✅ عرض تفاصيل الإشعار
   void _showNotificationDetails(NotificationModel notification) {
     showModalBottomSheet(
       context: context,
@@ -335,7 +362,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ✅ مقبض
               Center(
                 child: Container(
                   width: 50,
@@ -347,8 +373,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // ✅ رأس الإشعار
               Row(
                 children: [
                   Container(
@@ -409,12 +433,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 20),
               const Divider(),
               const SizedBox(height: 16),
-
-              // ✅ نص الإشعار الكامل
               Text(
                 notification.body,
                 style: GoogleFonts.cairo(
@@ -424,10 +445,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
                 textDirection: TextDirection.rtl,
               ),
-
               const SizedBox(height: 16),
-
-              // ✅ معلومات إضافية
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -488,10 +506,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 20),
-
-              // ✅ زر الحذف
               if (!_isGuest)
                 SizedBox(
                   width: double.infinity,
@@ -518,7 +533,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                   ),
                 ),
-
               const SizedBox(height: 10),
             ],
           ),
@@ -527,7 +541,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  // ✅ الحصول على اسم نوع الإشعار بالعربي
   String _getNotificationTypeLabel(String type) {
     switch (type) {
       case 'welcome':
@@ -571,129 +584,207 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFEFF6FF), Color(0xFFF5F7FA)],
             ),
           ),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.notifications_rounded,
-                color: Colors.white, size: 24),
-            const SizedBox(width: 10),
-            Text(
-              'الإشعارات',
-              style: GoogleFonts.cairo(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-            if (_unreadCount > 0) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(12),
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      child: Row(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back_rounded,
+                                  color: Colors.white),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AnimatedBuilder(
+                                    animation: _pulseController,
+                                    builder: (context, child) =>
+                                        Transform.scale(
+                                      scale:
+                                          1.0 + (_pulseController.value * 0.1),
+                                      child: child,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.25),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                          Icons.notifications_rounded,
+                                          color: Colors.white,
+                                          size: 22),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'الإشعارات',
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  if (_unreadCount > 0) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        '$_unreadCount',
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (!_isGuest && _notifications.isNotEmpty)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert_rounded,
+                                    color: Colors.white, size: 22),
+                                offset: const Offset(0, 50),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20)),
+                                color: cardWhite,
+                                elevation: 10,
+                                onSelected: (value) {
+                                  if (value == 'mark_all_read') {
+                                    _markAllAsRead();
+                                  } else if (value == 'delete_all') {
+                                    _deleteAllNotifications();
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  PopupMenuItem(
+                                    value: 'mark_all_read',
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: primaryBlue.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(
+                                              Icons.done_all_rounded,
+                                              size: 18,
+                                              color: primaryBlue),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text('تحديد الكل كمقروء',
+                                            style: GoogleFonts.cairo(
+                                                fontSize: 14,
+                                                color: darkColor)),
+                                      ],
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete_all',
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(
+                                              Icons.delete_sweep_rounded,
+                                              size: 18,
+                                              color: Colors.red),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text('حذف الكل',
+                                            style: GoogleFonts.cairo(
+                                                fontSize: 14,
+                                                color: darkColor)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                child: Text(
-                  '$_unreadCount',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold),
-                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : _errorMessage != null
+                        ? _buildErrorWidget()
+                        : _notifications.isEmpty
+                            ? _buildEmptyWidget()
+                            : TweenAnimationBuilder(
+                                tween: Tween<double>(begin: 0.0, end: 1.0),
+                                duration: const Duration(milliseconds: 600),
+                                builder: (context, value, child) => Opacity(
+                                  opacity: value,
+                                  child: Transform.translate(
+                                    offset: Offset(0, 20 * (1 - value)),
+                                    child: child,
+                                  ),
+                                ),
+                                child: _buildNotificationsList(),
+                              ),
               ),
             ],
-          ],
+          ),
         ),
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          if (!_isGuest && _notifications.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded,
-                    color: Colors.white, size: 22),
-                offset: const Offset(0, 50),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20)),
-                color: cardWhite,
-                elevation: 10,
-                onSelected: (value) {
-                  if (value == 'mark_all_read') {
-                    _markAllAsRead();
-                  } else if (value == 'delete_all') {
-                    _deleteAllNotifications();
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'mark_all_read',
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: primaryBlue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.done_all_rounded,
-                              size: 18, color: primaryBlue),
-                        ),
-                        const SizedBox(width: 12),
-                        Text('تحديد الكل كمقروء',
-                            style: GoogleFonts.cairo(
-                                fontSize: 14, color: darkColor)),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'delete_all',
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.delete_sweep_rounded,
-                              size: 18, color: Colors.red),
-                        ),
-                        const SizedBox(width: 12),
-                        Text('حذف الكل',
-                            style: GoogleFonts.cairo(
-                                fontSize: 14, color: darkColor)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
       ),
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : _errorMessage != null
-          ? _buildErrorWidget()
-          : _notifications.isEmpty
-          ? _buildEmptyWidget()
-          : _buildNotificationsList(),
     );
   }
 
@@ -706,7 +797,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return _buildLoadMoreIndicator();
         }
         final notification = _notifications[index];
-        return _buildNotificationCard(notification);
+        return TweenAnimationBuilder(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 300 + (index * 50)),
+          curve: Curves.easeOut,
+          builder: (context, value, child) => Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 10 * (1 - value)),
+              child: child,
+            ),
+          ),
+          child: _buildNotificationCard(notification),
+        );
       },
     );
   }
@@ -714,9 +817,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _buildNotificationCard(NotificationModel notification) {
     return GestureDetector(
       onTap: () {
-        // ✅ تحديد كمقروء
         _markAsRead(notification);
-        // ✅ عرض تفاصيل الإشعار
         _showNotificationDetails(notification);
       },
       child: Container(
@@ -816,7 +917,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             fontSize: 11, color: Colors.grey.shade500),
                       ),
                       const SizedBox(width: 12),
-                      // ✅ زر عرض التفاصيل
                       GestureDetector(
                         onTap: () => _showNotificationDetails(notification),
                         child: Container(
@@ -903,125 +1003,144 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _buildErrorWidget() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: cardWhite,
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.red.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 5))
-              ],
+      child: TweenAnimationBuilder(
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 800),
+        builder: (context, double value, child) => Opacity(
+            opacity: value,
+            child: Transform.scale(scale: 0.8 + (0.2 * value), child: child)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cardWhite,
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.red.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 5))
+                ],
+              ),
+              child: Icon(Icons.error_outline_rounded,
+                  size: 50, color: Colors.red.shade300),
             ),
-            child: Icon(Icons.error_outline_rounded,
-                size: 50, color: Colors.red.shade300),
-          ),
-          const SizedBox(height: 20),
-          Text(_errorMessage!,
-              style: GoogleFonts.cairo(fontSize: 16, color: mediumGray)),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _fetchNotifications(),
-            icon: const Icon(Icons.refresh_rounded),
-            label: Text('إعادة المحاولة',
-                style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryBlue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 110,
-            height: 110,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: cardWhite,
-              boxShadow: [
-                BoxShadow(
-                  color: primaryBlue.withOpacity(0.1),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Icon(
-              _isGuest
-                  ? Icons.lock_outline_rounded
-                  : Icons.notifications_none_rounded,
-              size: 55,
-              color: Colors.grey.shade400,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            _isGuest ? 'سجل دخولك لعرض الإشعارات' : 'لا توجد إشعارات',
-            style: GoogleFonts.cairo(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: darkColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _isGuest
-                ? 'يجب تسجيل الدخول للاطلاع على الإشعارات الخاصة بك'
-                : 'ستظهر الإشعارات هنا عند استلامها',
-            style: GoogleFonts.cairo(
-              fontSize: 14,
-              color: mediumGray,
-            ),
-          ),
-          if (_isGuest) ...[
+            const SizedBox(height: 20),
+            Text(_errorMessage!,
+                style: GoogleFonts.cairo(fontSize: 16, color: mediumGray)),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => LoginScreen(
-                      authService: widget.authService,
-                      storageService: widget.authService.storageService,
-                    ),
-                  ),
-                ).then((_) {
-                  _initLoad();
-                });
-              },
-              icon: const Icon(Icons.login_rounded, size: 20),
-              label: Text(
-                'تسجيل الدخول',
-                style: GoogleFonts.cairo(fontWeight: FontWeight.w600),
-              ),
+              onPressed: () => _fetchNotifications(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text('إعادة المحاولة',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
                 padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shadowColor: primaryBlue.withOpacity(0.4),
+                elevation: 5,
               ),
             ),
           ],
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyWidget() {
+    return Center(
+      child: TweenAnimationBuilder(
+        tween: Tween<double>(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 800),
+        builder: (context, double value, child) => Opacity(
+            opacity: value,
+            child: Transform.scale(scale: 0.8 + (0.2 * value), child: child)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cardWhite,
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryBlue.withOpacity(0.1),
+                    blurRadius: 30,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Icon(
+                _isGuest
+                    ? Icons.lock_outline_rounded
+                    : Icons.notifications_none_rounded,
+                size: 55,
+                color: Colors.grey.shade400,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              _isGuest ? 'سجل دخولك لعرض الإشعارات' : 'لا توجد إشعارات',
+              style: GoogleFonts.cairo(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: darkColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _isGuest
+                  ? 'يجب تسجيل الدخول للاطلاع على الإشعارات الخاصة بك'
+                  : 'ستظهر الإشعارات هنا عند استلامها',
+              style: GoogleFonts.cairo(
+                fontSize: 14,
+                color: mediumGray,
+              ),
+            ),
+            if (_isGuest) ...[
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LoginScreen(
+                        authService: widget.authService,
+                        storageService: widget.authService.storageService,
+                      ),
+                    ),
+                  ).then((_) {
+                    _initLoad();
+                  });
+                },
+                icon: const Icon(Icons.login_rounded, size: 20),
+                label: Text(
+                  'تسجيل الدخول',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shadowColor: primaryBlue.withOpacity(0.4),
+                  elevation: 5,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1055,4 +1174,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return Colors.grey;
     }
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

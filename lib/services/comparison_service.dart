@@ -1,21 +1,24 @@
 // lib/services/comparison_service.dart
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
 
 class ComparisonService {
   static final ComparisonService _instance = ComparisonService._internal();
+
   static ComparisonService get instance => _instance;
+
   ComparisonService._internal();
 
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _offers = [];
 
   List<Map<String, dynamic>> get products => List.unmodifiable(_products);
+
   List<Map<String, dynamic>> get offers => List.unmodifiable(_offers);
 
   int get productsCount => _products.length;
+
   int get offersCount => _offers.length;
 
   Future<void> loadComparisonData() async {

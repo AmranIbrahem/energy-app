@@ -1,12 +1,12 @@
-// lib/screens/categories/subcategories_screen.dart
+import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:GeniusHouse/screens/products/products_list_screen.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/screens/products/products_list_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../services/storage_service.dart';
 
@@ -91,122 +91,185 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
             return name.contains(_searchQuery.toLowerCase());
           }).toList();
 
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: Text(
-          widget.category['name_ar'] ?? 'الأقسام الفرعية',
-          style: GoogleFonts.cairo(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: Icon(
-                  _isGridView
-                      ? Icons.view_list_rounded
-                      : Icons.grid_view_rounded,
-                  key: ValueKey(_isGridView),
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-              onPressed: () {
-                setState(() {
-                  _isGridView = !_isGridView;
-                  _zoomedCardIndex = null;
-                });
-              },
-              tooltip: _isGridView ? 'عرض القائمة' : 'عرض الشبكة',
-            ),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: cardWhite,
-              boxShadow: [
-                BoxShadow(
-                  color: primaryBlue.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFEFF6FF),
+                Color(0xFFF5F7FA),
               ],
             ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: lightGray,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: TextField(
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                    _zoomedCardIndex = null;
-                  });
-                },
-                style: GoogleFonts.cairo(fontSize: 14, color: darkColor),
-                decoration: InputDecoration(
-                  hintText: 'ابحث عن قسم...',
-                  hintStyle: GoogleFonts.cairo(
-                      fontSize: 14, color: Colors.grey.shade400),
-                  prefixIcon:
-                      const Icon(Icons.search, size: 20, color: primaryBlue),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear,
-                              size: 18, color: Colors.grey),
-                          onPressed: () {
-                            setState(() {
-                              _searchQuery = '';
-                            });
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          ),
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back_rounded,
+                                      color: Colors.white),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Center(
+                                  child: Text(
+                                    widget.category['name_ar'] ??
+                                        'الأقسام الفرعية',
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 300),
+                                    child: Icon(
+                                      _isGridView
+                                          ? Icons.view_list_rounded
+                                          : Icons.grid_view_rounded,
+                                      key: ValueKey(_isGridView),
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _isGridView = !_isGridView;
+                                      _zoomedCardIndex = null;
+                                    });
+                                  },
+                                  tooltip: _isGridView
+                                      ? 'عرض القائمة'
+                                      : 'عرض الشبكة',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: TextField(
+                              onChanged: (value) {
+                                setState(() {
+                                  _searchQuery = value;
+                                  _zoomedCardIndex = null;
+                                });
+                              },
+                              style: GoogleFonts.cairo(
+                                  fontSize: 14, color: darkColor),
+                              textAlign: TextAlign.right,
+                              decoration: InputDecoration(
+                                hintText: 'ابحث عن قسم فرعي...',
+                                hintStyle: GoogleFonts.cairo(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                ),
+                                prefixIcon: Container(
+                                  margin: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.search_rounded,
+                                    size: 20,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear_rounded,
+                                            color: Colors.white, size: 20),
+                                        onPressed: () {
+                                          setState(() {
+                                            _searchQuery = '';
+                                          });
+                                        },
+                                      )
+                                    : null,
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.1),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: const BorderSide(
+                                      color: Colors.white, width: 2),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : _errorMessage != null
+                        ? _buildErrorWidget()
+                        : _subCategories.isEmpty
+                            ? _buildEmptyWidget()
+                            : filteredCategories.isEmpty
+                                ? _buildNoResultsWidget()
+                                : _isGridView
+                                    ? _buildGridView(filteredCategories)
+                                    : _buildListView(filteredCategories),
+              ),
+            ],
           ),
         ),
       ),
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : _errorMessage != null
-              ? _buildErrorWidget()
-              : _subCategories.isEmpty
-                  ? _buildEmptyWidget()
-                  : filteredCategories.isEmpty
-                      ? _buildNoResultsWidget()
-                      : _isGridView
-                          ? _buildGridView(filteredCategories)
-                          : _buildListView(filteredCategories),
     );
   }
 
@@ -425,6 +488,46 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                     ],
                   ),
                 ),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [primaryBlue, secondaryBlue],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryBlue.withOpacity(0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          'مميز',
+                          style: GoogleFonts.cairo(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -616,7 +719,7 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.arrow_forward_ios_rounded,
+                  Icons.arrow_back_ios_rounded,
                   size: 14,
                   color: primaryBlue,
                 ),
@@ -782,6 +885,24 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
 
 class FadeInCard extends StatelessWidget {

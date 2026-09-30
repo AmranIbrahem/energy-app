@@ -1,20 +1,21 @@
-// lib/services/cart_service.dart
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+
 import '../models/cart_item_model.dart';
 
 class CartService extends ChangeNotifier {
   static final CartService _instance = CartService._internal();
+
   static CartService get instance => _instance;
 
   CartService._internal();
 
   List<CartItemModel> _items = [];
+
   List<CartItemModel> get items => List.unmodifiable(_items);
 
-  // ✅ محافظة المستخدم - يتم تعيينها من الخارج
   String? userGovernorate;
 
   int get itemCount => _items.length;
@@ -47,7 +48,6 @@ class CartService extends ChangeNotifier {
     return originalTotalPrice - totalPrice;
   }
 
-  // ✅ إجمالي رسوم الشحن المحسوبة
   double get calculatedShippingCost {
     double total = 0;
     for (var item in _items) {
@@ -59,7 +59,6 @@ class CartService extends ChangeNotifier {
     return total;
   }
 
-  // ✅ عدد العناصر التي رسوم شحنها غير محددة
   int get pendingShippingItemsCount {
     int count = 0;
     for (var item in _items) {
@@ -70,7 +69,6 @@ class CartService extends ChangeNotifier {
     return count;
   }
 
-  // ✅ عدد العناصر التي الشحن لها مجاني
   int get freeShippingItemsCount {
     int count = 0;
     for (var item in _items) {
@@ -81,7 +79,6 @@ class CartService extends ChangeNotifier {
     return count;
   }
 
-  // ✅ عدد العناصر التي الشحن لها محسوب
   int get calculatedShippingItemsCount {
     int count = 0;
     for (var item in _items) {
@@ -92,12 +89,10 @@ class CartService extends ChangeNotifier {
     return count;
   }
 
-  // ✅ الإجمالي النهائي مع الشحن
   double get totalPriceWithShipping {
     return totalPrice + calculatedShippingCost;
   }
 
-  // ✅ هل يوجد أي عنصر بشحن غير محدد
   bool get hasPendingShipping {
     return pendingShippingItemsCount > 0;
   }
@@ -111,7 +106,6 @@ class CartService extends ChangeNotifier {
         _items = decoded.map((item) => CartItemModel.fromJson(item)).toList();
         notifyListeners();
       } catch (e) {
-        print('Error loading cart: $e');
         _items = [];
       }
     }
@@ -126,7 +120,7 @@ class CartService extends ChangeNotifier {
 
   void addItem(CartItemModel item) {
     final existingIndex = _items.indexWhere(
-          (i) => i.id == item.id && i.itemType == 'product',
+      (i) => i.id == item.id && i.itemType == 'product',
     );
 
     if (existingIndex != -1) {
@@ -140,7 +134,7 @@ class CartService extends ChangeNotifier {
 
   void addOffer(CartItemModel offer) {
     final existingIndex = _items.indexWhere(
-          (i) => i.id == offer.id && i.itemType == 'offer',
+      (i) => i.id == offer.id && i.itemType == 'offer',
     );
 
     if (existingIndex != -1) {
@@ -154,7 +148,7 @@ class CartService extends ChangeNotifier {
 
   void updateQuantity(int id, int newQuantity, {String itemType = 'product'}) {
     final index = _items.indexWhere(
-          (i) => i.id == id && i.itemType == itemType,
+      (i) => i.id == id && i.itemType == itemType,
     );
     if (index != -1 && newQuantity > 0) {
       if (newQuantity <= _items[index].stock || _items[index].stock >= 999999) {
@@ -182,7 +176,7 @@ class CartService extends ChangeNotifier {
 
   int getItemQuantity(int id, {String itemType = 'product'}) {
     final item = _items.firstWhere(
-          (i) => i.id == id && i.itemType == itemType,
+      (i) => i.id == id && i.itemType == itemType,
       orElse: () => CartItemModel(
         id: 0,
         name: '',

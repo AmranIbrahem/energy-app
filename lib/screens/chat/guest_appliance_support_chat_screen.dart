@@ -1,20 +1,22 @@
 // lib/screens/chat/guest_appliance_support_chat_screen.dart
 
 import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:GeniusHouse/screens/chat/governorate_picker.dart';
+import 'package:GeniusHouse/screens/chat/message_bubble.dart';
+import 'package:GeniusHouse/services/api_service.dart';
+import 'package:GeniusHouse/services/permission_service.dart';
+import 'package:GeniusHouse/services/pusher_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter_sound/flutter_sound.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:GeniusHouse/services/permission_service.dart';
-import 'package:GeniusHouse/services/api_service.dart';
-import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/services/pusher_service.dart';
-import 'package:GeniusHouse/screens/chat/message_bubble.dart';
-import 'package:GeniusHouse/screens/chat/governorate_picker.dart';
 
 class GuestApplianceSupportChatScreen extends StatefulWidget {
   final ApiService apiService;
@@ -34,7 +36,8 @@ class GuestApplianceSupportChatScreen extends StatefulWidget {
 }
 
 class _GuestApplianceSupportChatScreenState
-    extends State<GuestApplianceSupportChatScreen> with TickerProviderStateMixin {
+    extends State<GuestApplianceSupportChatScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
@@ -95,13 +98,19 @@ class _GuestApplianceSupportChatScreenState
     )..repeat(reverse: true);
 
     _typingAnimation1 = Tween<double>(begin: 0.3, end: 1.0).animate(
-      CurvedAnimation(parent: _typingAnimationController, curve: const Interval(0.0, 0.33, curve: Curves.easeInOut)),
+      CurvedAnimation(
+          parent: _typingAnimationController,
+          curve: const Interval(0.0, 0.33, curve: Curves.easeInOut)),
     );
     _typingAnimation2 = Tween<double>(begin: 0.3, end: 1.0).animate(
-      CurvedAnimation(parent: _typingAnimationController, curve: const Interval(0.33, 0.66, curve: Curves.easeInOut)),
+      CurvedAnimation(
+          parent: _typingAnimationController,
+          curve: const Interval(0.33, 0.66, curve: Curves.easeInOut)),
     );
     _typingAnimation3 = Tween<double>(begin: 0.3, end: 1.0).animate(
-      CurvedAnimation(parent: _typingAnimationController, curve: const Interval(0.66, 1.0, curve: Curves.easeInOut)),
+      CurvedAnimation(
+          parent: _typingAnimationController,
+          curve: const Interval(0.66, 1.0, curve: Curves.easeInOut)),
     );
   }
 
@@ -131,7 +140,8 @@ class _GuestApplianceSupportChatScreenState
 
       await _audioRecorder.openRecorder();
       final tempDir = await getTemporaryDirectory();
-      final filePath = '${tempDir.path}/appliance_support_voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+      final filePath =
+          '${tempDir.path}/appliance_support_voice_${DateTime.now().millisecondsSinceEpoch}.wav';
 
       await _audioRecorder.startRecorder(
         toFile: filePath,
@@ -157,18 +167,30 @@ class _GuestApplianceSupportChatScreenState
             Container(
               width: 60,
               height: 60,
-              decoration: BoxDecoration(color: Colors.orange.shade50, shape: BoxShape.circle),
-              child: Icon(Icons.mic_off_rounded, color: Colors.orange.shade700, size: 30),
+              decoration: BoxDecoration(
+                  color: Colors.orange.shade50, shape: BoxShape.circle),
+              child: Icon(Icons.mic_off_rounded,
+                  color: Colors.orange.shade700, size: 30),
             ),
             const SizedBox(height: 12),
-            Text('صلاحية الميكروفون مطلوبة', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: darkColor), textAlign: TextAlign.center),
+            Text('صلاحية الميكروفون مطلوبة',
+                style: GoogleFonts.cairo(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor),
+                textAlign: TextAlign.center),
           ],
         ),
-        content: Text('يحتاج التطبيق إلى الوصول إلى الميكروفون لإرسال الرسائل الصوتية.', style: GoogleFonts.cairo(fontSize: 14, color: mediumGray), textAlign: TextAlign.center),
+        content: Text(
+            'يحتاج التطبيق إلى الوصول إلى الميكروفون لإرسال الرسائل الصوتية.',
+            style: GoogleFonts.cairo(fontSize: 14, color: mediumGray),
+            textAlign: TextAlign.center),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('إلغاء', style: GoogleFonts.cairo(color: mediumGray, fontWeight: FontWeight.w600)),
+            child: Text('إلغاء',
+                style: GoogleFonts.cairo(
+                    color: mediumGray, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton.icon(
             onPressed: () async {
@@ -176,12 +198,14 @@ class _GuestApplianceSupportChatScreenState
               await PermissionService.openAppSettings();
             },
             icon: const Icon(Icons.settings_rounded, size: 18),
-            label: Text('فتح الإعدادات', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+            label: Text('فتح الإعدادات',
+                style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ],
@@ -273,9 +297,12 @@ class _GuestApplianceSupportChatScreenState
     if (savedGovernorate == null || savedGovernorate.isEmpty) {
       savedGovernorate = widget.storageService.getGuestGovernorate();
     }
-    _governorate = (savedGovernorate != null && savedGovernorate.isNotEmpty) ? savedGovernorate : 'دمشق';
+    _governorate = (savedGovernorate != null && savedGovernorate.isNotEmpty)
+        ? savedGovernorate
+        : 'دمشق';
 
-    final savedSessionId = widget.storageService.getGuestApplianceSupportSessionId();
+    final savedSessionId =
+        widget.storageService.getGuestApplianceSupportSessionId();
     if (savedSessionId != null) {
       _sessionId = savedSessionId;
       await _fetchChatHistory();
@@ -287,10 +314,12 @@ class _GuestApplianceSupportChatScreenState
   Future<void> _createNewSession() async {
     setState(() => _isLoading = true);
     try {
-      final response = await widget.apiService.startGuestApplianceSupportSession();
+      final response =
+          await widget.apiService.startGuestApplianceSupportSession();
       if (response['status'] == 'success' && mounted) {
         _sessionId = response['data']['session_id']?.toString();
-        await widget.storageService.saveGuestApplianceSupportSessionId(_sessionId!);
+        await widget.storageService
+            .saveGuestApplianceSupportSessionId(_sessionId!);
         await _fetchChatHistory();
       } else {
         setState(() {
@@ -338,8 +367,7 @@ class _GuestApplianceSupportChatScreenState
           final map = Map<String, dynamic>.from(msg as Map);
           map['content'] = map['content']?.toString() ?? '';
           return map;
-        })
-            .toList();
+        }).toList();
 
         setState(() {
           _messages = processedMessages;
@@ -532,27 +560,37 @@ class _GuestApplianceSupportChatScreenState
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12)),
-              child: Icon(Icons.delete_rounded, color: Colors.red.shade700, size: 24),
+              decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12)),
+              child: Icon(Icons.delete_rounded,
+                  color: Colors.red.shade700, size: 24),
             ),
             const SizedBox(width: 12),
-            Text('مسح المحادثة', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: darkColor)),
+            Text('مسح المحادثة',
+                style: GoogleFonts.cairo(
+                    fontWeight: FontWeight.bold, color: darkColor)),
           ],
         ),
-        content: Text('هل أنت متأكد من مسح جميع رسائل المحادثة؟', style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
+        content: Text('هل أنت متأكد من مسح جميع رسائل المحادثة؟',
+            style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('إلغاء', style: GoogleFonts.cairo(fontWeight: FontWeight.w600, color: mediumGray)),
+            child: Text('إلغاء',
+                style: GoogleFonts.cairo(
+                    fontWeight: FontWeight.w600, color: mediumGray)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('مسح', style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+            child: Text('مسح',
+                style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -560,7 +598,8 @@ class _GuestApplianceSupportChatScreenState
 
     if (confirm == true && _sessionId != null) {
       try {
-        final response = await widget.apiService.clearApplianceSupportConversation(
+        final response =
+            await widget.apiService.clearApplianceSupportConversation(
           requiresAuth: false,
           sessionId: _sessionId,
         );
@@ -575,7 +614,8 @@ class _GuestApplianceSupportChatScreenState
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('تم مسح المحادثة بنجاح', style: GoogleFonts.cairo()),
+              content:
+                  Text('تم مسح المحادثة بنجاح', style: GoogleFonts.cairo()),
               backgroundColor: primaryBlue,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 2),
@@ -605,7 +645,8 @@ class _GuestApplianceSupportChatScreenState
       final dateTime = DateTime.parse(timestamp);
       final now = DateTime.now();
       final difference = now.difference(dateTime);
-      if (difference.inDays > 0) return DateFormat('MMM dd, hh:mm a').format(dateTime);
+      if (difference.inDays > 0)
+        return DateFormat('MMM dd, hh:mm a').format(dateTime);
       if (difference.inHours > 0) return 'منذ ${difference.inHours} ساعة';
       if (difference.inMinutes > 0) return 'منذ ${difference.inMinutes} دقيقة';
       return 'الآن';
@@ -619,7 +660,11 @@ class _GuestApplianceSupportChatScreenState
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
-        content: Row(children: [const Icon(Icons.error_rounded, color: Colors.white, size: 20), const SizedBox(width: 10), Expanded(child: Text(message, style: GoogleFonts.cairo()))]),
+        content: Row(children: [
+          const Icon(Icons.error_rounded, color: Colors.white, size: 20),
+          const SizedBox(width: 10),
+          Expanded(child: Text(message, style: GoogleFonts.cairo()))
+        ]),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -628,82 +673,144 @@ class _GuestApplianceSupportChatScreenState
       ));
   }
 
+  Widget _buildCurvedHeader(BuildContext context) {
+    return ClipPath(
+      clipper: _BottomCurveClipper(),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [primaryBlue, secondaryBlue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.handyman_rounded,
+                      color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'دعم الأجهزة الكهربائية',
+                        style: GoogleFonts.cairo(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'وضع الزوار • ${_governorate ?? "دمشق"}',
+                        style: GoogleFonts.cairo(
+                          fontSize: 10,
+                          color: Colors.white.withOpacity(0.85),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (_messages.isNotEmpty)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: Colors.white, size: 22),
+                      onPressed: _clearChat,
+                    ),
+                  ),
+                if (_governorate != null)
+                  Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.location_on_outlined,
+                          color: Colors.white, size: 22),
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(20))),
+                          builder: (context) => GovernoratePicker(
+                            selectedGovernorate: _governorate,
+                            onSelected: (gov) {
+                              Navigator.pop(context);
+                              setState(() => _governorate = gov);
+                              widget.storageService.saveGuestGovernorate(gov);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: Row(
+      body: Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: Column(
           children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.25), borderRadius: BorderRadius.circular(14)),
-              child: const Icon(Icons.handyman_rounded, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('دعم الأجهزة الكهربائية', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text('وضع الزوار • ${_governorate ?? "دمشق"}', style: GoogleFonts.cairo(fontSize: 11, color: Colors.white.withOpacity(0.85))),
-              ],
+            _buildCurvedHeader(context),
+            Expanded(
+              child: _isLoading
+                  ? _buildLoadingState()
+                  : Column(
+                      children: [
+                        Expanded(
+                          child: _messages.isEmpty
+                              ? _buildEmptyState()
+                              : _buildMessagesList(),
+                        ),
+                        _buildInputBar(),
+                      ],
+                    ),
             ),
           ],
         ),
-        elevation: 0,
-        actions: [
-          if (_messages.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-              child: IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 22),
-                onPressed: _clearChat,
-              ),
-            ),
-          if (_governorate != null)
-            Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
-              child: IconButton(
-                icon: const Icon(Icons.location_on_outlined, color: Colors.white, size: 22),
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                    builder: (context) => GovernoratePicker(
-                      selectedGovernorate: _governorate,
-                      onSelected: (gov) {
-                        Navigator.pop(context);
-                        setState(() => _governorate = gov);
-                        widget.storageService.saveGuestGovernorate(gov);
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? _buildLoadingState()
-          : Column(
-        children: [
-          Expanded(
-            child: _messages.isEmpty ? _buildEmptyState() : _buildMessagesList(),
-          ),
-          _buildInputBar(),
-        ],
       ),
     );
   }
@@ -760,15 +867,20 @@ class _GuestApplianceSupportChatScreenState
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)]),
+              gradient: LinearGradient(colors: [
+                primaryBlue.withOpacity(0.12),
+                secondaryBlue.withOpacity(0.06)
+              ]),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.handyman_rounded, color: primaryBlue, size: 18),
+            child: const Icon(Icons.handyman_rounded,
+                color: primaryBlue, size: 18),
           ),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(18)),
+            decoration: BoxDecoration(
+                color: cardWhite, borderRadius: BorderRadius.circular(18)),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -790,99 +902,161 @@ class _GuestApplianceSupportChatScreenState
       animation: animation,
       builder: (context, child) => Transform.scale(
         scale: animation.value,
-        child: Container(width: 7, height: 7, decoration: const BoxDecoration(color: primaryBlue, shape: BoxShape.circle)),
+        child: Container(
+            width: 7,
+            height: 7,
+            decoration: const BoxDecoration(
+                color: primaryBlue, shape: BoxShape.circle)),
       ),
     );
   }
 
   Widget _buildInputBar() {
-    return Column(
-      children: [
-        if (_showImageGrid && _selectedImages.isNotEmpty) _buildImageGrid(),
-        if (_isRecording) _buildRecordingIndicator(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(color: cardWhite, boxShadow: [BoxShadow(color: primaryBlue.withOpacity(0.06), blurRadius: 10)]),
-          child: SafeArea(
-            child: _isRecording
-                ? _buildRecordingStopButton()
-                : Row(
-              children: [
-                GestureDetector(
-                  onLongPressStart: (_) async {
-                    final hasPermission = await _requestMicrophonePermission();
-                    if (hasPermission) {
-                      await _startRecording();
-                    } else {
-                      _showPermissionDeniedDialog();
-                    }
-                  },
-                  onLongPressEnd: (_) async {
-                    if (_isRecording) await _stopRecording();
-                  },
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _isRecording ? Colors.red.withOpacity(0.1) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(_isRecording ? Icons.mic_rounded : Icons.mic_none_rounded, color: _isRecording ? Colors.red : Colors.grey.shade600, size: 24),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: _toggleImagePicker,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _selectedImages.isNotEmpty ? primaryBlue.withOpacity(0.1) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(_selectedImages.isNotEmpty ? Icons.close_rounded : Icons.photo_library_rounded, color: _selectedImages.isNotEmpty ? primaryBlue : Colors.grey.shade600, size: 24),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(color: lightGray, borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.grey.shade200)),
-                    child: TextField(
-                      controller: _messageController,
-                      focusNode: _focusNode,
-                      style: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: darkColor),
-                      maxLines: 3,
-                      minLines: 1,
-                      decoration: InputDecoration(
-                        hintText: 'اكتب رسالتك لفريق الدعم...',
-                        hintStyle: GoogleFonts.cairo(fontSize: 14 * _fontScale, color: Colors.grey.shade400),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [primaryBlue, secondaryBlue]),
-                    shape: BoxShape.circle,
-                  ),
-                  child: InkWell(
-                    onTap: _isSending ? null : _sendMessage,
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      child: _isSending
-                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                    ),
-                  ),
-                ),
-              ],
+    return Container(
+      decoration: BoxDecoration(
+        color: cardWhite,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_showImageGrid && _selectedImages.isNotEmpty) _buildImageGrid(),
+          if (_isRecording) _buildRecordingIndicator(),
+          SafeArea(
+            top: false,
+            bottom: true,
+            minimum: const EdgeInsets.only(bottom: 0),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+              child:
+                  _isRecording ? _buildRecordingStopButton() : _buildInputRow(),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputRow() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        GestureDetector(
+          onLongPressStart: (_) async {
+            final hasPermission = await _requestMicrophonePermission();
+            if (hasPermission) {
+              await _startRecording();
+            } else {
+              _showPermissionDeniedDialog();
+            }
+          },
+          onLongPressEnd: (_) async {
+            if (_isRecording) await _stopRecording();
+          },
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: _isRecording
+                  ? Colors.red.withOpacity(0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(19),
+            ),
+            child: Icon(
+              _isRecording ? Icons.mic_rounded : Icons.mic_none_rounded,
+              color: _isRecording ? Colors.red : Colors.grey.shade600,
+              size: 22,
+            ),
+          ),
+        ),
+        const SizedBox(width: 2),
+        GestureDetector(
+          onTap: _toggleImagePicker,
+          child: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: _selectedImages.isNotEmpty
+                  ? primaryBlue.withOpacity(0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(19),
+            ),
+            child: Icon(
+              _selectedImages.isNotEmpty
+                  ? Icons.close_rounded
+                  : Icons.photo_library_rounded,
+              color: _selectedImages.isNotEmpty
+                  ? primaryBlue
+                  : Colors.grey.shade600,
+              size: 22,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 38, maxHeight: 100),
+            decoration: BoxDecoration(
+              color: lightGray,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: TextField(
+              controller: _messageController,
+              focusNode: _focusNode,
+              style: GoogleFonts.cairo(
+                  fontSize: 14 * _fontScale, color: darkColor),
+              maxLines: 4,
+              minLines: 1,
+              textInputAction: TextInputAction.newline,
+              decoration: InputDecoration(
+                hintText: 'اكتب رسالتك...',
+                hintStyle: GoogleFonts.cairo(
+                  fontSize: 13 * _fontScale,
+                  color: Colors.grey.shade400,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+              ),
+              onSubmitted: (_) => _sendMessage(),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        GestureDetector(
+          onTap: _isSending ? null : _sendMessage,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryBlue, secondaryBlue],
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: _isSending
+                ? const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(
+                    Icons.send_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
           ),
         ),
       ],
@@ -890,36 +1064,65 @@ class _GuestApplianceSupportChatScreenState
   }
 
   Widget _buildRecordingStopButton() {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: _stopRecording,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(25)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.stop_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text('إيقاف التسجيل', style: GoogleFonts.cairo(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
+    return GestureDetector(
+      onTap: _stopRecording,
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(20),
         ),
-      ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.stop_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'إيقاف التسجيل وإرسال',
+              style: GoogleFonts.cairo(
+                fontSize: 14,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildRecordingIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       color: Colors.red.withOpacity(0.05),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
+          FadeTransition(
+            opacity: _pulseAnimationController.drive(
+              Tween<double>(begin: 0.4, end: 1.0).chain(
+                CurveTween(curve: Curves.easeInOut),
+              ),
+            ),
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
           const SizedBox(width: 8),
-          Text('جاري التسجيل...', style: GoogleFonts.cairo(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600)),
+          Text(
+            'جاري التسجيل...',
+            style: GoogleFonts.cairo(
+              fontSize: 12,
+              color: Colors.red,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -928,7 +1131,7 @@ class _GuestApplianceSupportChatScreenState
   Widget _buildImageGrid() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      height: 120,
+      height: 110,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _selectedImages.length,
@@ -937,12 +1140,13 @@ class _GuestApplianceSupportChatScreenState
           return Stack(
             children: [
               Container(
-                width: 100,
-                height: 100,
+                width: 90,
+                height: 90,
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  image: DecorationImage(image: FileImage(image), fit: BoxFit.cover),
+                  image: DecorationImage(
+                      image: FileImage(image), fit: BoxFit.cover),
                   border: Border.all(color: Colors.grey.shade200),
                 ),
               ),
@@ -953,8 +1157,10 @@ class _GuestApplianceSupportChatScreenState
                   onTap: () => _removeImage(index),
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
+                    decoration: const BoxDecoration(
+                        color: Colors.black54, shape: BoxShape.circle),
+                    child: const Icon(Icons.close_rounded,
+                        color: Colors.white, size: 14),
                   ),
                 ),
               ),
@@ -975,12 +1181,17 @@ class _GuestApplianceSupportChatScreenState
             height: 60,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.1), secondaryBlue.withOpacity(0.05)]),
+              gradient: LinearGradient(colors: [
+                primaryBlue.withOpacity(0.1),
+                secondaryBlue.withOpacity(0.05)
+              ]),
             ),
-            child: const CircularProgressIndicator(color: primaryBlue, strokeWidth: 2.5),
+            child: const CircularProgressIndicator(
+                color: primaryBlue, strokeWidth: 2.5),
           ),
           const SizedBox(height: 16),
-          Text('جاري التحميل...', style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
+          Text('جاري التحميل...',
+              style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
         ],
       ),
     );
@@ -998,18 +1209,44 @@ class _GuestApplianceSupportChatScreenState
             height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.08), secondaryBlue.withOpacity(0.04)]),
+              gradient: LinearGradient(colors: [
+                primaryBlue.withOpacity(0.08),
+                secondaryBlue.withOpacity(0.04)
+              ]),
             ),
-            child: const Icon(Icons.handyman_rounded, size: 50, color: primaryBlue),
+            child: const Icon(Icons.handyman_rounded,
+                size: 50, color: primaryBlue),
           ),
           const SizedBox(height: 20),
-          Text('دعم الأجهزة الكهربائية', style: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.bold, color: darkColor)),
+          Text('دعم الأجهزة الكهربائية',
+              style: GoogleFonts.cairo(
+                  fontSize: 20, fontWeight: FontWeight.bold, color: darkColor)),
           const SizedBox(height: 8),
-          Text('تواصل مع فريقنا المتخصص لحل مشكلتك', style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
+          Text('تواصل مع فريقنا المتخصص لحل مشكلتك',
+              style: GoogleFonts.cairo(fontSize: 14, color: mediumGray)),
           const SizedBox(height: 8),
-          Text('⏰ ساعات العمل: الاحد - الخميس (10 صباحاً - 4 مساءً)', style: GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
+          Text('⏰ ساعات العمل: الاحد - الخميس (10 صباحاً - 4 مساءً)',
+              style: GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
         ],
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

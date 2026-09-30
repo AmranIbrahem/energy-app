@@ -1,7 +1,8 @@
 // lib/services/storage_service.dart
 
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
   static late SharedPreferences _preferences;
@@ -10,19 +11,14 @@ class StorageService {
     _preferences = await SharedPreferences.getInstance();
   }
 
-  // ============ دوال حفظ الأيقونات المخصصة للإجراءات السريعة ============
-
-  // ✅ حفظ قائمة الأيقونات المخصصة
   Future<void> saveCustomQuickActions(List<String> actions) async {
     await _preferences.setStringList('custom_quick_actions', actions);
   }
 
-  // ✅ جلب قائمة الأيقونات المخصصة
   List<String> getCustomQuickActions() {
     return _preferences.getStringList('custom_quick_actions') ?? [];
   }
 
-  // ✅ حفظ حالة "إظهار الكل" (هل تم فتح قائمة الإظهار سابقاً)
   Future<void> saveQuickActionsExpanded(bool expanded) async {
     await _preferences.setBool('quick_actions_expanded', expanded);
   }
@@ -30,8 +26,6 @@ class StorageService {
   bool isQuickActionsExpanded() {
     return _preferences.getBool('quick_actions_expanded') ?? false;
   }
-
-  // ============ باقي الدوال الحالية ============
 
   Future<void> saveGuestSolarSessionId(String sessionId) async {
     await _preferences.setString('guest_solar_session_id', sessionId);
@@ -156,9 +150,9 @@ class StorageService {
     await _preferences.remove('remember_token');
   }
 
-  // ✅ وقت إنشاء التوكن
   Future<void> saveTokenCreatedAt(DateTime dateTime) async {
-    await _preferences.setString('token_created_at', dateTime.toIso8601String());
+    await _preferences.setString(
+        'token_created_at', dateTime.toIso8601String());
   }
 
   DateTime? getTokenCreatedAt() {
@@ -169,7 +163,6 @@ class StorageService {
     return null;
   }
 
-  // ✅ التحقق إذا كان التوكن على وشك الانتهاء (أقل من 5 أيام)
   bool isTokenExpiringSoon() {
     final createdAt = getTokenCreatedAt();
     if (createdAt == null) return false;
@@ -182,7 +175,6 @@ class StorageService {
     return difference > (thirtyDays - fiveDays);
   }
 
-  // ✅ التحقق إذا كان التوكن منتهياً
   bool isTokenExpired() {
     final createdAt = getTokenCreatedAt();
     if (createdAt == null) return false;
@@ -220,13 +212,10 @@ class StorageService {
     await _preferences.remove('guest_maintenance_session_id');
   }
 
-
-
-
-
   // ✅ Appliance Support Chat Session ID
   Future<void> saveGuestApplianceSupportSessionId(String sessionId) async {
-    await _preferences.setString('guest_appliance_support_session_id', sessionId);
+    await _preferences.setString(
+        'guest_appliance_support_session_id', sessionId);
   }
 
   String? getGuestApplianceSupportSessionId() {
@@ -237,10 +226,10 @@ class StorageService {
     await _preferences.remove('guest_appliance_support_session_id');
   }
 
-
   // ✅ Lighting Support Chat Session ID
   Future<void> saveGuestLightingSupportSessionId(String sessionId) async {
-    await _preferences.setString('guest_lighting_support_session_id', sessionId);
+    await _preferences.setString(
+        'guest_lighting_support_session_id', sessionId);
   }
 
   String? getGuestLightingSupportSessionId() {
@@ -250,5 +239,58 @@ class StorageService {
   Future<void> clearGuestLightingSupportSessionId() async {
     await _preferences.remove('guest_lighting_support_session_id');
   }
-  
+
+  Future<void> saveLightingSessionId(String sessionId) async {
+    await _preferences.setString('lighting_session_id', sessionId);
+  }
+
+  String? getLightingSessionId() {
+    return _preferences.getString('lighting_session_id');
+  }
+
+  Future<void> removeLightingSessionId() async {
+    await _preferences.remove('lighting_session_id');
+  }
+
+  Future<void> saveAlwaysShowHub(bool value) async {
+    await _preferences.setBool('always_show_hub', value);
+  }
+
+  bool isAlwaysShowHub() {
+    return _preferences.getBool('always_show_hub') ?? true;
+  }
+
+  Future<void> saveShowUnifiedReminder(bool value) async {
+    await _preferences.setBool('show_unified_reminder', value);
+  }
+
+  bool isShowUnifiedReminder() {
+    return _preferences.getBool('show_unified_reminder') ?? true;
+  }
+
+  static const String currencyUsdConst = 'usd';
+  static const String currencySypConst = 'syp';
+
+  Future<void> savePreferredCurrency(String currency) async {
+    if (currency != currencyUsdConst && currency != currencySypConst) {
+      currency = currencyUsdConst;
+    }
+    await _preferences.setString('preferred_currency', currency);
+  }
+
+  String getPreferredCurrency() {
+    return _preferences.getString('preferred_currency') ?? currencyUsdConst;
+  }
+
+  bool isSypPreferred() {
+    return getPreferredCurrency() == currencySypConst;
+  }
+
+  bool isUsdPreferred() {
+    return getPreferredCurrency() == currencyUsdConst;
+  }
+
+  static String get currencyUsd => currencyUsdConst;
+
+  static String get currencySyp => currencySypConst;
 }

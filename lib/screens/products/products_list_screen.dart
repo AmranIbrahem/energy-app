@@ -1,14 +1,16 @@
 // lib/screens/products/products_list_screen.dart
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:flutter/services.dart';
-import 'package:GeniusHouse/utils/constants.dart';
+import 'dart:ui' as ui;
+
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:GeniusHouse/utils/constants.dart';
 import 'package:GeniusHouse/widgets/product_card.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ProductsListScreen extends StatefulWidget {
   final String title;
@@ -144,9 +146,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
         _governorate = savedGov;
         return;
       }
-    } catch (e) {
-      print('❌ Error getting governorate: $e');
-    }
+    } catch (e) {}
 
     if (widget.storageService != null) {
       final savedGov = widget.storageService!.getGovernorate();
@@ -181,7 +181,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
           requiresAuth = true;
         } else {
           endpoint =
-          '/v1/user/public/products/sub-category/${widget.subcategorySlug}/$_governorate';
+              '/v1/user/public/products/sub-category/${widget.subcategorySlug}/$_governorate';
           requiresAuth = false;
         }
       } else if (widget.categorySlug != null &&
@@ -191,7 +191,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
           requiresAuth = true;
         } else {
           endpoint =
-          '/v1/user/public/products/category/${widget.categorySlug}/$_governorate';
+              '/v1/user/public/products/category/${widget.categorySlug}/$_governorate';
           requiresAuth = false;
         }
       } else {
@@ -222,35 +222,32 @@ class _ProductsListScreenState extends State<ProductsListScreen>
       );
 
       if (mounted) {
-        // ✅ التحقق من نجاح الاستجابة
         if (response.containsKey('data')) {
           List<dynamic> newProducts = [];
 
-          // استخراج المنتجات من الاستجابة
-          if (response['data'] is Map && response['data'].containsKey('products')) {
+          if (response['data'] is Map &&
+              response['data'].containsKey('products')) {
             newProducts = response['data']['products'] ?? [];
           } else if (response['data'] is List) {
             newProducts = response['data'];
-          } else if (response['data'] is Map && response['data'].containsKey('data')) {
-            // بعض الـ APIs ترجع data داخل data
+          } else if (response['data'] is Map &&
+              response['data'].containsKey('data')) {
             newProducts = response['data']['data'] ?? [];
           }
 
-          // ✅ إذا كانت المنتجات فارغة - هذا ليس خطأ، القسم فارغ فقط
           if (newProducts.isEmpty && !loadMore) {
             setState(() {
               _products = [];
               _isLoading = false;
               _isLoadingMore = false;
-              _errorMessage = null; // ⬅️ لا نعرض رسالة خطأ
+              _errorMessage = null;
               _hasMore = false;
             });
-            return; // ⬅️ نخرج من الدالة
+            return;
           }
 
-          final pagination = response['data'] is Map
-              ? response['data']['pagination']
-              : null;
+          final pagination =
+              response['data'] is Map ? response['data']['pagination'] : null;
 
           if (loadMore) {
             setState(() {
@@ -266,7 +263,6 @@ class _ProductsListScreenState extends State<ProductsListScreen>
             _scaleAnimationController.forward(from: 0.0);
           }
 
-          // ✅ معالجة التصفح (pagination)
           if (pagination != null) {
             final currentPage = pagination['current_page'] ?? _currentPage;
             final lastPage = pagination['last_page'] ?? 1;
@@ -281,10 +277,8 @@ class _ProductsListScreenState extends State<ProductsListScreen>
             });
           }
         } else {
-          // ✅ الاستجابة لا تحتوي على 'data' - قد يكون خطأ حقيقي
           final message = response['message'] ?? '';
 
-          // ✅ إذا كانت رسالة "لا توجد منتجات" أو "فارغ" - نعتبرها قسم فارغ
           if (message.contains('لا توجد') ||
               message.contains('فارغ') ||
               message.contains('empty') ||
@@ -294,35 +288,31 @@ class _ProductsListScreenState extends State<ProductsListScreen>
               _products = [];
               _isLoading = false;
               _isLoadingMore = false;
-              _errorMessage = null; // ⬅️ لا نعرض خطأ
+              _errorMessage = null;
               _hasMore = false;
             });
           } else {
-            // ✅ خطأ حقيقي
             setState(() {
               _isLoading = false;
               _isLoadingMore = false;
-              _errorMessage = message.isNotEmpty
-                  ? message
-                  : 'حدث خطأ في تحميل المنتجات';
+              _errorMessage =
+                  message.isNotEmpty ? message : 'حدث خطأ في تحميل المنتجات';
             });
           }
         }
       }
     } catch (e) {
       if (mounted) {
-        // ✅ إذا كان الخطأ 404 (غير موجود) - القسم فارغ
         if (e.toString().contains('404') ||
             e.toString().contains('Not Found')) {
           setState(() {
             _products = [];
             _isLoading = false;
             _isLoadingMore = false;
-            _errorMessage = null; // ⬅️ لا نعرض خطأ
+            _errorMessage = null;
             _hasMore = false;
           });
         } else {
-          // ✅ خطأ حقيقي في الاتصال
           setState(() {
             _isLoading = false;
             _isLoadingMore = false;
@@ -350,282 +340,300 @@ class _ProductsListScreenState extends State<ProductsListScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: 1.0 + (_pulseAnimationController.value * 0.15),
-                  child: child,
-                );
-              },
-              child: const Icon(Icons.shopping_bag_rounded,
-                  color: Colors.yellow, size: 24),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                widget.title,
-                style: GoogleFonts.cairo(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        elevation: 0,
-        centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: Icon(
-                  _isGridView
-                      ? Icons.view_list_rounded
-                      : Icons.grid_view_rounded,
-                  key: ValueKey(_isGridView),
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                setState(() => _isGridView = !_isGridView);
-              },
-              tooltip: _isGridView ? 'عرض القائمة' : 'عرض الشبكة',
-            ),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(120),
-          child: Container(
-            decoration: BoxDecoration(
-              color: cardWhite,
-              boxShadow: [
-                BoxShadow(
-                  color: primaryBlue.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFEFF6FF),
+                Color(0xFFF5F7FA),
               ],
             ),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 5),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) => _searchQuery = value,
-                    onSubmitted: (_) => _search(),
-                    style: GoogleFonts.cairo(fontSize: 14, color: darkColor),
-                    decoration: InputDecoration(
-                      hintText: 'ابحث عن منتج...',
-                      hintStyle: GoogleFonts.cairo(
-                        fontSize: 14,
-                        color: Colors.grey.shade400,
-                      ),
-                      prefixIcon: Container(
-                        margin: const EdgeInsets.all(6),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              primaryBlue.withOpacity(0.15),
-                              secondaryBlue.withOpacity(0.08),
+          ),
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back_rounded,
+                                      color: Colors.white),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Center(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      AnimatedBuilder(
+                                        animation: _pulseAnimationController,
+                                        builder: (context, child) {
+                                          return Transform.scale(
+                                              scale: 1.0 +
+                                                  (_pulseAnimationController
+                                                          .value *
+                                                      0.15),
+                                              child: child);
+                                        },
+                                        child: const Icon(
+                                            Icons.shopping_bag_rounded,
+                                            color: Colors.yellow,
+                                            size: 24),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Flexible(
+                                        child: Text(
+                                          widget.title,
+                                          style: GoogleFonts.cairo(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 300),
+                                    child: Icon(
+                                      _isGridView
+                                          ? Icons.view_list_rounded
+                                          : Icons.grid_view_rounded,
+                                      key: ValueKey(_isGridView),
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    HapticFeedback.lightImpact();
+                                    setState(() => _isGridView = !_isGridView);
+                                  },
+                                  tooltip: _isGridView
+                                      ? 'عرض القائمة'
+                                      : 'عرض الشبكة',
+                                ),
+                              ),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
-                          Icons.search_rounded,
-                          size: 20,
-                          color: primaryBlue,
-                        ),
-                      ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? Container(
-                        margin: const EdgeInsets.all(6),
-                        child: IconButton(
-                          icon: Container(
-                            padding: const EdgeInsets.all(4),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                          child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Icon(
-                              Icons.close_rounded,
-                              size: 16,
-                              color: Colors.red,
+                            child: TextField(
+                              controller: _searchController,
+                              onChanged: (value) => _searchQuery = value,
+                              onSubmitted: (_) => _search(),
+                              style: GoogleFonts.cairo(
+                                  fontSize: 14, color: darkColor),
+                              textAlign: TextAlign.right,
+                              decoration: InputDecoration(
+                                hintText: 'ابحث عن منتج...',
+                                hintStyle: GoogleFonts.cairo(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                ),
+                                prefixIcon: Container(
+                                  margin: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.search_rounded,
+                                    size: 20,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear_rounded,
+                                            color: Colors.white, size: 20),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() => _searchQuery = '');
+                                          _search();
+                                        },
+                                      )
+                                    : null,
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.1),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: const BorderSide(
+                                      color: Colors.white, width: 2),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 16,
+                                ),
+                              ),
                             ),
                           ),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                            _search();
-                          },
                         ),
-                      )
-                          : null,
-                      filled: true,
-                      fillColor: lightGray,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: const BorderSide(
-                          color: primaryBlue,
-                          width: 2,
+                        SizedBox(
+                          height: 50,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            itemCount: _sortOptions.length,
+                            itemBuilder: (context, index) {
+                              final option = _sortOptions[index];
+                              final isSelected =
+                                  _selectedSort == option['label'];
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: TweenAnimationBuilder(
+                                  tween: Tween<double>(begin: 0.0, end: 1.0),
+                                  duration: Duration(
+                                      milliseconds: 400 + (index * 50)),
+                                  curve: Curves.easeOut,
+                                  builder: (context, double value, child) {
+                                    return Opacity(
+                                      opacity: value,
+                                      child: Transform.scale(
+                                        scale: 0.8 + (0.2 * value),
+                                        child: child,
+                                      ),
+                                    );
+                                  },
+                                  child: GestureDetector(
+                                    onTap: () => _applySort(
+                                      option['label'],
+                                      option['value'],
+                                      option['order'],
+                                    ),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: isSelected
+                                            ? const LinearGradient(
+                                                colors: [
+                                                  primaryBlue,
+                                                  secondaryBlue
+                                                ],
+                                              )
+                                            : LinearGradient(
+                                                colors: [
+                                                  Colors.white.withOpacity(0.2),
+                                                  Colors.white.withOpacity(0.1),
+                                                ],
+                                              ),
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: isSelected
+                                            ? [
+                                                BoxShadow(
+                                                  color: primaryBlue
+                                                      .withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            option['icon'],
+                                            size: 14,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.white70,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            option['label'],
+                                            style: GoogleFonts.cairo(
+                                              fontSize: 11,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500,
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : Colors.white70,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
+                      ],
                     ),
                   ),
                 ),
-                SizedBox(
-                  height: 45,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: _sortOptions.length,
-                    itemBuilder: (context, index) {
-                      final option = _sortOptions[index];
-                      final isSelected = _selectedSort == option['label'];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: TweenAnimationBuilder(
-                          tween: Tween<double>(begin: 0.0, end: 1.0),
-                          duration: Duration(milliseconds: 400 + (index * 50)),
-                          curve: Curves.easeOut,
-                          builder: (context, double value, child) {
-                            return Opacity(
-                              opacity: value,
-                              child: Transform.scale(
-                                scale: 0.8 + (0.2 * value),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: GestureDetector(
-                            onTap: () => _applySort(
-                              option['label'],
-                              option['value'],
-                              option['order'],
-                            ),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: isSelected
-                                    ? const LinearGradient(
-                                  colors: [primaryBlue, secondaryBlue],
-                                )
-                                    : LinearGradient(
-                                  colors: [
-                                    Colors.grey.shade100,
-                                    Colors.grey.shade200,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: isSelected
-                                    ? [
-                                  BoxShadow(
-                                    color: primaryBlue.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                                    : null,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    option['icon'],
-                                    size: 14,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.grey.shade600,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    option['label'],
-                                    style: GoogleFonts.cairo(
-                                      fontSize: 11,
-                                      fontWeight: isSelected
-                                          ? FontWeight.w700
-                                          : FontWeight.w500,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : Colors.grey.shade700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : _errorMessage != null
+                        ? _buildErrorWidget()
+                        : _products.isEmpty
+                            ? _buildEmptyWidget()
+                            : _isGridView
+                                ? _buildGridView()
+                                : _buildListView(),
+              ),
+            ],
           ),
         ),
       ),
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : _errorMessage != null
-          ? _buildErrorWidget()
-          : _products.isEmpty
-          ? _buildEmptyWidget()
-          : _isGridView
-          ? _buildGridView()
-          : _buildListView(),
     );
   }
 
@@ -633,7 +641,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
         if (scrollInfo.metrics.pixels >=
-            scrollInfo.metrics.maxScrollExtent - 200 &&
+                scrollInfo.metrics.maxScrollExtent - 200 &&
             !_isLoadingMore &&
             _hasMore) {
           _fetchProducts(loadMore: true);
@@ -684,7 +692,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
         if (scrollInfo.metrics.pixels >=
-            scrollInfo.metrics.maxScrollExtent - 200 &&
+                scrollInfo.metrics.maxScrollExtent - 200 &&
             !_isLoadingMore &&
             _hasMore) {
           _fetchProducts(loadMore: true);
@@ -731,44 +739,44 @@ class _ProductsListScreenState extends State<ProductsListScreen>
       child: Center(
         child: _isLoadingMore
             ? Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: 1.0 + (_pulseAnimationController.value * 0.2),
-                  child: child,
-                );
-              },
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      primaryBlue.withOpacity(0.15),
-                      secondaryBlue.withOpacity(0.08),
-                    ],
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedBuilder(
+                    animation: _pulseAnimationController,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: 1.0 + (_pulseAnimationController.value * 0.2),
+                        child: child,
+                      );
+                    },
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            primaryBlue.withOpacity(0.15),
+                            secondaryBlue.withOpacity(0.08),
+                          ],
+                        ),
+                      ),
+                      child: const CircularProgressIndicator(
+                        color: primaryBlue,
+                        strokeWidth: 3,
+                      ),
+                    ),
                   ),
-                ),
-                child: const CircularProgressIndicator(
-                  color: primaryBlue,
-                  strokeWidth: 3,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'جاري تحميل المزيد...',
-              style: GoogleFonts.cairo(
-                fontSize: 13,
-                color: mediumGray,
-              ),
-            ),
-          ],
-        )
+                  const SizedBox(height: 12),
+                  Text(
+                    'جاري تحميل المزيد...',
+                    style: GoogleFonts.cairo(
+                      fontSize: 13,
+                      color: mediumGray,
+                    ),
+                  ),
+                ],
+              )
             : const SizedBox.shrink(),
       ),
     );
@@ -853,7 +861,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                 foregroundColor: Colors.white,
                 elevation: 5,
                 padding:
-                const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15)),
                 shadowColor: primaryBlue.withOpacity(0.5),
@@ -866,22 +874,24 @@ class _ProductsListScreenState extends State<ProductsListScreen>
   }
 
   Widget _buildEmptyWidget() {
-    // ✅ تحديد رسالة مخصصة حسب نوع القسم
     String emptyMessage;
     String emptyTitle;
     IconData emptyIcon;
 
     if (_searchQuery.isNotEmpty) {
       emptyTitle = 'لا توجد نتائج';
-      emptyMessage = 'لا توجد منتجات تطابق بحثك "${_searchQuery}"\nحاول استخدام كلمات بحث مختلفة';
+      emptyMessage =
+          'لا توجد منتجات تطابق بحثك "${_searchQuery}"\nحاول استخدام كلمات بحث مختلفة';
       emptyIcon = Icons.search_off_rounded;
     } else if (widget.isSubCategory) {
       emptyTitle = 'القسم فارغ';
-      emptyMessage = 'لا توجد منتجات في هذا القسم الفرعي حالياً\nسيتم إضافة منتجات قريباً';
+      emptyMessage =
+          'لا توجد منتجات في هذا القسم الفرعي حالياً\nسيتم إضافة منتجات قريباً';
       emptyIcon = Icons.inventory_2_rounded;
     } else if (widget.categorySlug != null) {
       emptyTitle = 'القسم فارغ';
-      emptyMessage = 'لا توجد منتجات في هذا القسم حالياً\nيرجى تصفح الأقسام الأخرى';
+      emptyMessage =
+          'لا توجد منتجات في هذا القسم حالياً\nيرجى تصفح الأقسام الأخرى';
       emptyIcon = Icons.category_rounded;
     } else {
       emptyTitle = 'لا توجد منتجات';
@@ -907,7 +917,6 @@ class _ProductsListScreenState extends State<ProductsListScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // أيقونة مع أنيميشن نبضي
               AnimatedBuilder(
                 animation: _pulseAnimationController,
                 builder: (context, child) {
@@ -948,10 +957,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                   ),
                 ),
               ),
-
               const SizedBox(height: 32),
-
-              // العنوان
               Text(
                 emptyTitle,
                 style: GoogleFonts.cairo(
@@ -961,10 +967,7 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                 ),
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: 12),
-
-              // الرسالة التفصيلية
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -988,8 +991,6 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                   ),
                 ),
               ),
-
-              // زر مسح البحث (يظهر فقط عند البحث)
               if (_searchQuery.isNotEmpty) ...[
                 const SizedBox(height: 28),
                 ElevatedButton.icon(
@@ -1021,8 +1022,6 @@ class _ProductsListScreenState extends State<ProductsListScreen>
                   ),
                 ),
               ],
-
-              // زر العودة للأقسام الرئيسية
               if (!_searchQuery.isNotEmpty && widget.categorySlug != null) ...[
                 const SizedBox(height: 20),
                 TextButton.icon(
@@ -1047,4 +1046,22 @@ class _ProductsListScreenState extends State<ProductsListScreen>
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

@@ -1,15 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:GeniusHouse/utils/constants.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:GeniusHouse/screens/home_screen.dart' hide FadeInAnimation;
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/screens/home_screen.dart' hide FadeInAnimation;
+import 'package:GeniusHouse/utils/constants.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'
     hide FadeInAnimation;
-import 'package:lottie/lottie.dart';
-import 'dart:ui' as ui;
+import 'package:google_fonts/google_fonts.dart';
 
 import 'auth/login_screen.dart';
 

@@ -1,15 +1,18 @@
 // lib/screens/profile/orders_screen.dart
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:flutter/services.dart';
-import 'package:GeniusHouse/utils/helpers.dart';
+
+import 'dart:ui' as ui;
+
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/order_api_service.dart';
-import 'rate_items_screen.dart';
+import 'package:GeniusHouse/utils/helpers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
+
 import '../../services/storage_service.dart';
+import 'rate_items_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   final ApiService? apiService;
@@ -64,6 +67,29 @@ class _OrdersScreenState extends State<OrdersScreen>
   late OrderApiService _orderApiService;
 
   final String _baseUrl = 'https://nexsy.shop';
+
+  String _formatNumber(double number) {
+    final parts = number.toStringAsFixed(2).split('.');
+    final intPart = parts[0];
+    final decimalPart = parts[1];
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < intPart.length; i++) {
+      if (i > 0 && (intPart.length - i) % 3 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(intPart[i]);
+    }
+
+    return '${buffer.toString()}.$decimalPart';
+  }
+
+  String _fmtForOrder(double price, bool isSyp) {
+    if (isSyp) {
+      return '${_formatNumber(price)} SYP';
+    }
+    return '\$${_formatNumber(price)}';
+  }
 
   @override
   void initState() {
@@ -167,7 +193,6 @@ class _OrdersScreenState extends State<OrdersScreen>
         });
       }
     } catch (e) {
-      print('Error loading orders: $e');
       setState(() {
         _errorMessage = 'حدث خطأ في الاتصال بالخادم';
         _isLoading = false;
@@ -182,6 +207,7 @@ class _OrdersScreenState extends State<OrdersScreen>
       'order_number': apiOrder['number'],
       'created_at': apiOrder['created_at'],
       'total_price': apiOrder['total'],
+      'total_price_usd': apiOrder['total_usd'] ?? apiOrder['total'],
       'subtotal': apiOrder['subtotal'] ?? apiOrder['total'],
       'discount': apiOrder['discount'] ?? '0',
       'shipping_fee': apiOrder['shipping_fee'] ?? '0',
@@ -191,6 +217,8 @@ class _OrdersScreenState extends State<OrdersScreen>
       'shipping_address': apiOrder['shipping_address'] ?? '',
       'user_notes': apiOrder['user_notes'],
       'admin_notes': apiOrder['admin_notes'],
+      'is_syp': apiOrder['is_syp'] == true || apiOrder['is_syp'] == 1,
+      'exchange_rate_at_order': apiOrder['exchange_rate_at_order'],
       'items': apiOrder['items'] ?? [],
     };
   }
@@ -261,60 +289,63 @@ class _OrdersScreenState extends State<OrdersScreen>
   Future<void> _cancelOrder(int orderId) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => TweenAnimationBuilder(
-        tween: Tween<double>(begin: 0.0, end: 1.0),
-        duration: const Duration(milliseconds: 300),
-        builder: (context, double value, child) {
-          return Transform.scale(
-            scale: 0.8 + (0.2 * value),
-            child: Opacity(opacity: value, child: child),
-          );
-        },
-        child: AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(12),
+      builder: (context) => Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: TweenAnimationBuilder(
+          tween: Tween<double>(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          builder: (context, double value, child) {
+            return Transform.scale(
+              scale: 0.8 + (0.2 * value),
+              child: Opacity(opacity: value, child: child),
+            );
+          },
+          child: AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.warning_rounded,
+                      color: Colors.red.shade700, size: 24),
                 ),
-                child: Icon(Icons.warning_rounded,
-                    color: Colors.red.shade700, size: 24),
+                const SizedBox(width: 12),
+                Text('إلغاء الطلب',
+                    style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.bold, color: darkColor)),
+              ],
+            ),
+            content: Text('هل أنت متأكد من إلغاء هذا الطلب؟',
+                style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('تراجع',
+                    style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.w600, color: mediumGray)),
               ),
-              const SizedBox(width: 12),
-              Text('إلغاء الطلب',
-                  style: GoogleFonts.cairo(
-                      fontWeight: FontWeight.bold, color: darkColor)),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Text('تأكيد الإلغاء',
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+              ),
             ],
           ),
-          content: Text('هل أنت متأكد من إلغاء هذا الطلب؟',
-              style: GoogleFonts.cairo(fontSize: 15, color: mediumGray)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('تراجع',
-                  style: GoogleFonts.cairo(
-                      fontWeight: FontWeight.w600, color: mediumGray)),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text('تأكيد الإلغاء',
-                  style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
-            ),
-          ],
         ),
       ),
     );
@@ -362,162 +393,194 @@ class _OrdersScreenState extends State<OrdersScreen>
 
   void _showOrderDetails(Map<String, dynamic> order) {
     final paymentMethod = order['payment_method'] ?? 'cash';
+    final bool orderIsSyp = order['is_syp'] == true;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black26, blurRadius: 20, offset: Offset(0, -10))
-          ],
-        ),
-        child: DraggableScrollableSheet(
-          initialChildSize: 0.8,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (context, scrollController) => Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 60,
-                height: 5,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                      colors: [Colors.grey.shade400, Colors.grey.shade300]),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TweenAnimationBuilder(
-                        tween: Tween<double>(begin: 0.0, end: 1.0),
-                        duration: const Duration(milliseconds: 600),
-                        builder: (context, double value, child) {
-                          return Opacity(
-                            opacity: value,
-                            child: Transform.translate(
-                                offset: Offset(0, 30 * (1 - value)),
-                                child: child),
-                          );
-                        },
-                        child: _buildOrderDetailHeader(order),
-                      ),
-                      const SizedBox(height: 24),
-                      _buildDetailCard('معلومات الطلب',
-                          Icons.info_outline_rounded, Colors.blue, [
-                        _buildDetailRow(
-                            'رقم الطلب',
-                            order['order_number'] ?? '#${order['id']}',
-                            Icons.receipt_rounded),
-                        _buildDetailRow(
-                          'تاريخ الطلب',
-                          order['created_at'] != null
-                              ? DateTime.parse(order['created_at'])
-                                  .toString()
-                                  .split(' ')[0]
-                              : 'غير محدد',
-                          Icons.calendar_today_rounded,
-                        ),
-                        _buildDetailRow(
-                          'حالة الطلب',
-                          _getStatusText(order['status'] ?? 'pending'),
-                          Icons.flag_rounded,
-                          color: _getStatusColor(order['status'] ?? 'pending'),
-                        ),
-                        _buildDetailRow(
-                          'طريقة الدفع',
-                          _paymentMethodLabels[paymentMethod] ?? paymentMethod,
-                          _getPaymentMethodIcon(paymentMethod),
-                        ),
-                      ]),
-                      const SizedBox(height: 16),
-                      if (order['shipping_address'] != null &&
-                          order['shipping_address'].isNotEmpty)
-                        _buildDetailCard('عنوان التوصيل',
-                            Icons.location_on_rounded, Colors.orange, [
-                          Text(order['shipping_address'],
-                              style: GoogleFonts.cairo(
-                                  fontSize: 14, color: darkColor, height: 1.5)),
-                        ]),
-                      const SizedBox(height: 16),
-                      _buildDetailCard(
-                        'المنتجات',
-                        Icons.shopping_basket_rounded,
-                        primaryBlue,
-                        (order['items'] as List? ?? [])
-                            .map((item) => _buildOrderItem(item))
-                            .toList(),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDetailCard('ملخص الفاتورة',
-                          Icons.receipt_long_rounded, Colors.purple, [
-                        _buildDetailRow(
-                            'المجموع الفرعي',
-                            Helpers.formatPrice(
-                                Helpers.parsePrice(order['subtotal'] ?? '0')),
-                            Icons.calculate_rounded),
-                        if (Helpers.parsePrice(order['discount'] ?? '0') > 0)
-                          _buildDetailRow(
-                              'الخصم',
-                              '- ${Helpers.formatPrice(Helpers.parsePrice(order['discount'] ?? '0'))}',
-                              Icons.discount_rounded,
-                              color: Colors.red),
-                        _buildDetailRow(
-                            'الشحن',
-                            Helpers.formatPrice(Helpers.parsePrice(
-                                order['shipping_fee'] ?? '0')),
-                            Icons.local_shipping_rounded),
-                        _buildDetailRow(
-                            'الضريبة',
-                            Helpers.formatPrice(
-                                Helpers.parsePrice(order['tax'] ?? '0')),
-                            Icons.receipt_rounded),
-                        const Divider(height: 16),
-                        _buildDetailRow(
-                            'الإجمالي',
-                            Helpers.formatPrice(Helpers.parsePrice(
-                                order['total_price'] ?? '0')),
-                            Icons.monetization_on_rounded,
-                            isBold: true,
-                            color: primaryBlue),
-                      ]),
-                      if (order['user_notes'] != null &&
-                          order['user_notes'].isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        _buildDetailCard(
-                            'ملاحظاتك', Icons.note_rounded, Colors.teal, [
-                          Text(order['user_notes'],
-                              style: GoogleFonts.cairo(
-                                  fontSize: 14, color: darkColor, height: 1.5)),
-                        ]),
-                      ],
-                      if (order['admin_notes'] != null &&
-                          order['admin_notes'].isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        _buildDetailCard('ملاحظات الإدارة',
-                            Icons.admin_panel_settings_rounded, Colors.indigo, [
-                          Text(order['admin_notes'],
-                              style: GoogleFonts.cairo(
-                                  fontSize: 14, color: darkColor, height: 1.5)),
-                        ]),
-                      ],
-                      const SizedBox(height: 30),
-                    ],
+      builder: (context) => Directionality(
+        textDirection: ui.TextDirection.rtl,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black26, blurRadius: 20, offset: Offset(0, -10))
+            ],
+          ),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.8,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            expand: false,
+            builder: (context, scrollController) => Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  width: 60,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        colors: [Colors.grey.shade400, Colors.grey.shade300]),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TweenAnimationBuilder(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 600),
+                          builder: (context, double value, child) {
+                            return Opacity(
+                              opacity: value,
+                              child: Transform.translate(
+                                  offset: Offset(0, 30 * (1 - value)),
+                                  child: child),
+                            );
+                          },
+                          child: _buildOrderDetailHeader(order),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildDetailCard('معلومات الطلب',
+                            Icons.info_outline_rounded, Colors.blue, [
+                          _buildDetailRow(
+                              'رقم الطلب',
+                              order['order_number'] ?? '#${order['id']}',
+                              Icons.receipt_rounded),
+                          _buildDetailRow(
+                            'تاريخ الطلب',
+                            order['created_at'] != null
+                                ? DateTime.parse(order['created_at'])
+                                    .toString()
+                                    .split(' ')[0]
+                                : 'غير محدد',
+                            Icons.calendar_today_rounded,
+                          ),
+                          _buildDetailRow(
+                            'حالة الطلب',
+                            _getStatusText(order['status'] ?? 'pending'),
+                            Icons.flag_rounded,
+                            color:
+                                _getStatusColor(order['status'] ?? 'pending'),
+                          ),
+                          _buildDetailRow(
+                            'طريقة الدفع',
+                            _paymentMethodLabels[paymentMethod] ??
+                                paymentMethod,
+                            _getPaymentMethodIcon(paymentMethod),
+                          ),
+                          _buildDetailRow(
+                            'العملة',
+                            orderIsSyp
+                                ? 'ليرة سورية (SYP)'
+                                : 'دولار أمريكي (\$)',
+                            Icons.attach_money_rounded,
+                          ),
+                        ]),
+                        const SizedBox(height: 16),
+                        if (order['shipping_address'] != null &&
+                            order['shipping_address'].isNotEmpty)
+                          _buildDetailCard('عنوان التوصيل',
+                              Icons.location_on_rounded, Colors.orange, [
+                            Text(order['shipping_address'],
+                                style: GoogleFonts.cairo(
+                                    fontSize: 14,
+                                    color: darkColor,
+                                    height: 1.5)),
+                          ]),
+                        const SizedBox(height: 16),
+                        _buildDetailCard(
+                          'المنتجات',
+                          Icons.shopping_basket_rounded,
+                          primaryBlue,
+                          (order['items'] as List? ?? [])
+                              .map((item) => _buildOrderItem(item, orderIsSyp))
+                              .toList(),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDetailCard('ملخص الفاتورة',
+                            Icons.receipt_long_rounded, Colors.purple, [
+                          _buildDetailRow(
+                              'المجموع الفرعي',
+                              _fmtForOrder(
+                                  Helpers.parsePrice(order['subtotal'] ?? '0'),
+                                  orderIsSyp),
+                              Icons.calculate_rounded),
+                          if (Helpers.parsePrice(order['discount'] ?? '0') > 0)
+                            _buildDetailRow(
+                                'الخصم',
+                                '- ${_fmtForOrder(Helpers.parsePrice(order['discount'] ?? '0'), orderIsSyp)}',
+                                Icons.discount_rounded,
+                                color: Colors.red),
+                          _buildDetailRow(
+                              'الشحن',
+                              _fmtForOrder(
+                                  Helpers.parsePrice(
+                                      order['shipping_fee'] ?? '0'),
+                                  orderIsSyp),
+                              Icons.local_shipping_rounded),
+                          _buildDetailRow(
+                              'الضريبة',
+                              _fmtForOrder(
+                                  Helpers.parsePrice(order['tax'] ?? '0'),
+                                  orderIsSyp),
+                              Icons.receipt_rounded),
+                          const Divider(height: 16),
+                          _buildDetailRow(
+                              'الإجمالي',
+                              _fmtForOrder(
+                                  Helpers.parsePrice(
+                                      order['total_price'] ?? '0'),
+                                  orderIsSyp),
+                              Icons.monetization_on_rounded,
+                              isBold: true,
+                              color: primaryBlue),
+                          if (order['exchange_rate_at_order'] != null)
+                            _buildDetailRow(
+                                'سعر الصرف وقت الطلب',
+                                '1\$ = ${order['exchange_rate_at_order']} ل.س',
+                                Icons.currency_exchange_rounded),
+                        ]),
+                        if (order['user_notes'] != null &&
+                            order['user_notes'].isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          _buildDetailCard(
+                              'ملاحظاتك', Icons.note_rounded, Colors.teal, [
+                            Text(order['user_notes'],
+                                style: GoogleFonts.cairo(
+                                    fontSize: 14,
+                                    color: darkColor,
+                                    height: 1.5)),
+                          ]),
+                        ],
+                        if (order['admin_notes'] != null &&
+                            order['admin_notes'].isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          _buildDetailCard(
+                              'ملاحظات الإدارة',
+                              Icons.admin_panel_settings_rounded,
+                              Colors.indigo, [
+                            Text(order['admin_notes'],
+                                style: GoogleFonts.cairo(
+                                    fontSize: 14,
+                                    color: darkColor,
+                                    height: 1.5)),
+                          ]),
+                        ],
+                        const SizedBox(height: 30),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -526,6 +589,7 @@ class _OrdersScreenState extends State<OrdersScreen>
 
   Widget _buildOrderDetailHeader(Map<String, dynamic> order) {
     final status = order['status'] ?? 'pending';
+    final bool orderIsSyp = order['is_syp'] == true;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -549,19 +613,22 @@ class _OrdersScreenState extends State<OrdersScreen>
                   scale: 1.0 + (_pulseAnimationController.value * 0.1),
                   child: child);
             },
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _getStatusColor(status).withOpacity(0.2),
-                    _getStatusColor(status).withOpacity(0.1)
-                  ],
+            child: Hero(
+              tag: 'order_status_${order['id']}',
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      _getStatusColor(status).withOpacity(0.2),
+                      _getStatusColor(status).withOpacity(0.1)
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                borderRadius: BorderRadius.circular(18),
+                child: Icon(_getStatusIcon(status),
+                    size: 30, color: _getStatusColor(status)),
               ),
-              child: Icon(_getStatusIcon(status),
-                  size: 30, color: _getStatusColor(status)),
             ),
           ),
           const SizedBox(width: 15),
@@ -596,8 +663,8 @@ class _OrdersScreenState extends State<OrdersScreen>
               ],
             ),
             child: Text(
-              Helpers.formatPrice(
-                  Helpers.parsePrice(order['total_price'] ?? '0')),
+              _fmtForOrder(
+                  Helpers.parsePrice(order['total_price'] ?? '0'), orderIsSyp),
               style: GoogleFonts.cairo(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -701,7 +768,7 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  Widget _buildOrderItem(Map<String, dynamic> item) {
+  Widget _buildOrderItem(Map<String, dynamic> item, bool orderIsSyp) {
     final productName = item['name'] ?? item['product_name'] ?? 'منتج';
     final productImage = item['image'] ?? '';
     final quantity = item['quantity'] ?? 1;
@@ -809,7 +876,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text('الكمية: $quantity × ${Helpers.formatPrice(price)}',
+                Text('الكمية: $quantity × ${_fmtForOrder(price, orderIsSyp)}',
                     style: GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
               ],
             ),
@@ -818,7 +885,7 @@ class _OrdersScreenState extends State<OrdersScreen>
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(Helpers.formatPrice(totalPrice),
+              Text(_fmtForOrder(totalPrice, orderIsSyp),
                   style: GoogleFonts.cairo(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -841,6 +908,7 @@ class _OrdersScreenState extends State<OrdersScreen>
     final status = order['status'] ?? 'pending';
     final items = order['items'] as List? ?? [];
     final paymentMethod = order['payment_method'] ?? 'cash';
+    final bool orderIsSyp = order['is_syp'] == true;
 
     return TweenAnimationBuilder(
       tween: Tween<double>(begin: 0.0, end: 1.0),
@@ -890,20 +958,23 @@ class _OrdersScreenState extends State<OrdersScreen>
                 ),
                 child: Row(
                   children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            _getStatusColor(status).withOpacity(0.2),
-                            _getStatusColor(status).withOpacity(0.1)
-                          ],
+                    Hero(
+                      tag: 'order_status_$orderId',
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _getStatusColor(status).withOpacity(0.2),
+                              _getStatusColor(status).withOpacity(0.1)
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
                         ),
-                        borderRadius: BorderRadius.circular(15),
+                        child: Icon(_getStatusIcon(status),
+                            size: 22, color: _getStatusColor(status)),
                       ),
-                      child: Icon(_getStatusIcon(status),
-                          size: 22, color: _getStatusColor(status)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -951,7 +1022,9 @@ class _OrdersScreenState extends State<OrdersScreen>
                   padding: const EdgeInsets.all(14),
                   child: Column(
                     children: [
-                      ...items.take(2).map((item) => _buildOrderItem(item)),
+                      ...items
+                          .take(2)
+                          .map((item) => _buildOrderItem(item, orderIsSyp)),
                       if (items.length > 2)
                         Container(
                           margin: const EdgeInsets.only(top: 8),
@@ -1001,11 +1074,13 @@ class _OrdersScreenState extends State<OrdersScreen>
                             style: GoogleFonts.cairo(
                                 fontSize: 12, color: mediumGray)),
                         const SizedBox(width: 8),
-                        Text(Helpers.formatPrice(totalPrice),
-                            style: GoogleFonts.cairo(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: primaryBlue)),
+                        Text(
+                          _fmtForOrder(totalPrice, orderIsSyp),
+                          style: GoogleFonts.cairo(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: primaryBlue),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -1119,125 +1194,171 @@ class _OrdersScreenState extends State<OrdersScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _pulseAnimationController,
-              builder: (context, child) {
-                return Transform.scale(
-                    scale: 1.0 + (_pulseAnimationController.value * 0.1),
-                    child: child);
-              },
-              child: const Icon(Icons.shopping_bag_rounded,
-                  color: Colors.yellow, size: 24),
-            ),
-            const SizedBox(width: 10),
-            Text('طلباتي',
-                style: GoogleFonts.cairo(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
-          ],
-        ),
-        elevation: 0,
-        centerTitle: true,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12)),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(55),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-            decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(20)),
-            child: TabBar(
-              controller: _tabController,
-              indicator: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [Colors.white, Color(0xFFF0F0F0)]),
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2))
-                ],
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: primaryBlue,
-              unselectedLabelColor: Colors.white70,
-              labelStyle:
-                  GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w700),
-              unselectedLabelStyle:
-                  GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w500),
-              tabs: [
-                _buildTab('الكل', 0),
-                _buildTab('قيد المعالجة', 1),
-                _buildTab('مكتمل', 2),
-                _buildTab('ملغي', 3),
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFEFF6FF),
+                Color(0xFFF5F7FA),
               ],
-              onTap: (index) {
-                setState(() {
-                  switch (index) {
-                    case 0:
-                      _selectedTab = 'all';
-                      break;
-                    case 1:
-                      _selectedTab = 'pending';
-                      break;
-                    case 2:
-                      _selectedTab = 'completed';
-                      break;
-                    case 3:
-                      _selectedTab = 'cancelled';
-                      break;
-                  }
-                  _loadOrders();
-                });
-              },
             ),
+          ),
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back_rounded,
+                                      color: Colors.white),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Center(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      AnimatedBuilder(
+                                        animation: _pulseAnimationController,
+                                        builder: (context, child) {
+                                          return Transform.scale(
+                                              scale: 1.0 +
+                                                  (_pulseAnimationController
+                                                          .value *
+                                                      0.1),
+                                              child: child);
+                                        },
+                                        child: const Icon(
+                                            Icons.shopping_bag_rounded,
+                                            color: Colors.yellow,
+                                            size: 24),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text('طلباتي',
+                                          style: GoogleFonts.cairo(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 48),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 15, vertical: 8),
+                          decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20)),
+                          child: TabBar(
+                            controller: _tabController,
+                            dividerColor: Colors.transparent,
+                            indicator: BoxDecoration(
+                              gradient: const LinearGradient(
+                                  colors: [Colors.white, Color(0xFFF0F0F0)]),
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2))
+                              ],
+                            ),
+                            indicatorSize: TabBarIndicatorSize.tab,
+                            labelColor: primaryBlue,
+                            unselectedLabelColor: Colors.white70,
+                            labelStyle: GoogleFonts.cairo(
+                                fontSize: 12, fontWeight: FontWeight.w700),
+                            unselectedLabelStyle: GoogleFonts.cairo(
+                                fontSize: 12, fontWeight: FontWeight.w500),
+                            tabs: [
+                              _buildTab('الكل', 0),
+                              _buildTab('قيد المعالجة', 1),
+                              _buildTab('مكتمل', 2),
+                              _buildTab('ملغي', 3),
+                            ],
+                            onTap: (index) {
+                              setState(() {
+                                switch (index) {
+                                  case 0:
+                                    _selectedTab = 'all';
+                                    break;
+                                  case 1:
+                                    _selectedTab = 'pending';
+                                    break;
+                                  case 2:
+                                    _selectedTab = 'completed';
+                                    break;
+                                  case 3:
+                                    _selectedTab = 'cancelled';
+                                    break;
+                                }
+                                _loadOrders();
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : _errorMessage != null
+                        ? _buildErrorWidget()
+                        : _filteredOrders.isEmpty
+                            ? _buildEmptyState()
+                            : RefreshIndicator(
+                                onRefresh: _refreshOrders,
+                                color: primaryBlue,
+                                backgroundColor: cardWhite,
+                                child: ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: _filteredOrders.length,
+                                  itemBuilder: (context, index) =>
+                                      _buildOrderCard(
+                                          _filteredOrders[index], index),
+                                ),
+                              ),
+              ),
+            ],
           ),
         ),
       ),
-      body: _isLoading
-          ? _buildShimmerLoading()
-          : _errorMessage != null
-              ? _buildErrorWidget()
-              : _filteredOrders.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      onRefresh: _refreshOrders,
-                      color: primaryBlue,
-                      backgroundColor: cardWhite,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _filteredOrders.length,
-                        itemBuilder: (context, index) =>
-                            _buildOrderCard(_filteredOrders[index], index),
-                      ),
-                    ),
     );
   }
 
@@ -1390,4 +1511,22 @@ class _OrdersScreenState extends State<OrdersScreen>
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

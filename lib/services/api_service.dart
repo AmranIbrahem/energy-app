@@ -1,9 +1,10 @@
-import 'dart:io';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:GeniusHouse/utils/constants.dart';
+import 'dart:io';
+
 import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:http_parser/http_parser.dart';  // ✅ لـ MediaType
+import 'package:GeniusHouse/utils/constants.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class ApiService {
   final StorageService storageService;
@@ -17,7 +18,6 @@ class ApiService {
     _token = token;
   }
 
-  // ✅ دالة إرسال رسالة مع صور (Multipart)
   Future<Map<String, dynamic>> sendMessageWithImages({
     required String message,
     required List<File> images,
@@ -35,10 +35,8 @@ class ApiService {
       }
       request.headers.addAll(headers);
 
-      // إضافة النص
       request.fields['message'] = message;
 
-      // إضافة الصور
       for (var i = 0; i < images.length; i++) {
         request.files.add(
           await http.MultipartFile.fromPath(
@@ -54,10 +52,7 @@ class ApiService {
 
       return _handleResponse(response);
     } catch (e) {
-      return {
-        'error': true,
-        'message': 'خطأ في إرسال الرسالة مع الصورة: $e'
-      };
+      return {'error': true, 'message': 'خطأ في إرسال الرسالة مع الصورة: $e'};
     }
   }
 
@@ -75,10 +70,10 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> get(
-      String endpoint, {
-        bool requiresAuth = false,
-        Map<String, dynamic>? queryParams,
-      }) async {
+    String endpoint, {
+    bool requiresAuth = false,
+    Map<String, dynamic>? queryParams,
+  }) async {
     try {
       Uri uri = Uri.parse('${AppConstants.baseUrl}$endpoint');
 
@@ -99,15 +94,13 @@ class ApiService {
     }
   }
 
-  // ✅ دالة POST معدلة لدعم رفع الملفات
   Future<Map<String, dynamic>> post(
-      String endpoint, {
-        required Map<String, dynamic> data,
-        bool requiresAuth = false,
-        List<File>? files,
-      }) async {
+    String endpoint, {
+    required Map<String, dynamic> data,
+    bool requiresAuth = false,
+    List<File>? files,
+  }) async {
     try {
-      // ✅ إذا كان هناك ملفات، استخدم MultipartRequest
       if (files != null && files.isNotEmpty) {
         return await _postMultipart(
           endpoint,
@@ -117,7 +110,6 @@ class ApiService {
         );
       }
 
-      // ✅ إذا لم يكن هناك ملفات، استخدم الطلب العادي
       final response = await http.post(
         Uri.parse('${AppConstants.baseUrl}$endpoint'),
         headers: _getHeaders(requiresAuth: requiresAuth),
@@ -130,27 +122,24 @@ class ApiService {
     }
   }
 
-  // ✅ POST مع ملفات (Multipart)
   Future<Map<String, dynamic>> _postMultipart(
-      String endpoint, {
-        required Map<String, dynamic> data,
-        required List<File> files,
-        bool requiresAuth = false,
-      }) async {
+    String endpoint, {
+    required Map<String, dynamic> data,
+    required List<File> files,
+    bool requiresAuth = false,
+  }) async {
     try {
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('${AppConstants.baseUrl}$endpoint'),
       );
 
-      // ✅ إضافة الحقول النصية
       data.forEach((key, value) {
         if (value != null) {
           request.fields[key] = value.toString();
         }
       });
 
-      // ✅ إضافة الملفات
       for (var i = 0; i < files.length; i++) {
         request.files.add(
           await http.MultipartFile.fromPath(
@@ -160,7 +149,6 @@ class ApiService {
         );
       }
 
-      // ✅ إضافة headers
       final headers = <String, String>{
         'Accept': 'application/json',
       };
@@ -169,7 +157,6 @@ class ApiService {
       }
       request.headers.addAll(headers);
 
-      // ✅ إرسال الطلب
       final streamedResponse = await request.send();
       final responseBody = await streamedResponse.stream.bytesToString();
       final response = http.Response(responseBody, streamedResponse.statusCode);
@@ -181,10 +168,10 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> put(
-      String endpoint, {
-        required Map<String, dynamic> data,
-        bool requiresAuth = false,
-      }) async {
+    String endpoint, {
+    required Map<String, dynamic> data,
+    bool requiresAuth = false,
+  }) async {
     try {
       final response = await http.put(
         Uri.parse('${AppConstants.baseUrl}$endpoint'),
@@ -199,10 +186,10 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> delete(
-      String endpoint, {
-        bool requiresAuth = false,
-        Map<String, dynamic>? data,
-      }) async {
+    String endpoint, {
+    bool requiresAuth = false,
+    Map<String, dynamic>? data,
+  }) async {
     try {
       final request = http.Request(
         'DELETE',
@@ -225,16 +212,16 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> _handleResponse(http.Response response) async {
-    // ✅ إذا كان 401، جرب تجديد التوكن
     if (response.statusCode == 401) {
       final rememberToken = storageService.getRememberToken();
       if (rememberToken != null && rememberToken.isNotEmpty) {
-        print('⚠️ Got 401, trying to refresh token...');
-
         try {
           final refreshResponse = await http.post(
             Uri.parse('${AppConstants.baseUrl}/v1/user/public/refresh-token'),
-            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
             body: jsonEncode({'remember_token': rememberToken}),
           );
 
@@ -243,7 +230,6 @@ class ApiService {
             final newToken = data['data']['token'];
             final newRememberToken = data['data']['remember_token'];
 
-            // حفظ التوكنات الجديدة
             await storageService.saveToken(newToken);
             await storageService.saveTokenCreatedAt(DateTime.now());
             if (newRememberToken != null) {
@@ -251,25 +237,20 @@ class ApiService {
             }
 
             _token = newToken;
-            print('✅ Token refreshed after 401');
 
-            // إرجاع إشارة بأنه تم التجديد (سيتم إعادة الطلب من المتصل)
             return {
               'error': true,
               'message': 'TOKEN_REFRESHED',
               'statusCode': 401
             };
-          } else {
-            print('❌ Refresh token request failed with status: ${refreshResponse.statusCode}');
-          }
+          } else {}
         } catch (e) {
-          print('❌ Failed to refresh after 401: $e');
+          //
         }
       } else {
-        print('❌ No remember_token found for refresh');
+        //
       }
 
-      // فشل كل شيء - تنظيف الجلسة
       await storageService.removeToken();
       await storageService.removeRememberToken();
 
@@ -277,7 +258,8 @@ class ApiService {
         final error = jsonDecode(response.body);
         return {
           'error': true,
-          'message': error['message'] ?? 'انتهت الجلسة، الرجاء تسجيل الدخول مجدداً',
+          'message':
+              error['message'] ?? 'انتهت الجلسة، الرجاء تسجيل الدخول مجدداً',
           'statusCode': response.statusCode,
           'session_expired': true,
         };
@@ -291,7 +273,6 @@ class ApiService {
       }
     }
 
-    // ✅ نجاح (2xx)
     if (response.statusCode >= 200 && response.statusCode < 300) {
       try {
         final data = jsonDecode(response.body);
@@ -305,7 +286,6 @@ class ApiService {
       }
     }
 
-    // ✅ خطأ آخر (4xx, 5xx)
     try {
       final error = jsonDecode(response.body);
       return {
@@ -324,10 +304,10 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> uploadImage(
-      String endpoint,
-      File imageFile, {
-        bool requiresAuth = false,
-      }) async {
+    String endpoint,
+    File imageFile, {
+    bool requiresAuth = false,
+  }) async {
     try {
       var request = http.MultipartRequest(
         'POST',
@@ -490,7 +470,7 @@ class ApiService {
 
       if (image != null) {
         var multipartFile =
-        await http.MultipartFile.fromPath('image', image.path);
+            await http.MultipartFile.fromPath('image', image.path);
         request.files.add(multipartFile);
       }
 
@@ -633,7 +613,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة مع صورة كزائر (Guest)
   Future<Map<String, dynamic>> sendGuestMessageWithImage({
     required String sessionId,
     required String message,
@@ -643,7 +622,8 @@ class ApiService {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('${AppConstants.baseUrl}/v1/user/public/chat/send-with-image'),
+        Uri.parse(
+            '${AppConstants.baseUrl}/v1/user/public/chat/send-with-image'),
       );
 
       request.fields['session_id'] = sessionId;
@@ -666,14 +646,10 @@ class ApiService {
 
       return _handleResponse(response);
     } catch (e) {
-      return {
-        'error': true,
-        'message': 'خطأ في إرسال الرسالة مع الصورة: $e'
-      };
+      return {'error': true, 'message': 'خطأ في إرسال الرسالة مع الصورة: $e'};
     }
   }
 
-  /// ✅ إرسال رسالة صوتية فقط
   Future<Map<String, dynamic>> sendVoiceMessage({
     required File audioFile,
     String message = '',
@@ -682,10 +658,6 @@ class ApiService {
     String? governorate,
   }) async {
     try {
-      print('📁 Audio file path: ${audioFile.path}');
-      print('📁 Audio file exists: ${await audioFile.exists()}');
-      print('📁 Audio file size: ${await audioFile.length()}');
-
       var request = http.MultipartRequest(
         'POST',
         Uri.parse(
@@ -723,16 +695,12 @@ class ApiService {
       final responseBody = await streamedResponse.stream.bytesToString();
       final response = http.Response(responseBody, streamedResponse.statusCode);
 
-      print('📥 Response: ${response.body}');
-
       return _handleResponse(response);
     } catch (e) {
-      print('❌ Error: $e');
       return {'error': true, 'message': 'خطأ في إرسال الرسالة الصوتية: $e'};
     }
   }
 
-  /// ✅ إرسال صورة + صوت معاً
   Future<Map<String, dynamic>> sendImageWithVoice({
     required File imageFile,
     required File audioFile,
@@ -781,12 +749,10 @@ class ApiService {
     }
   }
 
-
   // ═══════════════════════════════════════════
-  // ✅ Solar Chat APIs (المستشار الشمسي)
+  // Solar Chat APIs
   // ═══════════════════════════════════════════
 
-  /// ✅ إرسال رسالة نصية إلى المستشار الشمسي
   Future<Map<String, dynamic>> sendSolarMessage({
     required String message,
     bool requiresAuth = true,
@@ -811,7 +777,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة مع صورة إلى المستشار الشمسي
   Future<Map<String, dynamic>> sendSolarMessageWithImage({
     required String message,
     required List<File> images,
@@ -856,7 +821,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة صوتية إلى المستشار الشمسي
   Future<Map<String, dynamic>> sendSolarVoiceMessage({
     required File audioFile,
     String message = '',
@@ -908,7 +872,6 @@ class ApiService {
     }
   }
 
-  /// ✅ جلب تاريخ محادثة المستشار الشمسي
   Future<Map<String, dynamic>> getSolarChatHistory({
     bool requiresAuth = true,
     String? sessionId,
@@ -926,7 +889,6 @@ class ApiService {
     }
   }
 
-  /// ✅ مسح محادثة المستشار الشمسي
   Future<Map<String, dynamic>> clearSolarChat({
     bool requiresAuth = true,
     String? sessionId,
@@ -946,7 +908,6 @@ class ApiService {
     }
   }
 
-  /// ✅ بدء جلسة المستشار الشمسي للضيف
   Future<Map<String, dynamic>> startGuestSolarSession() async {
     try {
       return await post(
@@ -959,13 +920,10 @@ class ApiService {
     }
   }
 
-
-
   // ═══════════════════════════════════════════
-  // ✅ Support Solar Chat APIs (الدعم الفني)
+  // Support Solar Chat APIs
   // ═══════════════════════════════════════════
 
-  /// ✅ إرسال رسالة نصية للدعم الفني
   Future<Map<String, dynamic>> sendSupportMessage({
     required String message,
     bool requiresAuth = true,
@@ -990,7 +948,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة مع صورة للدعم الفني
   Future<Map<String, dynamic>> sendSupportMessageWithImage({
     required String message,
     required List<File> images,
@@ -1035,7 +992,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة صوتية للدعم الفني
   Future<Map<String, dynamic>> sendSupportVoiceMessage({
     required File audioFile,
     String message = '',
@@ -1087,7 +1043,6 @@ class ApiService {
     }
   }
 
-  /// ✅ جلب تاريخ محادثة الدعم الفني
   Future<Map<String, dynamic>> getSupportChatHistory({
     bool requiresAuth = true,
     String? sessionId,
@@ -1105,7 +1060,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إغلاق محادثة الدعم الفني
   Future<Map<String, dynamic>> closeSupportConversation({
     bool requiresAuth = true,
     String? sessionId,
@@ -1129,7 +1083,6 @@ class ApiService {
     }
   }
 
-  /// ✅ بدء جلسة دعم فني للضيف
   Future<Map<String, dynamic>> startGuestSupportSession() async {
     try {
       return await post(
@@ -1142,7 +1095,6 @@ class ApiService {
     }
   }
 
-  /// ✅ مسح محادثة الدعم الفني (حذف كل الرسائل)
   Future<Map<String, dynamic>> clearSupportConversation({
     bool requiresAuth = true,
     String? sessionId,
@@ -1166,10 +1118,9 @@ class ApiService {
   }
 
   // ═══════════════════════════════════════════
-  // ✅ Appliance Compatibility APIs (فحص التوافق)
+  // Appliance Compatibility APIs
   // ═══════════════════════════════════════════
 
-  /// ✅ فحص توافق الأجهزة
   Future<Map<String, dynamic>> checkApplianceCompatibility({
     required String systemVoltage,
     required String inverterPower,
@@ -1200,7 +1151,6 @@ class ApiService {
     }
   }
 
-  /// ✅ جلب سجل فحوصات التوافق
   Future<Map<String, dynamic>> getCompatibilityHistory({
     int limit = 20,
   }) async {
@@ -1214,14 +1164,10 @@ class ApiService {
     }
   }
 
-
-
   // ═══════════════════════════════════════════
-  // ✅ Appliance Savings APIs (حاسبة التوفير)
+  // Appliance Savings APIs
   // ═══════════════════════════════════════════
 
-  /// ✅ حساب توفير الطاقة
-  /// ✅ حساب توفير الطاقة لعدة أجهزة
   Future<Map<String, dynamic>> calculateApplianceSavings({
     required List<Map<String, dynamic>> appliances,
     bool requiresAuth = true,
@@ -1246,8 +1192,6 @@ class ApiService {
     }
   }
 
-
-  /// ✅ إنشاء جدول التشغيل
   Future<Map<String, dynamic>> generateApplianceSchedule({
     required String systemVoltage,
     required String inverterPower,
@@ -1286,12 +1230,10 @@ class ApiService {
     }
   }
 
-
   // ═══════════════════════════════════════════
-// ✅ Inverter Appliances APIs (الأجهزة)
-// ═══════════════════════════════════════════
+  // Inverter Appliances APIs
+  // ═══════════════════════════════════════════
 
-  /// ✅ جلب قائمة الأجهزة المدعومة
   Future<Map<String, dynamic>> getInverterAppliances() async {
     try {
       final response = await get(
@@ -1304,12 +1246,10 @@ class ApiService {
     }
   }
 
-
   // ═══════════════════════════════════════════
-  // ✅ Appliance Maintenance APIs (الصيانة الذكية)
+  // Appliance Maintenance APIs
   // ═══════════════════════════════════════════
 
-  /// ✅ بدء جلسة صيانة للضيف
   Future<Map<String, dynamic>> startGuestMaintenanceSession() async {
     try {
       return await post(
@@ -1322,7 +1262,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة نصية للصيانة
   Future<Map<String, dynamic>> sendMaintenanceMessage({
     required String message,
     bool requiresAuth = true,
@@ -1347,7 +1286,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال صورة للتشخيص
   Future<Map<String, dynamic>> sendMaintenanceImage({
     required File imageFile,
     String message = '',
@@ -1392,7 +1330,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة صوتية للصيانة
   Future<Map<String, dynamic>> sendMaintenanceVoice({
     required File audioFile,
     bool requiresAuth = true,
@@ -1439,7 +1376,6 @@ class ApiService {
     }
   }
 
-  /// ✅ جلب تاريخ محادثة الصيانة
   Future<Map<String, dynamic>> getMaintenanceHistory({
     bool requiresAuth = true,
     String? sessionId,
@@ -1457,7 +1393,6 @@ class ApiService {
     }
   }
 
-  /// ✅ مسح محادثة الصيانة
   Future<Map<String, dynamic>> clearMaintenanceConversation({
     bool requiresAuth = true,
     String? sessionId,
@@ -1480,15 +1415,10 @@ class ApiService {
     }
   }
 
-
-
-
-
   // ═══════════════════════════════════════════
-  // ✅ Appliance Support Chat APIs (دعم الأجهزة الكهربائية)
+  // Appliance Support Chat APIs
   // ═══════════════════════════════════════════
 
-  /// ✅ بدء جلسة دعم الأجهزة الكهربائية للضيف
   Future<Map<String, dynamic>> startGuestApplianceSupportSession() async {
     try {
       return await post(
@@ -1501,7 +1431,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة نصية لدعم الأجهزة الكهربائية
   Future<Map<String, dynamic>> sendApplianceSupportMessage({
     required String message,
     bool requiresAuth = true,
@@ -1526,7 +1455,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال صورة لدعم الأجهزة الكهربائية
   Future<Map<String, dynamic>> sendApplianceSupportImage({
     required File imageFile,
     String message = '',
@@ -1571,7 +1499,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة صوتية لدعم الأجهزة الكهربائية
   Future<Map<String, dynamic>> sendApplianceSupportVoice({
     required File audioFile,
     bool requiresAuth = true,
@@ -1618,7 +1545,6 @@ class ApiService {
     }
   }
 
-  /// ✅ جلب تاريخ محادثة دعم الأجهزة الكهربائية
   Future<Map<String, dynamic>> getApplianceSupportHistory({
     bool requiresAuth = true,
     String? sessionId,
@@ -1636,7 +1562,6 @@ class ApiService {
     }
   }
 
-  /// ✅ مسح محادثة دعم الأجهزة الكهربائية
   Future<Map<String, dynamic>> clearApplianceSupportConversation({
     bool requiresAuth = true,
     String? sessionId,
@@ -1660,10 +1585,9 @@ class ApiService {
   }
 
   // ═══════════════════════════════════════════
-  // ✅ Lighting Support Chat APIs (دعم الإنارة والديكور)
+  // Lighting Support Chat APIs
   // ═══════════════════════════════════════════
 
-  /// ✅ بدء جلسة دعم الإنارة للضيف
   Future<Map<String, dynamic>> startGuestLightingSupportSession() async {
     try {
       return await post(
@@ -1676,7 +1600,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة نصية لدعم الإنارة
   Future<Map<String, dynamic>> sendLightingSupportMessage({
     required String message,
     bool requiresAuth = true,
@@ -1701,7 +1624,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال صورة لدعم الإنارة
   Future<Map<String, dynamic>> sendLightingSupportImage({
     required File imageFile,
     String message = '',
@@ -1746,7 +1668,6 @@ class ApiService {
     }
   }
 
-  /// ✅ إرسال رسالة صوتية لدعم الإنارة
   Future<Map<String, dynamic>> sendLightingSupportVoice({
     required File audioFile,
     bool requiresAuth = true,
@@ -1793,7 +1714,6 @@ class ApiService {
     }
   }
 
-  /// ✅ جلب تاريخ محادثة دعم الإنارة
   Future<Map<String, dynamic>> getLightingSupportHistory({
     bool requiresAuth = true,
     String? sessionId,
@@ -1811,7 +1731,6 @@ class ApiService {
     }
   }
 
-  /// ✅ مسح محادثة دعم الإنارة
   Future<Map<String, dynamic>> clearLightingSupportConversation({
     bool requiresAuth = true,
     String? sessionId,
@@ -1833,6 +1752,4 @@ class ApiService {
       return {'error': true, 'message': 'خطأ في مسح المحادثة: $e'};
     }
   }
-
-
 }

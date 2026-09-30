@@ -1,11 +1,14 @@
-// lib/screens/maintenance/maintenance_screen.dart
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
+import 'dart:ui' as ui;
+
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shimmer/shimmer.dart';
 
 class MaintenanceScreen extends StatefulWidget {
   final AuthService authService;
@@ -23,7 +26,8 @@ class MaintenanceScreen extends StatefulWidget {
   State<MaintenanceScreen> createState() => _MaintenanceScreenState();
 }
 
-class _MaintenanceScreenState extends State<MaintenanceScreen> {
+class _MaintenanceScreenState extends State<MaintenanceScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -42,12 +46,44 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   static const Color mediumGray = Color(0xFF4B5563);
   static const Color lightGray = Color(0xFFF3F4F6);
   static const Color cardWhite = Color(0xFFFFFFFF);
+  static const Color successGreen = Color(0xFF10B981);
+  static const Color warningOrange = Color(0xFFF59E0B);
+  static const Color purple = Color(0xFF7C3AED);
+
+  late AnimationController _pulseController;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..forward();
+
     _loadUserInfo();
     _fetchRequests();
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _nameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _pulseController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
   }
 
   void _loadUserInfo() {
@@ -63,7 +99,6 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
 
   Future<void> _fetchRequests() async {
     setState(() => _isLoading = true);
-
     try {
       final response = await widget.apiService.fetchMaintenanceRequests();
       if (response.containsKey('data')) {
@@ -72,20 +107,9 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching requests: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('حدث خطأ في تحميل الطلبات السابقة',
-              style: GoogleFonts.cairo()),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+      _showSnackBar('حدث خطأ في تحميل الطلبات السابقة', warningOrange);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -107,21 +131,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
 
   Future<void> _submitRequest() async {
     if (_messageController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('الرجاء كتابة المشكلة التي تواجهها',
-              style: GoogleFonts.cairo()),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+      _showSnackBar('الرجاء كتابة المشكلة التي تواجهها', warningOrange);
       return;
     }
 
     setState(() => _isSubmitting = true);
+    HapticFeedback.mediumImpact();
 
     try {
       final response = await widget.apiService.sendMaintenanceRequest(
@@ -147,43 +162,15 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               _showAiSolutionDialog(aiSolution);
             });
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(children: [
-                  const Icon(Icons.check_circle_rounded,
-                      color: Colors.white, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: Text(
-                          response['message'] ?? 'تم إرسال طلب الصيانة بنجاح',
-                          style: GoogleFonts.cairo())),
-                ]),
-                backgroundColor: primaryBlue,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
-              ),
+            _showSnackBar(
+              response['message'] ?? 'تم إرسال طلب الصيانة بنجاح',
+              primaryBlue,
             );
           }
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(children: [
-                const Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: Text(
-                        response['message'] ?? 'تم إرسال طلب الصيانة بنجاح',
-                        style: GoogleFonts.cairo())),
-              ]),
-              backgroundColor: primaryBlue,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              margin: const EdgeInsets.all(16),
-            ),
+          _showSnackBar(
+            response['message'] ?? 'تم إرسال طلب الصيانة بنجاح',
+            primaryBlue,
           );
         }
 
@@ -194,22 +181,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         throw Exception(response['message'] ?? 'حدث خطأ في إرسال الطلب');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(children: [
-            const Icon(Icons.error_rounded, color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-                child: Text('حدث خطأ: ${e.toString()}',
-                    style: GoogleFonts.cairo())),
-          ]),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+      _showSnackBar('حدث خطأ: ${e.toString()}', Colors.red);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -292,8 +264,8 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Colors.purple.withOpacity(0.06),
-                              Colors.purple.withOpacity(0.03)
+                              purple.withOpacity(0.06),
+                              purple.withOpacity(0.03)
                             ],
                           ),
                           borderRadius: BorderRadius.circular(12),
@@ -447,55 +419,160 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
     );
   }
 
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              color == primaryBlue || color == successGreen
+                  ? Icons.check_circle_rounded
+                  : Icons.info_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(message, style: GoogleFonts.cairo(fontSize: 14)),
+            ),
+          ],
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        margin: const EdgeInsets.all(16),
+        elevation: 5,
+      ));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: lightGray,
-      appBar: AppBar(
-        flexibleSpace: Container(
+    return Directionality(
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [primaryBlue, secondaryBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFEFF6FF), Color(0xFFF5F7FA)],
             ),
           ),
-        ),
-        title: Text('طلب صيانة',
-            style: GoogleFonts.cairo(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white)),
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryBlue))
-          : Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        _buildInfoForm(),
-                        const SizedBox(height: 16),
-                        _buildMessageForm(),
-                        const SizedBox(height: 16),
-                        _buildImageSection(),
-                        const SizedBox(height: 16),
-                        _buildSupportTypeSelector(),
-                        const SizedBox(height: 24),
-                        _buildSubmitButton(),
-                        const SizedBox(height: 24),
-                        _buildPreviousRequestsSection(),
-                      ],
+          child: Column(
+            children: [
+              ClipPath(
+                clipper: _BottomCurveClipper(),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryBlue, secondaryBlue],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      child: Row(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.arrow_back_rounded,
+                                  color: Colors.white),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AnimatedBuilder(
+                                    animation: _pulseController,
+                                    builder: (context, child) =>
+                                        Transform.scale(
+                                      scale:
+                                          1.0 + (_pulseController.value * 0.1),
+                                      child: child,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.25),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                          Icons.build_circle_rounded,
+                                          color: Colors.white,
+                                          size: 22),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'طلب صيانة',
+                                    style: GoogleFonts.cairo(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 48),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? _buildShimmerLoading()
+                    : TweenAnimationBuilder(
+                        tween: Tween<double>(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 600),
+                        builder: (context, value, child) => Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 20 * (1 - value)),
+                            child: child,
+                          ),
+                        ),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              _buildInfoForm(),
+                              const SizedBox(height: 16),
+                              _buildMessageForm(),
+                              const SizedBox(height: 16),
+                              _buildImageSection(),
+                              const SizedBox(height: 16),
+                              _buildSupportTypeSelector(),
+                              const SizedBox(height: 24),
+                              _buildSubmitButton(),
+                              const SizedBox(height: 24),
+                              _buildPreviousRequestsSection(),
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -827,21 +904,21 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: [
-                    Colors.purple.withOpacity(0.06),
-                    Colors.purple.withOpacity(0.03)
+                    purple.withOpacity(0.06),
+                    purple.withOpacity(0.03)
                   ]),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.hourglass_empty_rounded,
-                        size: 20, color: Colors.purple),
+                        size: 20, color: purple),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                           'سيتم حل مشكلتك تلقائياً بواسطة الذكاء الاصطناعي فور إرسالها',
-                          style: GoogleFonts.cairo(
-                              fontSize: 12, color: Colors.purple)),
+                          style:
+                              GoogleFonts.cairo(fontSize: 12, color: purple)),
                     ),
                   ],
                 ),
@@ -860,7 +937,8 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           gradient: isSelected
@@ -876,6 +954,14 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                   ? primaryBlue.withOpacity(0.3)
                   : Colors.grey.shade300,
               width: 1.5),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                      color: primaryBlue.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2))
+                ]
+              : null,
         ),
         child: Column(
           children: [
@@ -929,11 +1015,18 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                 height: 24,
                 child: CircularProgressIndicator(
                     color: Colors.white, strokeWidth: 2))
-            : Text('إرسال الطلب',
-                style: GoogleFonts.cairo(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text('إرسال الطلب',
+                      style: GoogleFonts.cairo(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                ],
+              ),
       ),
     );
   }
@@ -973,121 +1066,134 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
           itemCount: _requests.length,
           itemBuilder: (context, index) {
             final request = _requests[index];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: cardWhite,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                      color: primaryBlue.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2))
-                ],
-                border: Border.all(color: Colors.grey.shade200),
+            return TweenAnimationBuilder(
+              tween: Tween<double>(begin: 0.0, end: 1.0),
+              duration: Duration(milliseconds: 300 + (index * 80)),
+              curve: Curves.easeOut,
+              builder: (context, value, child) => Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 10 * (1 - value)),
+                  child: child,
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: cardWhite,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                        color: primaryBlue.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2))
+                  ],
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: request['type'] == 'ai'
+                                ? LinearGradient(colors: [
+                                    purple.withOpacity(0.08),
+                                    purple.withOpacity(0.04)
+                                  ])
+                                : LinearGradient(colors: [
+                                    primaryBlue.withOpacity(0.08),
+                                    secondaryBlue.withOpacity(0.04)
+                                  ]),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                  request['type'] == 'ai'
+                                      ? Icons.psychology_rounded
+                                      : Icons.support_agent_rounded,
+                                  size: 14,
+                                  color: request['type'] == 'ai'
+                                      ? purple
+                                      : primaryBlue),
+                              const SizedBox(width: 4),
+                              Text(
+                                request['type'] == 'ai'
+                                    ? 'ذكاء اصطناعي'
+                                    : 'فريق الدعم',
+                                style: GoogleFonts.cairo(
+                                    fontSize: 11,
+                                    color: request['type'] == 'ai'
+                                        ? purple
+                                        : primaryBlue),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: request['status'] == 'resolved'
+                                ? successGreen.withOpacity(0.08)
+                                : warningOrange.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            request['status'] == 'resolved'
+                                ? 'تم الحل'
+                                : 'قيد المعالجة',
+                            style: GoogleFonts.cairo(
+                              fontSize: 11,
+                              color: request['status'] == 'resolved'
+                                  ? successGreen
+                                  : warningOrange,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(request['message'],
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            GoogleFonts.cairo(fontSize: 13, color: darkColor)),
+                    if (request['ai_response'] != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          gradient: request['type'] == 'ai'
-                              ? LinearGradient(colors: [
-                                  Colors.purple.withOpacity(0.08),
-                                  Colors.purple.withOpacity(0.04)
-                                ])
-                              : LinearGradient(colors: [
-                                  primaryBlue.withOpacity(0.08),
-                                  secondaryBlue.withOpacity(0.04)
-                                ]),
+                          gradient: LinearGradient(colors: [
+                            purple.withOpacity(0.05),
+                            purple.withOpacity(0.02)
+                          ]),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                                request['type'] == 'ai'
-                                    ? Icons.psychology_rounded
-                                    : Icons.support_agent_rounded,
-                                size: 14,
-                                color: request['type'] == 'ai'
-                                    ? Colors.purple
-                                    : primaryBlue),
-                            const SizedBox(width: 4),
-                            Text(
-                              request['type'] == 'ai'
-                                  ? 'ذكاء اصطناعي'
-                                  : 'فريق الدعم',
-                              style: GoogleFonts.cairo(
-                                  fontSize: 11,
-                                  color: request['type'] == 'ai'
-                                      ? Colors.purple
-                                      : primaryBlue),
+                            Icon(Icons.psychology_rounded,
+                                size: 16, color: purple),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(request['ai_response'],
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.cairo(
+                                      fontSize: 11, color: purple)),
                             ),
                           ],
                         ),
                       ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: request['status'] == 'resolved'
-                              ? Colors.green.withOpacity(0.08)
-                              : Colors.orange.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          request['status'] == 'resolved'
-                              ? 'تم الحل'
-                              : 'قيد المعالجة',
-                          style: GoogleFonts.cairo(
-                            fontSize: 11,
-                            color: request['status'] == 'resolved'
-                                ? Colors.green
-                                : Colors.orange,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(request['message'],
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.cairo(fontSize: 13, color: darkColor)),
-                  if (request['ai_response'] != null)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: [
-                          Colors.purple.withOpacity(0.05),
-                          Colors.purple.withOpacity(0.02)
-                        ]),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.psychology_rounded,
-                              size: 16, color: Colors.purple),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(request['ai_response'],
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.cairo(
-                                    fontSize: 11, color: Colors.purple)),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -1095,4 +1201,43 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       ],
     );
   }
+
+  Widget _buildShimmerLoading() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: List.generate(
+        4,
+        (index) => Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            height: 100,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: cardWhite,
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 30);
+    path.quadraticBezierTo(0, size.height, 30, size.height);
+    path.lineTo(size.width - 30, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 30);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

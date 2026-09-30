@@ -1,8 +1,8 @@
-// lib/services/solar_system_service.dart
 import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
+
 import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:http/http.dart' as http;
 
 class SolarSystemService {
   final String baseUrl;

@@ -1,11 +1,11 @@
 // lib/screens/company/company_choice_screen.dart
 
+import 'package:GeniusHouse/screens/home_screen.dart';
+import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:GeniusHouse/services/auth_service.dart';
-import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/screens/home_screen.dart';
 
 import 'company_dashboard_screen.dart';
 
@@ -25,7 +25,6 @@ class CompanyChoiceScreen extends StatefulWidget {
 
 class _CompanyChoiceScreenState extends State<CompanyChoiceScreen>
     with TickerProviderStateMixin {
-
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color darkColor = Color(0xFF111827);
@@ -130,8 +129,6 @@ class _CompanyChoiceScreenState extends State<CompanyChoiceScreen>
               child: Column(
                 children: [
                   const Spacer(flex: 2),
-
-                  // Logo
                   Container(
                     width: 100,
                     height: 100,
@@ -158,10 +155,7 @@ class _CompanyChoiceScreenState extends State<CompanyChoiceScreen>
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
-                  // Title
                   Text(
                     'مرحباً بك في متجرك',
                     style: GoogleFonts.cairo(
@@ -170,10 +164,7 @@ class _CompanyChoiceScreenState extends State<CompanyChoiceScreen>
                       color: darkColor,
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
-                  // Subtitle
                   Text(
                     'اختر كيف تريد المتابعة',
                     style: GoogleFonts.cairo(
@@ -181,15 +172,11 @@ class _CompanyChoiceScreenState extends State<CompanyChoiceScreen>
                       color: mediumGray,
                     ),
                   ),
-
                   const Spacer(flex: 1),
-
-                  // Buttons
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30),
                     child: Column(
                       children: [
-                        // ✅ زر لوحة التحكم
                         _buildChoiceButton(
                           icon: Icons.dashboard_rounded,
                           title: 'لوحة تحكم الشركة',
@@ -199,23 +186,22 @@ class _CompanyChoiceScreenState extends State<CompanyChoiceScreen>
                           ),
                           onTap: _navigateToDashboard,
                         ),
-
                         const SizedBox(height: 16),
-
-                        // ✅ زر تصفح التطبيق
                         _buildChoiceButton(
                           icon: Icons.shopping_bag_rounded,
                           title: 'تصفح التطبيق',
                           subtitle: 'عرض المنتجات والتسوق كالمعتاد',
                           gradient: LinearGradient(
-                            colors: [Colors.grey.shade600, Colors.grey.shade800],
+                            colors: [
+                              Colors.grey.shade600,
+                              Colors.grey.shade800
+                            ],
                           ),
                           onTap: _navigateToApp,
                         ),
                       ],
                     ),
                   ),
-
                   const Spacer(flex: 3),
                 ],
               ),

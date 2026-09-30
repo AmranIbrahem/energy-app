@@ -1,9 +1,9 @@
 // lib/screens/appliances/appliance_compatibility_screen.dart
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ApplianceCompatibilityScreen extends StatefulWidget {
   final AuthService authService;
@@ -16,10 +16,12 @@ class ApplianceCompatibilityScreen extends StatefulWidget {
   });
 
   @override
-  State<ApplianceCompatibilityScreen> createState() => _ApplianceCompatibilityScreenState();
+  State<ApplianceCompatibilityScreen> createState() =>
+      _ApplianceCompatibilityScreenState();
 }
 
-class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScreen> {
+class _ApplianceCompatibilityScreenState
+    extends State<ApplianceCompatibilityScreen> {
   int _currentStep = 0;
   String? _systemVoltage;
   String? _inverterPower;
@@ -63,7 +65,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
       } else {
         setState(() => _isChecking = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ في الفحص', style: GoogleFonts.cairo())),
+          SnackBar(
+              content: Text('حدث خطأ في الفحص', style: GoogleFonts.cairo())),
         );
       }
     } catch (e) {
@@ -85,7 +88,9 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             ),
           ),
         ),
-        title: Text('فحص التوافق', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text('فحص التوافق',
+            style: GoogleFonts.cairo(
+                fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
       ),
       body: _result != null ? _buildResult() : _buildWizard(),
@@ -95,7 +100,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
   Widget _buildWizard() {
     return Column(
       children: [
-        // ✅ مؤشر التقدم
         Container(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -106,19 +110,18 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                 height: 8,
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 decoration: BoxDecoration(
-                  color: index <= _currentStep ? primaryBlue : Colors.grey.shade300,
+                  color: index <= _currentStep
+                      ? primaryBlue
+                      : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(4),
                 ),
               );
             }),
           ),
         ),
-
         Expanded(
           child: _buildStep(),
         ),
-
-        // ✅ أزرار التنقل
         Container(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -130,9 +133,11 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       side: BorderSide(color: primaryBlue),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: Text('السابق', style: GoogleFonts.cairo(color: primaryBlue)),
+                    child: Text('السابق',
+                        style: GoogleFonts.cairo(color: primaryBlue)),
                   ),
                 ),
               if (_currentStep > 0) const SizedBox(width: 12),
@@ -141,19 +146,25 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                   onPressed: _currentStep < 3
                       ? () => setState(() => _currentStep++)
                       : _isChecking
-                      ? null
-                      : _checkCompatibility,
+                          ? null
+                          : _checkCompatibility,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryBlue,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                   ),
                   child: _isChecking
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
                       : Text(
-                    _currentStep < 3 ? 'التالي' : 'فحص التوافق',
-                    style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
+                          _currentStep < 3 ? 'التالي' : 'فحص التوافق',
+                          style: GoogleFonts.cairo(
+                              fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
                 ),
               ),
             ],
@@ -208,9 +219,15 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.cairo(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF111827))),
+          Text(title,
+              style: GoogleFonts.cairo(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF111827))),
           const SizedBox(height: 8),
-          Text(subtitle, style: GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade600)),
+          Text(subtitle,
+              style:
+                  GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade600)),
           const SizedBox(height: 24),
           ...options.map((option) {
             final isSelected = selected == option;
@@ -239,7 +256,8 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                       style: GoogleFonts.cairo(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white : const Color(0xFF111827),
+                        color:
+                            isSelected ? Colors.white : const Color(0xFF111827),
                       ),
                     ),
                   ],
@@ -258,16 +276,24 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('الأجهزة المراد فحصها', style: GoogleFonts.cairo(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF111827))),
+          Text('الأجهزة المراد فحصها',
+              style: GoogleFonts.cairo(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF111827))),
           const SizedBox(height: 8),
-          Text('اكتب أجهزتك مع الاستطاعة التقريبية', style: GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade600)),
+          Text('اكتب أجهزتك مع الاستطاعة التقريبية',
+              style:
+                  GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade600)),
           const SizedBox(height: 24),
           TextField(
             controller: _appliancesController,
             maxLines: 6,
             decoration: InputDecoration(
-              hintText: 'مثال:\n- براد 200W\n- غسالة 500W\n- مكيف 1500W\n- تلفاز 100W',
-              hintStyle: GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade400),
+              hintText:
+                  'مثال:\n- براد 200W\n- غسالة 500W\n- مكيف 1500W\n- تلفاز 100W',
+              hintStyle:
+                  GoogleFonts.cairo(fontSize: 14, color: Colors.grey.shade400),
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
@@ -300,7 +326,6 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ ملخص
           if (summary.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(16),
@@ -308,33 +333,40 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
                 color: primaryBlue.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Text(summary, style: GoogleFonts.cairo(fontSize: 14, color: const Color(0xFF111827))),
+              child: Text(summary,
+                  style: GoogleFonts.cairo(
+                      fontSize: 14, color: const Color(0xFF111827))),
             ),
           const SizedBox(height: 16),
-
-          // ✅ متوافق
           if (compatible.isNotEmpty) ...[
-            Text('✅ الأجهزة المتوافقة', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
+            Text('✅ الأجهزة المتوافقة',
+                style: GoogleFonts.cairo(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700)),
             const SizedBox(height: 8),
             ...compatible.map((item) => _buildResultCard(item, Colors.green)),
             const SizedBox(height: 16),
           ],
-
-          // ✅ تحذير
           if (warning.isNotEmpty) ...[
-            Text('⚠️ تحتاج انتباه', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange.shade700)),
+            Text('⚠️ تحتاج انتباه',
+                style: GoogleFonts.cairo(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade700)),
             const SizedBox(height: 8),
             ...warning.map((item) => _buildResultCard(item, Colors.orange)),
             const SizedBox(height: 16),
           ],
-
-          // ✅ غير متوافق
           if (incompatible.isNotEmpty) ...[
-            Text('❌ غير متوافقة', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red.shade700)),
+            Text('❌ غير متوافقة',
+                style: GoogleFonts.cairo(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700)),
             const SizedBox(height: 8),
             ...incompatible.map((item) => _buildResultCard(item, Colors.red)),
           ],
-
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
@@ -350,9 +382,12 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryBlue,
               minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
-            child: Text('فحص جديد', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: Colors.white)),
+            child: Text('فحص جديد',
+                style: GoogleFonts.cairo(
+                    fontWeight: FontWeight.bold, color: Colors.white)),
           ),
         ],
       ),
@@ -378,15 +413,25 @@ class _ApplianceCompatibilityScreenState extends State<ApplianceCompatibilityScr
           Row(
             children: [
               Expanded(
-                child: Text(name, style: GoogleFonts.cairo(fontSize: 15, fontWeight: FontWeight.bold, color: color.shade700)),
+                child: Text(name,
+                    style: GoogleFonts.cairo(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: color.shade700)),
               ),
               if (watts.isNotEmpty)
-                Text('$watts W', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.bold, color: color.shade600)),
+                Text('$watts W',
+                    style: GoogleFonts.cairo(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: color.shade600)),
             ],
           ),
           if (note.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(note, style: GoogleFonts.cairo(fontSize: 12, color: Colors.grey.shade600)),
+            Text(note,
+                style: GoogleFonts.cairo(
+                    fontSize: 12, color: Colors.grey.shade600)),
           ],
         ],
       ),

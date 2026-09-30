@@ -3,12 +3,12 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:GeniusHouse/screens/company/categories/add_main_category_screen.dart';
+import 'package:GeniusHouse/screens/company/categories/main_categories_screen.dart';
 import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:GeniusHouse/utils/constants.dart';
-import 'package:GeniusHouse/screens/company/categories/add_main_category_screen.dart';
-import 'package:GeniusHouse/screens/company/categories/main_categories_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -38,13 +38,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
   static const Color successGreen = Color(0xFF10B981);
   static const Color dangerRed = Color(0xFFEF4444);
   static const Color warningOrange = Color(0xFFF59E0B);
+  static const Color sypAmber = Color(0xFFD97706);
 
   late ApiService _apiService;
   final ImagePicker _imagePicker = ImagePicker();
   final _formKey = GlobalKey<FormState>();
   bool _isSaving = false;
 
-  // Form Controllers
   final _nameArController = TextEditingController();
   final _skuController = TextEditingController();
   final _priceController = TextEditingController();
@@ -54,43 +54,57 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _stockController = TextEditingController();
   final _brandController = TextEditingController();
   final _modelController = TextEditingController();
-  final _warrantyController = TextEditingController();
+  String _warrantyType = 'year';
+  int _warrantyValue = 1;
+  final _customWarrantyController = TextEditingController();
   final _descriptionArController = TextEditingController();
 
-  // Dropdown Values
+  final _priceSypController = TextEditingController();
+  final _discountPriceSypController = TextEditingController();
+  final _wholesalePriceSypController = TextEditingController();
+
+  double _exchangeRate = 0;
+  bool _isLoadingRate = false;
+
   String? _selectedSubCategoryId;
   String _selectedUnit = 'قطعة';
   bool _isActive = true;
 
-  // ✅ متغيرات الوحدة المخصصة
   final _customUnitController = TextEditingController();
   bool _showCustomUnitInput = false;
   bool _showAllUnits = false;
 
-  // ✅ متغيرات الشحن
   bool _hasShipping = false;
   Map<String, TextEditingController> _shippingCostControllers = {};
-  Map<String, bool> _selectedShippingCities = {}; // ✅ جديد لتتبع التحديد
+  Map<String, bool> _selectedShippingCities = {};
 
-  // ✅ تمت إضافة ريف دمشق
   final List<String> _syrianCities = [
-    'دمشق', 'ريف دمشق', 'حلب', 'حمص', 'اللاذقية', 'طرطوس', 'حماة', 'درعا',
-    'السويداء', 'القنيطرة', 'دير الزور', 'الرقة', 'الحسكة', 'إدلب'
+    'دمشق',
+    'ريف دمشق',
+    'حلب',
+    'حمص',
+    'اللاذقية',
+    'طرطوس',
+    'حماة',
+    'درعا',
+    'السويداء',
+    'القنيطرة',
+    'دير الزور',
+    'الرقة',
+    'الحسكة',
+    'إدلب'
   ];
 
-  // Subcategory Search
   List<dynamic> _filteredSubCategories = [];
-  final TextEditingController _subCategorySearchController = TextEditingController();
+  final TextEditingController _subCategorySearchController =
+      TextEditingController();
   bool _showSubCategoryDropdown = false;
 
-  // Images
   File? _mainImage;
   List<File> _additionalImages = [];
 
-  // Data
   List<dynamic> _subCategories = [];
 
-  // ✅ قائمة الوحدات بالعربي
   List<Map<String, String>> _units = [
     {'key': 'قطعة', 'label': 'قطعة'},
     {'key': 'كيلوغرام', 'label': 'كيلوغرام'},
@@ -115,7 +129,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
     {'key': 'وحدة', 'label': 'وحدة'},
   ];
 
-  // Specifications
   List<Map<String, TextEditingController>> _specifications = [];
 
   bool _isLoadingData = true;
@@ -129,9 +142,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
     _initShippingCostControllers();
     _fetchCreateData();
+    _fetchExchangeRate();
   }
 
-  // ✅ تهيئة Controllers لأسعار الشحن مع التحديد
   void _initShippingCostControllers() {
     for (var city in _syrianCities) {
       _shippingCostControllers[city] = TextEditingController();
@@ -150,13 +163,35 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _stockController.dispose();
     _brandController.dispose();
     _modelController.dispose();
-    _warrantyController.dispose();
+    _customWarrantyController.dispose();
     _descriptionArController.dispose();
     _subCategorySearchController.dispose();
     _customUnitController.dispose();
     _shippingCostControllers.forEach((_, controller) => controller.dispose());
     _clearSpecifications();
+
+    _priceSypController.dispose();
+    _discountPriceSypController.dispose();
+    _wholesalePriceSypController.dispose();
     super.dispose();
+  }
+
+  String _getWarrantyText() {
+    if (_warrantyType == 'custom') {
+      return _customWarrantyController.text.trim();
+    }
+    final int value = _warrantyValue;
+    if (_warrantyType == 'year') {
+      if (value == 1) return 'سنة واحدة';
+      if (value == 2) return 'سنتان';
+      if (value >= 3 && value <= 10) return '$value سنوات';
+      return '$value سنة';
+    } else {
+      if (value == 1) return 'شهر واحد';
+      if (value == 2) return 'شهران';
+      if (value >= 3 && value <= 10) return '$value أشهر';
+      return '$value شهرًا';
+    }
   }
 
   void _clearSpecifications() {
@@ -166,7 +201,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
   }
 
-  // ✅ تبديل اختيار المدينة
   void _toggleCity(String city) {
     setState(() {
       _selectedShippingCities[city] = !_selectedShippingCities[city]!;
@@ -176,14 +210,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
     });
   }
 
-  // ✅ عدد المدن المحددة
   int get _selectedCitiesCount =>
       _selectedShippingCities.values.where((selected) => selected).length;
 
   Future<void> _fetchCreateData() async {
     setState(() => _isLoadingData = true);
     try {
-      final response = await _apiService.get('/v1/company/products/create-data', requiresAuth: true);
+      final response = await _apiService.get('/v1/company/products/create-data',
+          requiresAuth: true);
       if (response['data'] != null && mounted) {
         setState(() {
           _subCategories = response['data']['sub_categories'] ?? [];
@@ -191,9 +225,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
           if (response['data']['units'] != null) {
             final apiUnits = List<Map<String, String>>.from(
               (response['data']['units'] as List).map((u) => {
-                'key': u['label']?.toString() ?? u['key']?.toString() ?? '',
-                'label': u['label']?.toString() ?? u['key']?.toString() ?? '',
-              }),
+                    'key': u['label']?.toString() ?? u['key']?.toString() ?? '',
+                    'label':
+                        u['label']?.toString() ?? u['key']?.toString() ?? '',
+                  }),
             );
             for (var unit in apiUnits) {
               if (!_units.any((u) => u['key'] == unit['key'])) {
@@ -205,9 +240,77 @@ class _AddProductScreenState extends State<AddProductScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error fetching create data: $e');
+      // debugPrint('Error fetching create data: $e');
       if (mounted) setState(() => _isLoadingData = false);
     }
+  }
+
+  Future<void> _fetchExchangeRate() async {
+    setState(() => _isLoadingRate = true);
+    try {
+      final response = await _apiService.get(
+        '/v1/user/public/setting/usd_to_syp_exchange_rate',
+        requiresAuth: false,
+      );
+      if (response['data'] != null && mounted) {
+        setState(() {
+          _exchangeRate =
+              double.tryParse(response['data']['value']?.toString() ?? '0') ??
+                  0;
+          _isLoadingRate = false;
+        });
+        // debugPrint('✅ سعر الصرف: $_exchangeRate');
+      } else {
+        if (mounted) setState(() => _isLoadingRate = false);
+      }
+    } catch (e) {
+      // debugPrint('❌ Error fetching exchange rate: $e');
+      if (mounted) setState(() => _isLoadingRate = false);
+    }
+  }
+
+  void _autoFillSypPrices() {
+    if (_exchangeRate <= 0) {
+      _showSnackBar('سعر الصرف غير متوفر حالياً', dangerRed);
+      return;
+    }
+
+    final priceUsd = double.tryParse(_priceController.text.trim()) ?? 0;
+    if (priceUsd <= 0) {
+      _showSnackBar('أدخل سعر الدولار أولاً', warningOrange);
+      return;
+    }
+
+    setState(() {
+      _priceSypController.text = (priceUsd * _exchangeRate).toStringAsFixed(0);
+
+      final discountUsd =
+          double.tryParse(_discountPriceController.text.trim()) ?? 0;
+      if (discountUsd > 0) {
+        _discountPriceSypController.text =
+            (discountUsd * _exchangeRate).toStringAsFixed(0);
+      } else {
+        _discountPriceSypController.clear();
+      }
+
+      final wholesaleUsd =
+          double.tryParse(_wholesalePriceController.text.trim()) ?? 0;
+      if (wholesaleUsd > 0) {
+        _wholesalePriceSypController.text =
+            (wholesaleUsd * _exchangeRate).toStringAsFixed(0);
+      } else {
+        _wholesalePriceSypController.clear();
+      }
+    });
+
+    _showSnackBar('تم تعبئة الأسعار تلقائياً 🎉', successGreen);
+  }
+
+  String _formatRate(double rate) {
+    if (rate == rate.roundToDouble()) {
+      return rate.toStringAsFixed(0);
+    }
+    return rate.toStringAsFixed(2);
   }
 
   TextDirection _getTextDirection(String text) {
@@ -277,33 +380,33 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _fetchCreateData();
   }
 
-  // ==================== Image Picker ====================
-
   Future<void> _pickMainImage() async {
-    final XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1200);
+    final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery, imageQuality: 85, maxWidth: 1200);
     if (image != null) setState(() => _mainImage = File(image.path));
   }
 
   void _removeMainImage() => setState(() => _mainImage = null);
 
   Future<void> _pickAdditionalImages() async {
-    final List<XFile> images = await _imagePicker.pickMultiImage(imageQuality: 85, maxWidth: 1200);
-    if (images.isNotEmpty) setState(() => _additionalImages.addAll(images.map((img) => File(img.path))));
+    final List<XFile> images =
+        await _imagePicker.pickMultiImage(imageQuality: 85, maxWidth: 1200);
+    if (images.isNotEmpty)
+      setState(
+          () => _additionalImages.addAll(images.map((img) => File(img.path))));
   }
 
-  void _removeAdditionalImage(int index) => setState(() => _additionalImages.removeAt(index));
+  void _removeAdditionalImage(int index) =>
+      setState(() => _additionalImages.removeAt(index));
 
-  // ==================== Specifications ====================
-
-  void _addSpecification() => setState(() => _specifications.add({'key': TextEditingController(), 'value': TextEditingController()}));
+  void _addSpecification() => setState(() => _specifications
+      .add({'key': TextEditingController(), 'value': TextEditingController()}));
 
   void _removeSpecification(int index) {
     _specifications[index]['key']?.dispose();
     _specifications[index]['value']?.dispose();
     setState(() => _specifications.removeAt(index));
   }
-
-  // ==================== Save Product ====================
 
   Future<void> _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
@@ -316,32 +419,73 @@ class _AddProductScreenState extends State<AddProductScreen> {
       return;
     }
 
+    final warrantyValue = _getWarrantyText();
     setState(() => _isSaving = true);
 
     try {
-      final request = http.MultipartRequest('POST', Uri.parse('${AppConstants.baseUrl}/v1/company/products'));
+      final request = http.MultipartRequest(
+          'POST', Uri.parse('${AppConstants.baseUrl}/v1/company/products'));
       request.headers['Authorization'] = 'Bearer ${widget.authService.token}';
       request.headers['Accept'] = 'application/json';
 
-      request.fields.addAll({
+      final Map<String, String> fields = {
         'name_ar': _nameArController.text.trim(),
-        'sku': _skuController.text.trim(),
         'price': _priceController.text.trim(),
-        'discount_price': _discountPriceController.text.isNotEmpty ? _discountPriceController.text.trim() : '',
-        'wholesale_price': _wholesalePriceController.text.isNotEmpty ? _wholesalePriceController.text.trim() : '',
-        'wholesale_min_quantity': _wholesaleMinQtyController.text.isNotEmpty ? _wholesaleMinQtyController.text.trim() : '',
-        'stock': _stockController.text.isNotEmpty ? _stockController.text.trim() : '0',
-        'unit': _selectedUnit,
         'sub_category_id': _selectedSubCategoryId ?? '',
-        'brand': _brandController.text.trim(),
-        'model': _modelController.text.trim(),
-        'warranty': _warrantyController.text.trim(),
-        'description_ar': _descriptionArController.text.trim(),
+        'unit': _selectedUnit,
+        'stock': _stockController.text.trim().isNotEmpty
+            ? _stockController.text.trim()
+            : '0',
         'is_active': _isActive ? '1' : '0',
         'has_shipping': _hasShipping ? '1' : '0',
-      });
+      };
 
-      // ✅ إرسال المدن المحددة فقط
+      if (_skuController.text.trim().isNotEmpty) {
+        fields['sku'] = _skuController.text.trim();
+      }
+
+      if (_discountPriceController.text.trim().isNotEmpty) {
+        fields['discount_price'] = _discountPriceController.text.trim();
+      }
+
+      if (_wholesalePriceController.text.trim().isNotEmpty) {
+        fields['wholesale_price'] = _wholesalePriceController.text.trim();
+      }
+
+      if (_wholesaleMinQtyController.text.trim().isNotEmpty) {
+        fields['wholesale_min_quantity'] =
+            _wholesaleMinQtyController.text.trim();
+      }
+
+      if (_priceSypController.text.trim().isNotEmpty) {
+        fields['price_syp'] = _priceSypController.text.trim();
+      }
+
+      if (_discountPriceSypController.text.trim().isNotEmpty) {
+        fields['discount_price_syp'] = _discountPriceSypController.text.trim();
+      }
+
+      if (_wholesalePriceSypController.text.trim().isNotEmpty) {
+        fields['wholesale_price_syp'] =
+            _wholesalePriceSypController.text.trim();
+      }
+
+      if (_brandController.text.trim().isNotEmpty) {
+        fields['brand'] = _brandController.text.trim();
+      }
+
+      if (_modelController.text.trim().isNotEmpty) {
+        fields['model'] = _modelController.text.trim();
+      }
+
+      if (_descriptionArController.text.trim().isNotEmpty) {
+        fields['description_ar'] = _descriptionArController.text.trim();
+      }
+
+      if (warrantyValue.trim().isNotEmpty) {
+        fields['warranty'] = warrantyValue.trim();
+      }
+
       if (_hasShipping) {
         final shippingCities = _syrianCities
             .where((city) => _selectedShippingCities[city] == true)
@@ -354,39 +498,57 @@ class _AddProductScreenState extends State<AddProductScreen> {
         }).toList();
 
         if (shippingCities.isNotEmpty) {
-          request.fields['shipping_cities'] = jsonEncode(shippingCities);
-          debugPrint('📢 Shipping Cities (JSON): ${jsonEncode(shippingCities)}');
-        } else {
-          request.fields['shipping_cities'] = jsonEncode([]);
+          fields['shipping_cities'] = jsonEncode(shippingCities);
         }
       }
 
-      // ✅ إرسال المواصفات
-      int specIndex = 0;
+      final specs = <Map<String, String>>[];
       for (var spec in _specifications) {
         final key = spec['key']?.text.trim() ?? '';
         final value = spec['value']?.text.trim() ?? '';
         if (key.isNotEmpty && value.isNotEmpty) {
-          request.fields['specifications[$specIndex][key]'] = key;
-          request.fields['specifications[$specIndex][value]'] = value;
-          specIndex++;
+          specs.add({'key': key, 'value': value});
         }
       }
 
-      request.files.add(await http.MultipartFile.fromPath('main_image', _mainImage!.path));
+      if (specs.isNotEmpty) {
+        fields['specifications'] = jsonEncode(specs);
+      }
+
+      request.fields.addAll(fields);
+
+      // debugPrint('═══════════════════════════════════');
+      // debugPrint('📢 Fields being sent (General Product):');
+      fields.forEach((key, value) {
+        final display =
+            value.length > 100 ? '${value.substring(0, 100)}...' : value;
+        // debugPrint('   $key: $display');
+      });
+      // debugPrint('═══════════════════════════════════');
+
+      request.files.add(
+          await http.MultipartFile.fromPath('main_image', _mainImage!.path));
+
       for (var image in _additionalImages) {
-        request.files.add(await http.MultipartFile.fromPath('images[]', image.path));
+        request.files
+            .add(await http.MultipartFile.fromPath('images[]', image.path));
       }
 
       final streamedResponse = await request.send();
       final responseBody = await streamedResponse.stream.bytesToString();
+
+      // debugPrint('═══════════════════════════════════');
+      // debugPrint('📢 Status Code: ${streamedResponse.statusCode}');
+      // debugPrint('📢 Response Body: $responseBody');
+      // debugPrint('═══════════════════════════════════');
 
       Map<String, dynamic> data;
       try {
         data = jsonDecode(responseBody);
       } catch (e) {
         setState(() => _isSaving = false);
-        _showSnackBar('استجابة غير صالحة من الخادم', dangerRed);
+        _showSnackBar(
+            'استجابة غير صالحة (${streamedResponse.statusCode})', dangerRed);
         return;
       }
 
@@ -396,11 +558,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
           _showSnackBar('تم إضافة المنتج بنجاح 🎉', successGreen);
           Navigator.pop(context, true);
         } else {
-          _showSnackBar(data['message'] ?? 'فشل إضافة المنتج', dangerRed);
+          String errorMsg = data['message'] ?? 'فشل إضافة المنتج';
+          if (data['errors'] != null && data['errors'] is Map) {
+            final errors = data['errors'] as Map;
+            if (errors.isNotEmpty) {
+              final firstError = errors.values.first;
+              if (firstError is List && firstError.isNotEmpty) {
+                errorMsg = '$errorMsg\n${firstError.first}';
+              }
+            }
+          }
+          _showSnackBar(errorMsg, dangerRed);
         }
       }
     } catch (e) {
-      debugPrint('❌ Error saving product: $e');
+      // debugPrint('❌ Error saving product: $e');
       if (mounted) {
         setState(() => _isSaving = false);
         _showSnackBar('حدث خطأ في حفظ المنتج', dangerRed);
@@ -414,12 +586,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
       ..showSnackBar(SnackBar(
         content: Row(children: [
           Icon(
-            color == successGreen ? Icons.check_circle_rounded :
-            color == warningOrange ? Icons.warning_rounded : Icons.info_rounded,
-            color: Colors.white, size: 20,
+            color == successGreen
+                ? Icons.check_circle_rounded
+                : color == warningOrange
+                    ? Icons.warning_rounded
+                    : Icons.info_rounded,
+            color: Colors.white,
+            size: 20,
           ),
           const SizedBox(width: 10),
-          Expanded(child: Text(message, style: GoogleFonts.cairo(fontSize: 14), textDirection: _getTextDirection(message)))
+          Expanded(
+              child: Text(message,
+                  style: GoogleFonts.cairo(fontSize: 14),
+                  textDirection: _getTextDirection(message)))
         ]),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
@@ -429,27 +608,55 @@ class _AddProductScreenState extends State<AddProductScreen> {
       ));
   }
 
-  // ==================== Build ====================
-
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        if (_showSubCategoryDropdown) setState(() => _showSubCategoryDropdown = false);
-        FocusScope.of(context).unfocus();
-      },
-      child: Scaffold(
-        backgroundColor: lightGray,
-        appBar: AppBar(
-            backgroundColor: cardWhite, elevation: 0,
-            leading: IconButton(icon: const Icon(Icons.arrow_back_rounded, color: darkColor), onPressed: () => Navigator.pop(context)),
-            title: Text('إضافة منتج جديد', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: darkColor))),
-        body: _isLoadingData ? _buildLoading() : _buildForm(),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: GestureDetector(
+        onTap: () {
+          if (_showSubCategoryDropdown)
+            setState(() => _showSubCategoryDropdown = false);
+          FocusScope.of(context).unfocus();
+        },
+        child: Scaffold(
+          backgroundColor: lightGray,
+          appBar: _buildAppBar(),
+          body: _isLoadingData ? _buildLoading() : _buildForm(),
+        ),
       ),
     );
   }
 
-  Widget _buildLoading() => const Center(child: CircularProgressIndicator(color: primaryBlue));
+  AppBar _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Text(
+        'إضافة منتج جديد',
+        style: GoogleFonts.cairo(
+            fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      flexibleSpace: ClipPath(
+        clipper: _BottomCurveClipper(),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryBlue, secondaryBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoading() =>
+      const Center(child: CircularProgressIndicator(color: primaryBlue));
 
   Widget _buildForm() {
     return Form(
@@ -457,34 +664,261 @@ class _AddProductScreenState extends State<AddProductScreen> {
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _buildSectionTitle('معلومات أساسية', Icons.info_rounded), const SizedBox(height: 12),
-          _buildTextField(_nameArController, 'اسم المنتج *', 'أدخل اسم المنتج (عربي / English)', textDirection: TextDirection.rtl), const SizedBox(height: 12),
-          _buildTextField(_skuController, 'رمز المنتج (SKU) *', 'SKU-001', textDirection: TextDirection.ltr), const SizedBox(height: 12),
-          _buildSubCategoryDropdown(), const SizedBox(height: 12),
-          _buildUnitDropdown(), const SizedBox(height: 12),
-          _buildDescriptionField(), const SizedBox(height: 24),
-          _buildSectionTitle('السعر والمخزون', Icons.attach_money_rounded), const SizedBox(height: 12),
-          Row(children: [Expanded(child: _buildTextField(_priceController, 'السعر *', '0.00', keyboardType: TextInputType.number, textDirection: TextDirection.ltr)), const SizedBox(width: 10), Expanded(child: _buildTextField(_discountPriceController, 'سعر الخصم', '0.00', keyboardType: TextInputType.number, textDirection: TextDirection.ltr))]),
+          _buildSectionTitle('معلومات أساسية', Icons.info_rounded),
           const SizedBox(height: 12),
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: successGreen.withOpacity(0.05), borderRadius: BorderRadius.circular(12), border: Border.all(color: successGreen.withOpacity(0.2))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [const Icon(Icons.warehouse_rounded, color: successGreen, size: 18), const SizedBox(width: 6), Text('سعر الجملة (اختياري)', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.bold, color: successGreen))]), const SizedBox(height: 10), Row(children: [Expanded(child: _buildTextField(_wholesalePriceController, 'سعر الجملة', '0.00', keyboardType: TextInputType.number, textDirection: TextDirection.ltr)), const SizedBox(width: 10), Expanded(child: _buildTextField(_wholesaleMinQtyController, 'الحد الأدنى للكمية', 'مثال: 10', keyboardType: TextInputType.number, textDirection: TextDirection.ltr))])])),
+          _buildTextField(_nameArController, 'اسم المنتج *',
+              'أدخل اسم المنتج (عربي / English)',
+              textDirection: TextDirection.rtl),
           const SizedBox(height: 12),
-          _buildTextField(_stockController, 'الكمية المتاحة *', '0', keyboardType: TextInputType.number, textDirection: TextDirection.ltr), const SizedBox(height: 24),
-          _buildSectionTitle('معلومات إضافية', Icons.more_horiz_rounded), const SizedBox(height: 12),
-          Row(children: [Expanded(child: _buildTextField(_brandController, 'العلامة التجارية', 'مثال: Samsung / سامسونج')), const SizedBox(width: 10), Expanded(child: _buildTextField(_modelController, 'الموديل', 'مثال: X1000', textDirection: TextDirection.ltr))]), const SizedBox(height: 12),
-          _buildTextField(_warrantyController, 'الضمان', 'مثال: سنة واحدة / 1 Year'), const SizedBox(height: 24),
-          _buildSectionTitle('الصور', Icons.image_rounded), const SizedBox(height: 12),
-          _buildMainImagePicker(), const SizedBox(height: 12),
-          _buildAdditionalImagesPicker(), const SizedBox(height: 24),
-          _buildSectionTitle('المواصفات', Icons.list_alt_rounded), const SizedBox(height: 12),
-          _buildSpecificationsSection(), const SizedBox(height: 24),
-          _buildSectionTitle('الحالة', Icons.toggle_on_rounded), const SizedBox(height: 12),
+          _buildTextField(_skuController, 'رمز المنتج (SKU) *', 'SKU-001',
+              textDirection: TextDirection.ltr),
+          const SizedBox(height: 12),
+          _buildSubCategoryDropdown(),
+          const SizedBox(height: 12),
+          _buildUnitDropdown(),
+          const SizedBox(height: 12),
+          _buildDescriptionField(),
+          const SizedBox(height: 24),
+          _buildSectionTitle('السعر والمخزون', Icons.attach_money_rounded),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+                child: _buildTextField(_priceController, 'السعر *', '0.00',
+                    keyboardType: TextInputType.number,
+                    textDirection: TextDirection.ltr)),
+            const SizedBox(width: 10),
+            Expanded(
+                child: _buildTextField(
+                    _discountPriceController, 'سعر الخصم (اختياري)', '0.00',
+                    keyboardType: TextInputType.number,
+                    textDirection: TextDirection.ltr))
+          ]),
+          const SizedBox(height: 12),
+          Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: successGreen.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: successGreen.withOpacity(0.2))),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      const Icon(Icons.warehouse_rounded,
+                          color: successGreen, size: 18),
+                      const SizedBox(width: 6),
+                      Text('سعر الجملة (اختياري)',
+                          style: GoogleFonts.cairo(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: successGreen))
+                    ]),
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      Expanded(
+                          child: _buildTextField(_wholesalePriceController,
+                              'سعر الجملة (اختياري)', '0.00',
+                              keyboardType: TextInputType.number,
+                              textDirection: TextDirection.ltr)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: _buildTextField(_wholesaleMinQtyController,
+                              'الحد الأدنى للكمية (اختياري)', 'مثال: 10',
+                              keyboardType: TextInputType.number,
+                              textDirection: TextDirection.ltr))
+                    ])
+                  ])),
+          const SizedBox(height: 12),
+          _buildTextField(_stockController, 'الكمية المتاحة *', '0',
+              keyboardType: TextInputType.number,
+              textDirection: TextDirection.ltr),
+          const SizedBox(height: 24),
+          _buildSectionTitle(
+              'أسعار الليرة السورية (اختياري)', Icons.currency_exchange_rounded,
+              color: sypAmber),
+          const SizedBox(height: 12),
+          _buildSypPricesSection(),
+          const SizedBox(height: 24),
+          _buildSectionTitle('معلومات إضافية', Icons.more_horiz_rounded),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+                child: _buildTextField(_brandController,
+                    'العلامة التجارية (اختياري)', 'مثال: Samsung / سامسونج')),
+            const SizedBox(width: 10),
+            Expanded(
+                child: _buildTextField(
+                    _modelController, 'الموديل (اختياري)', 'مثال: X1000',
+                    textDirection: TextDirection.ltr))
+          ]),
+          const SizedBox(height: 12),
+          _buildWarrantyField(),
+          const SizedBox(height: 24),
+          _buildSectionTitle('الصور', Icons.image_rounded),
+          const SizedBox(height: 12),
+          _buildMainImagePicker(),
+          const SizedBox(height: 12),
+          _buildAdditionalImagesPicker(),
+          const SizedBox(height: 24),
+          _buildSectionTitle('المواصفات (اختياري)', Icons.list_alt_rounded),
+          const SizedBox(height: 12),
+          _buildSpecificationsSection(),
+          const SizedBox(height: 24),
+          _buildSectionTitle('الحالة', Icons.toggle_on_rounded),
+          const SizedBox(height: 12),
           _buildActiveToggle(),
           const SizedBox(height: 24),
-          _buildSectionTitle('الشحن', Icons.local_shipping_rounded), const SizedBox(height: 12),
+          _buildSectionTitle('الشحن (اختياري)', Icons.local_shipping_rounded),
+          const SizedBox(height: 12),
           _buildShippingSection(),
           const SizedBox(height: 30),
-          _buildSaveButton(), const SizedBox(height: 30),
+          _buildSaveButton(),
+          const SizedBox(height: 30),
         ]),
+      ),
+    );
+  }
+
+  Widget _buildSypPricesSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            sypAmber.withOpacity(0.08),
+            sypAmber.withOpacity(0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: sypAmber.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: sypAmber.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: _isLoadingRate
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: sypAmber,
+                        ),
+                      )
+                    : const Icon(Icons.currency_exchange_rounded,
+                        size: 18, color: sypAmber),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('سعر الصرف الحالي',
+                        style: GoogleFonts.cairo(
+                            fontSize: 11, color: Colors.grey.shade600)),
+                    Text(
+                      _exchangeRate > 0
+                          ? '1\$ = ${_formatRate(_exchangeRate)} ل.س'
+                          : 'غير متوفر',
+                      style: GoogleFonts.cairo(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: sypAmber,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: (_exchangeRate > 0 && !_isLoadingRate)
+                    ? _autoFillSypPrices
+                    : null,
+                icon: const Icon(Icons.auto_fix_high_rounded, size: 16),
+                label: Text('تعبئة تلقائية',
+                    style: GoogleFonts.cairo(
+                        fontSize: 12, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: sypAmber,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  disabledForegroundColor: Colors.grey.shade500,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  elevation: 2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  _priceSypController,
+                  'السعر (ل.س)',
+                  'مثال: 750000',
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  textDirection: TextDirection.ltr,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildTextField(
+                  _discountPriceSypController,
+                  'سعر الخصم (ل.س)',
+                  '0',
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  textDirection: TextDirection.ltr,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildTextField(
+            _wholesalePriceSypController,
+            'سعر الجملة (ل.س) - اختياري',
+            '0',
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textDirection: TextDirection.ltr,
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded,
+                    size: 16, color: Color(0xFF92400E)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'هذه الأسعار اختيارية. إذا تركتها فارغة، سيعرض التطبيق السعر بالدولار فقط. اضغط "تعبئة تلقائية" لتحويل السعر من الدولار.',
+                    style: GoogleFonts.cairo(
+                        fontSize: 10.5,
+                        color: const Color(0xFF92400E),
+                        height: 1.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -492,11 +926,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Widget _buildUnitDropdown() {
     final selectedUnitLabel = _units.firstWhere(
           (u) => u['key'] == _selectedUnit,
-      orElse: () => {'key': 'قطعة', 'label': 'قطعة'},
-    )['label'] ?? 'قطعة';
+          orElse: () => {'key': 'قطعة', 'label': 'قطعة'},
+        )['label'] ??
+        'قطعة';
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('وحدة القياس *', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w600, color: darkColor)),
+      Text('وحدة القياس *',
+          style: GoogleFonts.cairo(
+              fontSize: 12, fontWeight: FontWeight.w600, color: darkColor)),
       const SizedBox(height: 8),
       GestureDetector(
         onTap: () {
@@ -510,19 +947,29 @@ class _AddProductScreenState extends State<AddProductScreen> {
           decoration: BoxDecoration(
             color: cardWhite,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _showAllUnits ? primaryBlue : Colors.grey.shade200, width: _showAllUnits ? 2 : 1),
+            border: Border.all(
+                color: _showAllUnits ? primaryBlue : Colors.grey.shade200,
+                width: _showAllUnits ? 2 : 1),
           ),
           child: Row(children: [
-            Icon(Icons.straighten_rounded, size: 20, color: _showAllUnits ? primaryBlue : mediumGray),
+            Icon(Icons.straighten_rounded,
+                size: 20, color: _showAllUnits ? primaryBlue : mediumGray),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 selectedUnitLabel,
-                style: GoogleFonts.cairo(fontSize: 14, color: darkColor, fontWeight: FontWeight.w600),
+                style: GoogleFonts.cairo(
+                    fontSize: 14,
+                    color: darkColor,
+                    fontWeight: FontWeight.w600),
                 textDirection: _getTextDirection(selectedUnitLabel),
               ),
             ),
-            Icon(_showAllUnits ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded, color: mediumGray),
+            Icon(
+                _showAllUnits
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
+                color: mediumGray),
           ]),
         ),
       ),
@@ -533,7 +980,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
             color: cardWhite,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: primaryBlue.withOpacity(0.3)),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4))
+            ],
           ),
           constraints: const BoxConstraints(maxHeight: 350),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -557,7 +1009,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
-                        isSelected ? Icons.check_rounded : Icons.straighten_rounded,
+                        isSelected
+                            ? Icons.check_rounded
+                            : Icons.straighten_rounded,
                         size: 18,
                         color: isSelected ? Colors.white : mediumGray,
                       ),
@@ -566,13 +1020,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       unit['label'] ?? '',
                       style: GoogleFonts.cairo(
                         fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.w500,
                         color: isSelected ? primaryBlue : darkColor,
                       ),
                     ),
                     trailing: isSelected
-                        ? const Icon(Icons.check_circle_rounded, color: primaryBlue, size: 20)
-                        : const Icon(Icons.chevron_left_rounded, color: Colors.grey, size: 20),
+                        ? const Icon(Icons.check_circle_rounded,
+                            color: primaryBlue, size: 20)
+                        : const Icon(Icons.chevron_left_rounded,
+                            color: Colors.grey, size: 20),
                     onTap: () => setState(() {
                       _selectedUnit = unit['key']!;
                       _showAllUnits = false;
@@ -589,9 +1046,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   _showCustomUnitInput = true;
                   _showAllUnits = false;
                 }),
-                icon: const Icon(Icons.add_rounded, color: primaryBlue, size: 20),
-                label: Text('إضافة وحدة جديدة', style: GoogleFonts.cairo(fontSize: 14, color: primaryBlue, fontWeight: FontWeight.bold)),
-                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                icon:
+                    const Icon(Icons.add_rounded, color: primaryBlue, size: 20),
+                label: Text('إضافة وحدة جديدة',
+                    style: GoogleFonts.cairo(
+                        fontSize: 14,
+                        color: primaryBlue,
+                        fontWeight: FontWeight.bold)),
+                style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12)),
               ),
           ]),
         ),
@@ -608,7 +1071,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('✏️ إضافة وحدة جديدة', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.bold, color: primaryBlue)),
+              Text('✏️ إضافة وحدة جديدة',
+                  style: GoogleFonts.cairo(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: primaryBlue)),
               const SizedBox(height: 10),
               TextField(
                 controller: _customUnitController,
@@ -617,7 +1084,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 style: GoogleFonts.cairo(fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'اكتب اسم الوحدة هنا... (مثال: حبة، كرتونة كبيرة)',
-                  hintStyle: GoogleFonts.cairo(fontSize: 13, color: Colors.grey.shade400),
+                  hintStyle: GoogleFonts.cairo(
+                      fontSize: 13, color: Colors.grey.shade400),
                   hintTextDirection: TextDirection.rtl,
                   filled: true,
                   fillColor: Colors.white,
@@ -633,8 +1101,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     borderRadius: BorderRadius.circular(10),
                     borderSide: const BorderSide(color: primaryBlue, width: 2),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                  prefixIcon: const Icon(Icons.edit_rounded, size: 20, color: primaryBlue),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                  prefixIcon: const Icon(Icons.edit_rounded,
+                      size: 20, color: primaryBlue),
                 ),
                 onSubmitted: (value) => _addCustomUnit(),
               ),
@@ -646,10 +1116,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       onPressed: _addCustomUnit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryBlue,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: Text('إضافة الوحدة', style: GoogleFonts.cairo(fontSize: 13, color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text('إضافة الوحدة',
+                          style: GoogleFonts.cairo(
+                              fontSize: 13,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -660,11 +1135,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         _customUnitController.clear();
                       }),
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         side: BorderSide(color: Colors.grey.shade300),
                       ),
-                      child: Text('إلغاء', style: GoogleFonts.cairo(fontSize: 13, color: mediumGray)),
+                      child: Text('إلغاء',
+                          style: GoogleFonts.cairo(
+                              fontSize: 13, color: mediumGray)),
                     ),
                   ),
                 ],
@@ -678,14 +1156,31 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   bool _isDefaultUnit(String key) {
     const defaultUnits = [
-      'قطعة', 'كيلوغرام', 'غرام', 'طن', 'لتر', 'ملليلتر', 'صندوق', 'كرتونة',
-      'مجموعة', 'متر', 'سنتيمتر', 'ميلليمتر', 'دستة (12)', 'زوج', 'عبوة', 'كيس',
-      'زجاجة', 'علبة', 'لفة', 'ورقة', 'وحدة'
+      'قطعة',
+      'كيلوغرام',
+      'غرام',
+      'طن',
+      'لتر',
+      'ملليلتر',
+      'صندوق',
+      'كرتونة',
+      'مجموعة',
+      'متر',
+      'سنتيمتر',
+      'ميلليمتر',
+      'دستة (12)',
+      'زوج',
+      'عبوة',
+      'كيس',
+      'زجاجة',
+      'علبة',
+      'لفة',
+      'ورقة',
+      'وحدة'
     ];
     return defaultUnits.contains(key);
   }
 
-  // ✅ قسم الشحن - اختيار المدن بالنقر + أسعار للمحددة فقط
   Widget _buildShippingSection() {
     final selectedCities = _syrianCities
         .where((city) => _selectedShippingCities[city] == true)
@@ -693,59 +1188,72 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
+      decoration: BoxDecoration(
+          color: cardWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // ✅ Toggle الشحن
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Row(children: [
-            Icon(Icons.local_shipping_rounded, color: _hasShipping ? primaryBlue : Colors.grey, size: 22),
+            Icon(Icons.local_shipping_rounded,
+                color: _hasShipping ? primaryBlue : Colors.grey, size: 22),
             const SizedBox(width: 10),
-            Text(_hasShipping ? 'الشحن متاح' : 'الشحن غير متاح', style: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w600, color: _hasShipping ? primaryBlue : mediumGray)),
+            Text(_hasShipping ? 'الشحن متاح' : 'الشحن غير متاح',
+                style: GoogleFonts.cairo(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _hasShipping ? primaryBlue : mediumGray)),
           ]),
           GestureDetector(
             onTap: () => setState(() => _hasShipping = !_hasShipping),
             child: Container(
               width: 50,
               height: 28,
-              decoration: BoxDecoration(color: _hasShipping ? primaryBlue : Colors.grey.shade300, borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(
+                  color: _hasShipping ? primaryBlue : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(14)),
               child: Stack(children: [
                 AnimatedAlign(
-                  alignment: _hasShipping ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: _hasShipping
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   duration: const Duration(milliseconds: 200),
                   child: Container(
                     width: 22,
                     height: 22,
                     margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                        color: Colors.white, shape: BoxShape.circle),
                   ),
                 ),
               ]),
             ),
           ),
         ]),
-
         if (_hasShipping) ...[
           const SizedBox(height: 16),
           const Divider(height: 1),
           const SizedBox(height: 12),
-
-          // ✅ عنوان + عدد المدن المحددة
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'اختر المدن المتاحة للشحن',
-                style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600, color: darkColor),
+                style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: darkColor),
               ),
               Text(
                 '${selectedCities.length} مدينة',
-                style: GoogleFonts.cairo(fontSize: 11, color: primaryBlue, fontWeight: FontWeight.w600),
+                style: GoogleFonts.cairo(
+                    fontSize: 11,
+                    color: primaryBlue,
+                    fontWeight: FontWeight.w600),
               ),
             ],
           ),
           const SizedBox(height: 10),
-
-          // ✅ شبكة المدن القابلة للنقر
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -756,7 +1264,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 onTap: () => _toggleCity(city),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: isSelected ? primaryBlue : lightGray,
                     borderRadius: BorderRadius.circular(20),
@@ -765,14 +1274,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       width: isSelected ? 1.5 : 1,
                     ),
                     boxShadow: isSelected
-                        ? [BoxShadow(color: primaryBlue.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))]
+                        ? [
+                            BoxShadow(
+                                color: primaryBlue.withOpacity(0.3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2))
+                          ]
                         : null,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                        isSelected
+                            ? Icons.check_circle_rounded
+                            : Icons.circle_outlined,
                         color: isSelected ? Colors.white : Colors.grey,
                         size: 16,
                       ),
@@ -781,7 +1297,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         city,
                         style: GoogleFonts.cairo(
                           fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                           color: isSelected ? Colors.white : mediumGray,
                         ),
                       ),
@@ -791,24 +1308,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
               );
             }).toList(),
           ),
-
-          // ✅ قسم أسعار الشحن للمدن المحددة فقط
           if (selectedCities.isNotEmpty) ...[
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 12),
             Text(
               'أسعار الشحن لكل مدينة',
-              style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600, color: darkColor),
+              style: GoogleFonts.cairo(
+                  fontSize: 13, fontWeight: FontWeight.w600, color: darkColor),
             ),
             const SizedBox(height: 4),
             Text(
               'اترك السعر فارغاً لتحديده لاحقاً، أو ضع 0 للشحن المجاني',
-              style: GoogleFonts.cairo(fontSize: 11, color: Colors.grey.shade500),
+              style:
+                  GoogleFonts.cairo(fontSize: 11, color: Colors.grey.shade500),
             ),
             const SizedBox(height: 10),
-
-            // ✅ حقول أسعار الشحن للمدن المحددة
             ...selectedCities.map((city) {
               final costController = _shippingCostControllers[city]!;
               return Container(
@@ -825,9 +1340,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       flex: 2,
                       child: Row(
                         children: [
-                          const Icon(Icons.location_on_rounded, size: 18, color: primaryBlue),
+                          const Icon(Icons.location_on_rounded,
+                              size: 18, color: primaryBlue),
                           const SizedBox(width: 6),
-                          Text(city, style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600, color: darkColor)),
+                          Text(city,
+                              style: GoogleFonts.cairo(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: darkColor)),
                         ],
                       ),
                     ),
@@ -835,31 +1355,45 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       flex: 3,
                       child: TextField(
                         controller: costController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         textDirection: TextDirection.ltr,
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.cairo(fontSize: 13, color: darkColor),
+                        style:
+                            GoogleFonts.cairo(fontSize: 13, color: darkColor),
                         onChanged: (value) => setState(() {}),
                         decoration: InputDecoration(
                           hintText: 'سعر الشحن (اختياري)',
-                          hintStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.grey.shade400),
+                          hintStyle: GoogleFonts.cairo(
+                              fontSize: 11, color: Colors.grey.shade400),
                           prefixText: '\$ ',
-                          prefixStyle: GoogleFonts.cairo(fontSize: 12, color: successGreen, fontWeight: FontWeight.bold),
+                          prefixStyle: GoogleFonts.cairo(
+                              fontSize: 12,
+                              color: successGreen,
+                              fontWeight: FontWeight.bold),
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: costController.text.isNotEmpty ? successGreen : Colors.grey.shade300),
+                            borderSide: BorderSide(
+                                color: costController.text.isNotEmpty
+                                    ? successGreen
+                                    : Colors.grey.shade300),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: costController.text.isNotEmpty ? successGreen : Colors.grey.shade300),
+                            borderSide: BorderSide(
+                                color: costController.text.isNotEmpty
+                                    ? successGreen
+                                    : Colors.grey.shade300),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: primaryBlue, width: 2),
+                            borderSide:
+                                const BorderSide(color: primaryBlue, width: 2),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 10),
                           isDense: true,
                         ),
                       ),
@@ -874,21 +1408,38 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title, IconData icon) => Row(children: [Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(gradient: LinearGradient(colors: [primaryBlue.withOpacity(0.12), secondaryBlue.withOpacity(0.06)]), borderRadius: BorderRadius.circular(10)), child: Icon(icon, size: 18, color: primaryBlue)), const SizedBox(width: 10), Text(title, style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold, color: darkColor))]);
+  Widget _buildSectionTitle(String title, IconData icon,
+          {Color color = primaryBlue}) =>
+      Row(children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+                colors: [color.withOpacity(0.12), color.withOpacity(0.06)]),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: color),
+        ),
+        const SizedBox(width: 10),
+        Text(title,
+            style: GoogleFonts.cairo(
+                fontSize: 16, fontWeight: FontWeight.bold, color: darkColor))
+      ]);
 
   Widget _buildTextField(
-      TextEditingController controller,
-      String label,
-      String hint, {
-        TextInputType keyboardType = TextInputType.text,
-        int maxLines = 1,
-        TextDirection? textDirection,
-      }) {
+    TextEditingController controller,
+    String label,
+    String hint, {
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    TextDirection? textDirection,
+  }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
-      textInputAction: maxLines > 1 ? TextInputAction.newline : TextInputAction.next,
+      textInputAction:
+          maxLines > 1 ? TextInputAction.newline : TextInputAction.next,
       textDirection: textDirection ?? _getTextDirection(controller.text),
       textAlign: TextAlign.start,
       style: GoogleFonts.cairo(fontSize: 14, color: darkColor, height: 1.5),
@@ -901,20 +1452,35 @@ class _AddProductScreenState extends State<AddProductScreen> {
         hintTextDirection: _getTextDirection(hint),
         filled: true,
         fillColor: cardWhite,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: primaryBlue, width: 2)),
-        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: primaryBlue, width: 2)),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
       ),
-      validator: label.contains('*') ? (v) => (v == null || v.trim().isEmpty) ? 'هذا الحقل مطلوب' : null : null,
+      validator: label.contains('*')
+          ? (v) => (v == null || v.trim().isEmpty) ? 'هذا الحقل مطلوب' : null
+          : null,
     );
   }
 
   Widget _buildDescriptionField() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('الوصف', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w600, color: darkColor)), const SizedBox(height: 8),
+      Text('الوصف (اختياري)',
+          style: GoogleFonts.cairo(
+              fontSize: 12, fontWeight: FontWeight.w600, color: darkColor)),
+      const SizedBox(height: 8),
       Container(
-        decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
+        decoration: BoxDecoration(
+            color: cardWhite,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           TextFormField(
             controller: _descriptionArController,
@@ -924,29 +1490,47 @@ class _AddProductScreenState extends State<AddProductScreen> {
             textInputAction: TextInputAction.newline,
             textDirection: _getTextDirection(_descriptionArController.text),
             textAlign: TextAlign.start,
-            style: GoogleFonts.cairo(fontSize: 14, color: darkColor, height: 1.8),
+            style:
+                GoogleFonts.cairo(fontSize: 14, color: darkColor, height: 1.8),
             onChanged: (value) => setState(() {}),
             decoration: InputDecoration(
-              hintText: 'اكتب وصفاً تفصيلياً للمنتج...\nيمكنك الكتابة بالعربية والإنجليزية معاً\nWrite product description in Arabic and English',
-              hintStyle: GoogleFonts.cairo(fontSize: 13, color: Colors.grey.shade400, height: 1.5),
+              hintText:
+                  'اكتب وصفاً تفصيلياً للمنتج...\nيمكنك الكتابة بالعربية والإنجليزية معاً\nWrite product description in Arabic and English',
+              hintStyle: GoogleFonts.cairo(
+                  fontSize: 13, color: Colors.grey.shade400, height: 1.5),
               hintTextDirection: TextDirection.rtl,
               filled: true,
               fillColor: cardWhite,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.all(14),
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(color: lightGray, borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12))),
+            decoration: BoxDecoration(
+                color: lightGray,
+                borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(12),
+                    bottomRight: Radius.circular(12))),
             child: Row(children: [
-              Icon(Icons.info_outline_rounded, size: 14, color: mediumGray.withOpacity(0.7)),
+              Icon(Icons.info_outline_rounded,
+                  size: 14, color: mediumGray.withOpacity(0.7)),
               const SizedBox(width: 6),
-              Text('يدعم العربية والإنجليزية', style: GoogleFonts.cairo(fontSize: 11, color: mediumGray.withOpacity(0.7))),
+              Text('يدعم العربية والإنجليزية',
+                  style: GoogleFonts.cairo(
+                      fontSize: 11, color: mediumGray.withOpacity(0.7))),
               const Spacer(),
-              Text('${_descriptionArController.text.length} حرف', style: GoogleFonts.cairo(fontSize: 11, color: mediumGray.withOpacity(0.7))),
+              Text('${_descriptionArController.text.length} حرف',
+                  style: GoogleFonts.cairo(
+                      fontSize: 11, color: mediumGray.withOpacity(0.7))),
             ]),
           ),
         ]),
@@ -956,7 +1540,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Widget _buildSubCategoryDropdown() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('التصنيف الفرعي *', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w600, color: darkColor)), const SizedBox(height: 8),
+      Text('التصنيف الفرعي *',
+          style: GoogleFonts.cairo(
+              fontSize: 12, fontWeight: FontWeight.w600, color: darkColor)),
+      const SizedBox(height: 8),
       GestureDetector(
         onTap: () => setState(() {
           _showSubCategoryDropdown = !_showSubCategoryDropdown;
@@ -967,17 +1554,41 @@ class _AddProductScreenState extends State<AddProductScreen> {
         }),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(12), border: Border.all(color: _showSubCategoryDropdown ? primaryBlue : Colors.grey.shade200, width: _showSubCategoryDropdown ? 2 : 1)),
+          decoration: BoxDecoration(
+              color: cardWhite,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: _showSubCategoryDropdown
+                      ? primaryBlue
+                      : Colors.grey.shade200,
+                  width: _showSubCategoryDropdown ? 2 : 1)),
           child: Row(children: [
-            Expanded(child: Text(_getSelectedSubCategoryName(), style: GoogleFonts.cairo(fontSize: 14, color: _selectedSubCategoryId != null ? darkColor : Colors.grey.shade400), maxLines: 1, overflow: TextOverflow.ellipsis, textDirection: _getTextDirection(_getSelectedSubCategoryName()))),
-            Icon(_showSubCategoryDropdown ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded, color: mediumGray),
+            Expanded(
+                child: Text(_getSelectedSubCategoryName(),
+                    style: GoogleFonts.cairo(
+                        fontSize: 14,
+                        color: _selectedSubCategoryId != null
+                            ? darkColor
+                            : Colors.grey.shade400),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textDirection:
+                        _getTextDirection(_getSelectedSubCategoryName()))),
+            Icon(
+                _showSubCategoryDropdown
+                    ? Icons.arrow_drop_up_rounded
+                    : Icons.arrow_drop_down_rounded,
+                color: mediumGray),
           ]),
         ),
       ),
       if (_showSubCategoryDropdown)
         Container(
           margin: const EdgeInsets.only(top: 4),
-          decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(12), border: Border.all(color: primaryBlue.withOpacity(0.3))),
+          decoration: BoxDecoration(
+              color: cardWhite,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: primaryBlue.withOpacity(0.3))),
           constraints: const BoxConstraints(maxHeight: 300),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Padding(
@@ -989,15 +1600,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 style: GoogleFonts.cairo(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: '🔍 بحث عن تصنيف...',
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20, color: primaryBlue),
+                  prefixIcon: const Icon(Icons.search_rounded,
+                      size: 20, color: primaryBlue),
                   filled: true,
                   fillColor: lightGray,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   isDense: true,
                 ),
                 onChanged: (value) => setState(() {
-                  _filteredSubCategories = value.isEmpty ? List.from(_subCategories) : _subCategories.where((s) => (s['full_name'] ?? s['name_ar'] ?? '').toLowerCase().contains(value.toLowerCase())).toList();
+                  _filteredSubCategories = value.isEmpty
+                      ? List.from(_subCategories)
+                      : _subCategories
+                          .where((s) => (s['full_name'] ?? s['name_ar'] ?? '')
+                              .toLowerCase()
+                              .contains(value.toLowerCase()))
+                          .toList();
                 }),
               ),
             ),
@@ -1009,14 +1630,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 itemCount: _filteredSubCategories.length,
                 itemBuilder: (_, index) {
                   final sub = _filteredSubCategories[index];
-                  final isSelected = sub['id']?.toString() == _selectedSubCategoryId;
+                  final isSelected =
+                      sub['id']?.toString() == _selectedSubCategoryId;
                   final displayName = sub['full_name'] ?? sub['name_ar'] ?? '';
                   return ListTile(
                     dense: true,
                     selected: isSelected,
                     selectedTileColor: primaryBlue.withOpacity(0.08),
-                    title: Text(displayName, style: GoogleFonts.cairo(fontSize: 13, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? primaryBlue : darkColor), textDirection: _getTextDirection(displayName)),
-                    trailing: isSelected ? const Icon(Icons.check_rounded, color: primaryBlue, size: 20) : null,
+                    title: Text(displayName,
+                        style: GoogleFonts.cairo(
+                            fontSize: 13,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isSelected ? primaryBlue : darkColor),
+                        textDirection: _getTextDirection(displayName)),
+                    trailing: isSelected
+                        ? const Icon(Icons.check_rounded,
+                            color: primaryBlue, size: 20)
+                        : null,
                     onTap: () => setState(() {
                       _selectedSubCategoryId = sub['id']?.toString();
                       _subCategorySearchController.text = displayName;
@@ -1026,7 +1658,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 },
               ),
             ),
-            if (_filteredSubCategories.isEmpty) Padding(padding: const EdgeInsets.all(16), child: Text('لا توجد نتائج', style: GoogleFonts.cairo(fontSize: 13, color: mediumGray))),
+            if (_filteredSubCategories.isEmpty)
+              Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text('لا توجد نتائج',
+                      style:
+                          GoogleFonts.cairo(fontSize: 13, color: mediumGray))),
             const Divider(height: 1),
             ListTile(
               dense: true,
@@ -1036,10 +1673,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   color: primaryBlue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.add_home_rounded, color: primaryBlue, size: 18),
+                child: const Icon(Icons.add_home_rounded,
+                    color: primaryBlue, size: 18),
               ),
-              title: Text('إضافة قسم رئيسي جديد', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600, color: primaryBlue)),
-              trailing: const Icon(Icons.chevron_left_rounded, color: primaryBlue, size: 20),
+              title: Text('إضافة قسم رئيسي جديد',
+                  style: GoogleFonts.cairo(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: primaryBlue)),
+              trailing: const Icon(Icons.chevron_left_rounded,
+                  color: primaryBlue, size: 20),
               onTap: _navigateToAddMainCategory,
             ),
             ListTile(
@@ -1050,10 +1693,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   color: const Color(0xFF10B981).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.add_box_rounded, color: Color(0xFF10B981), size: 18),
+                child: const Icon(Icons.add_box_rounded,
+                    color: Color(0xFF10B981), size: 18),
               ),
-              title: Text('إضافة قسم فرعي جديد', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF10B981))),
-              trailing: const Icon(Icons.chevron_left_rounded, color: Color(0xFF10B981), size: 20),
+              title: Text('إضافة قسم فرعي جديد',
+                  style: GoogleFonts.cairo(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF10B981))),
+              trailing: const Icon(Icons.chevron_left_rounded,
+                  color: Color(0xFF10B981), size: 20),
               onTap: _navigateToMainCategories,
             ),
           ]),
@@ -1063,29 +1712,58 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   String _getSelectedSubCategoryName() {
     if (_selectedSubCategoryId == null) return 'اختر التصنيف الفرعي *';
-    final selected = _subCategories.firstWhere((s) => s['id']?.toString() == _selectedSubCategoryId, orElse: () => null);
-    return selected?['full_name'] ?? selected?['name_ar'] ?? 'اختر التصنيف الفرعي *';
+    final selected = _subCategories.firstWhere(
+        (s) => s['id']?.toString() == _selectedSubCategoryId,
+        orElse: () => null);
+    return selected?['full_name'] ??
+        selected?['name_ar'] ??
+        'اختر التصنيف الفرعي *';
   }
 
   Widget _buildMainImagePicker() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('الصورة الرئيسية *', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600, color: darkColor)), const SizedBox(height: 8),
+      Text('الصورة الرئيسية *',
+          style: GoogleFonts.cairo(
+              fontSize: 13, fontWeight: FontWeight.w600, color: darkColor)),
+      const SizedBox(height: 8),
       if (_mainImage != null)
         Stack(children: [
-          ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(_mainImage!, height: 200, width: double.infinity, fit: BoxFit.cover)),
-          Positioned(top: 8, right: 8, child: GestureDetector(onTap: _removeMainImage, child: Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: dangerRed, shape: BoxShape.circle), child: const Icon(Icons.close_rounded, color: Colors.white, size: 18)))),
+          ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(_mainImage!,
+                  height: 200, width: double.infinity, fit: BoxFit.cover)),
+          Positioned(
+              top: 8,
+              right: 8,
+              child: GestureDetector(
+                  onTap: _removeMainImage,
+                  child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                          color: dangerRed, shape: BoxShape.circle),
+                      child: const Icon(Icons.close_rounded,
+                          color: Colors.white, size: 18)))),
         ])
       else
         GestureDetector(
           onTap: _pickMainImage,
           child: Container(
             height: 120,
-            decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
-            child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.add_a_photo_rounded, size: 40, color: primaryBlue.withOpacity(0.6)),
-              const SizedBox(height: 8),
-              Text('انقر لاختيار الصورة الرئيسية', style: GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
-            ])),
+            decoration: BoxDecoration(
+                color: cardWhite,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300)),
+            child: Center(
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                  Icon(Icons.add_a_photo_rounded,
+                      size: 40, color: primaryBlue.withOpacity(0.6)),
+                  const SizedBox(height: 8),
+                  Text('انقر لاختيار الصورة الرئيسية',
+                      style:
+                          GoogleFonts.cairo(fontSize: 12, color: mediumGray)),
+                ])),
           ),
         ),
     ]);
@@ -1093,15 +1771,40 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   Widget _buildAdditionalImagesPicker() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('صور إضافية', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600, color: darkColor)), const SizedBox(height: 8),
+      Text('صور إضافية (اختياري)',
+          style: GoogleFonts.cairo(
+              fontSize: 13, fontWeight: FontWeight.w600, color: darkColor)),
+      const SizedBox(height: 8),
       Wrap(spacing: 8, runSpacing: 8, children: [
         ..._additionalImages.asMap().entries.map((entry) => Stack(children: [
-          ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.file(entry.value, width: 80, height: 80, fit: BoxFit.cover)),
-          Positioned(top: 2, right: 2, child: GestureDetector(onTap: () => _removeAdditionalImage(entry.key), child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: dangerRed, shape: BoxShape.circle), child: const Icon(Icons.close_rounded, color: Colors.white, size: 14)))),
-        ])),
+              ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.file(entry.value,
+                      width: 80, height: 80, fit: BoxFit.cover)),
+              Positioned(
+                  top: 2,
+                  right: 2,
+                  child: GestureDetector(
+                      onTap: () => _removeAdditionalImage(entry.key),
+                      child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                              color: dangerRed, shape: BoxShape.circle),
+                          child: const Icon(Icons.close_rounded,
+                              color: Colors.white, size: 14)))),
+            ])),
         GestureDetector(
           onTap: _pickAdditionalImages,
-          child: Container(width: 80, height: 80, decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey.shade300)), child: Center(child: Icon(Icons.add_rounded, size: 30, color: primaryBlue.withOpacity(0.6)))),
+          child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                  color: cardWhite,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300)),
+              child: Center(
+                  child: Icon(Icons.add_rounded,
+                      size: 30, color: primaryBlue.withOpacity(0.6)))),
         ),
       ]),
     ]);
@@ -1110,37 +1813,248 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Widget _buildSpecificationsSection() {
     return Column(children: [
       ..._specifications.asMap().entries.map((entry) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(children: [
-          Expanded(child: TextField(controller: entry.value['key'], textDirection: _getTextDirection(entry.value['key']!.text), style: GoogleFonts.cairo(fontSize: 13, height: 1.5), decoration: InputDecoration(hintText: 'المفتاح (مثال: اللون / Color)', filled: true, fillColor: cardWhite, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)), contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10), isDense: true))),
-          const SizedBox(width: 8),
-          Expanded(child: TextField(controller: entry.value['value'], textDirection: _getTextDirection(entry.value['value']!.text), style: GoogleFonts.cairo(fontSize: 13, height: 1.5), decoration: InputDecoration(hintText: 'القيمة (مثال: أحمر / Red)', filled: true, fillColor: cardWhite, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)), contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10), isDense: true))),
-          const SizedBox(width: 4),
-          GestureDetector(onTap: () => _removeSpecification(entry.key), child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: dangerRed.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.delete_rounded, color: dangerRed, size: 18))),
-        ]),
-      )),
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(children: [
+              Expanded(
+                  child: TextField(
+                      controller: entry.value['key'],
+                      textDirection:
+                          _getTextDirection(entry.value['key']!.text),
+                      style: GoogleFonts.cairo(fontSize: 13, height: 1.5),
+                      decoration: InputDecoration(
+                          hintText: 'المفتاح (مثال: اللون / Color)',
+                          filled: true,
+                          fillColor: cardWhite,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade200)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 10),
+                          isDense: true))),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: TextField(
+                      controller: entry.value['value'],
+                      textDirection:
+                          _getTextDirection(entry.value['value']!.text),
+                      style: GoogleFonts.cairo(fontSize: 13, height: 1.5),
+                      decoration: InputDecoration(
+                          hintText: 'القيمة (مثال: أحمر / Red)',
+                          filled: true,
+                          fillColor: cardWhite,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade200)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 10),
+                          isDense: true))),
+              const SizedBox(width: 4),
+              GestureDetector(
+                  onTap: () => _removeSpecification(entry.key),
+                  child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                          color: dangerRed.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.delete_rounded,
+                          color: dangerRed, size: 18))),
+            ]),
+          )),
       const SizedBox(height: 4),
-      TextButton.icon(onPressed: _addSpecification, icon: const Icon(Icons.add_rounded, color: primaryBlue, size: 18), label: Text('إضافة مواصفة', style: GoogleFonts.cairo(fontSize: 13, color: primaryBlue))),
+      TextButton.icon(
+          onPressed: _addSpecification,
+          icon: const Icon(Icons.add_rounded, color: primaryBlue, size: 18),
+          label: Text('إضافة مواصفة',
+              style: GoogleFonts.cairo(fontSize: 13, color: primaryBlue))),
     ]);
   }
 
   Widget _buildActiveToggle() {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: cardWhite, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
+      decoration: BoxDecoration(
+          color: cardWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200)),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Row(children: [
-          Icon(Icons.store_rounded, color: _isActive ? successGreen : Colors.grey, size: 22),
+          Icon(Icons.store_rounded,
+              color: _isActive ? successGreen : Colors.grey, size: 22),
           const SizedBox(width: 10),
-          Text(_isActive ? 'المنتج نشط' : 'المنتج غير نشط', style: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w600, color: _isActive ? successGreen : mediumGray)),
+          Text(_isActive ? 'المنتج نشط' : 'المنتج غير نشط',
+              style: GoogleFonts.cairo(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _isActive ? successGreen : mediumGray)),
         ]),
         GestureDetector(
           onTap: () => setState(() => _isActive = !_isActive),
-          child: Container(width: 50, height: 28, decoration: BoxDecoration(color: _isActive ? successGreen : Colors.grey.shade300, borderRadius: BorderRadius.circular(14)), child: Stack(children: [
-            AnimatedAlign(alignment: _isActive ? Alignment.centerRight : Alignment.centerLeft, duration: const Duration(milliseconds: 200), child: Container(width: 22, height: 22, margin: const EdgeInsets.symmetric(horizontal: 3), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))),
-          ])),
+          child: Container(
+              width: 50,
+              height: 28,
+              decoration: BoxDecoration(
+                  color: _isActive ? successGreen : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(14)),
+              child: Stack(children: [
+                AnimatedAlign(
+                    alignment: _isActive
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                        width: 22,
+                        height: 22,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        decoration: const BoxDecoration(
+                            color: Colors.white, shape: BoxShape.circle))),
+              ])),
         ),
       ]),
+    );
+  }
+
+  Widget _buildWarrantyField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('الضمان (اختياري)',
+            style: GoogleFonts.cairo(
+                fontSize: 12, fontWeight: FontWeight.w600, color: darkColor)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: cardWhite,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  _buildWarrantyTypeOption('year', 'سنة'),
+                  const SizedBox(width: 8),
+                  _buildWarrantyTypeOption('month', 'شهر'),
+                  const SizedBox(width: 8),
+                  _buildWarrantyTypeOption('custom', 'إدخال يدوي'),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (_warrantyType != 'custom') ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'المدة',
+                        style: GoogleFonts.cairo(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: mediumGray),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: lightGray,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: _warrantyValue,
+                            isExpanded: true,
+                            items: List.generate(12, (index) => index + 1)
+                                .map((num) => DropdownMenuItem<int>(
+                                      value: num,
+                                      child: Text(
+                                        num.toString(),
+                                        style: GoogleFonts.cairo(fontSize: 14),
+                                      ),
+                                    ))
+                                .toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _warrantyValue = value ?? 1;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _getWarrantyText(),
+                  style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: primaryBlue,
+                  ),
+                ),
+              ] else ...[
+                TextField(
+                  controller: _customWarrantyController,
+                  textDirection: TextDirection.rtl,
+                  style: GoogleFonts.cairo(fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'مثال: 10 سنوات، ضمان مدى الحياة، 6 أشهر',
+                    filled: true,
+                    fillColor: lightGray,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 12),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWarrantyTypeOption(String value, String label) {
+    final isSelected = _warrantyType == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _warrantyType = value;
+            if (value != 'custom') {
+              _customWarrantyController.clear();
+            }
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? primaryBlue : lightGray,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? primaryBlue : Colors.grey.shade300,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.cairo(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? Colors.white : mediumGray,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1150,15 +2064,46 @@ class _AddProductScreenState extends State<AddProductScreen> {
       height: 55,
       child: ElevatedButton(
         onPressed: _isSaving ? null : _saveProduct,
-        style: ElevatedButton.styleFrom(backgroundColor: primaryBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 5, shadowColor: primaryBlue.withOpacity(0.4)),
+        style: ElevatedButton.styleFrom(
+            backgroundColor: primaryBlue,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 5,
+            shadowColor: primaryBlue.withOpacity(0.4)),
         child: _isSaving
-            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2.5))
             : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.save_rounded, color: Colors.white, size: 22),
-          const SizedBox(width: 10),
-          Text('حفظ المنتج', style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-        ]),
+                const Icon(Icons.save_rounded, color: Colors.white, size: 22),
+                const SizedBox(width: 10),
+                Text('حفظ المنتج',
+                    style: GoogleFonts.cairo(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
+              ]),
       ),
     );
   }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 20);
+    path.quadraticBezierTo(0, size.height, 20, size.height);
+    path.lineTo(size.width - 20, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 20);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

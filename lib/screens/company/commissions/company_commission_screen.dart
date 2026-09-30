@@ -1,10 +1,10 @@
 // lib/screens/company/commissions/company_commission_screen.dart
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:GeniusHouse/services/api_service.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
-import 'package:GeniusHouse/services/api_service.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class CompanyCommissionScreen extends StatefulWidget {
   final AuthService authService;
@@ -17,11 +17,13 @@ class CompanyCommissionScreen extends StatefulWidget {
   });
 
   @override
-  State<CompanyCommissionScreen> createState() => _CompanyCommissionScreenState();
+  State<CompanyCommissionScreen> createState() =>
+      _CompanyCommissionScreenState();
 }
 
 class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
   static const Color primaryBlue = Color(0xFF1E3A8A);
+  static const Color secondaryBlue = Color(0xFF3B82F6);
   static const Color darkColor = Color(0xFF111827);
   static const Color mediumGray = Color(0xFF4B5563);
   static const Color lightGray = Color(0xFFF3F4F6);
@@ -60,7 +62,6 @@ class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
         });
       }
 
-      // جلب سجل العمولات
       final listResponse = await _apiService.get(
         '/v1/company/commissions/list',
         requiresAuth: true,
@@ -107,46 +108,51 @@ class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return _isLoading
-        ? const Center(child: CircularProgressIndicator(color: primaryBlue))
-        : RefreshIndicator(
-      onRefresh: _fetchCommissionData,
-      color: primaryBlue,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // بطاقة نسبة العمولة
-            _buildPercentageCard(),
-            const SizedBox(height: 16),
-            // بطاقات الإحصائيات
-            _buildStatsGrid(),
-            const SizedBox(height: 20),
-            // تنبيه
-            _buildInfoAlert(),
-            const SizedBox(height: 20),
-            // سجل العمولات
-            Text(
-              'سجل العمولات',
-              style: GoogleFonts.cairo(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: darkColor,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: lightGray,
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: primaryBlue))
+            : RefreshIndicator(
+                onRefresh: _fetchCommissionData,
+                color: primaryBlue,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildPercentageCard(),
+                      const SizedBox(height: 16),
+                      _buildStatsGrid(),
+                      const SizedBox(height: 20),
+                      _buildInfoAlert(),
+                      const SizedBox(height: 20),
+                      Text(
+                        'سجل العمولات',
+                        style: GoogleFonts.cairo(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: darkColor,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ..._commissions.map(
+                          (commission) => _buildCommissionCard(commission)),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            ..._commissions.map((commission) => _buildCommissionCard(commission)),
-          ],
-        ),
       ),
     );
   }
 
   Widget _buildPercentageCard() {
-    final percentage = (_commissionData?['commission_percentage'] ?? 0).toString();
-    final totalRemaining = (_commissionData?['total_remaining'] ?? 0).toString();
+    final percentage =
+        (_commissionData?['commission_percentage'] ?? 0).toString();
+    final totalRemaining =
+        (_commissionData?['total_remaining'] ?? 0).toString();
     final totalPaid = (_commissionData?['total_paid'] ?? 0).toString();
 
     return Container(
@@ -174,6 +180,13 @@ class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.3),
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.white.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: const Icon(
               Icons.percent_rounded,
@@ -214,7 +227,8 @@ class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
                   ),
                   Text(
                     'المدفوع',
-                    style: GoogleFonts.cairo(fontSize: 12, color: Colors.white.withOpacity(0.9)),
+                    style: GoogleFonts.cairo(
+                        fontSize: 12, color: Colors.white.withOpacity(0.9)),
                   ),
                 ],
               ),
@@ -235,7 +249,8 @@ class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
                   ),
                   Text(
                     'المتبقي',
-                    style: GoogleFonts.cairo(fontSize: 12, color: Colors.white.withOpacity(0.9)),
+                    style: GoogleFonts.cairo(
+                        fontSize: 12, color: Colors.white.withOpacity(0.9)),
                   ),
                 ],
               ),
@@ -258,21 +273,35 @@ class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
       crossAxisSpacing: 10,
       childAspectRatio: 1.6,
       children: [
-        _buildStatCard('عدد الطلبيات', '${stats['total_orders'] ?? 0}', Icons.receipt_long_rounded, primaryBlue),
-        _buildStatCard('عمولات معلقة', '${stats['pending_count'] ?? 0}', Icons.pending_actions_rounded, warningOrange),
-        _buildStatCard('عمولات مدفوعة', '${stats['paid_count'] ?? 0}', Icons.check_circle_rounded, successGreen),
-        _buildStatCard('إجمالي العمولة', '${double.tryParse((stats['total_commissions'] ?? 0).toString())?.toStringAsFixed(2) ?? '0.00'} \$', Icons.calculate_rounded, dangerRed),
+        _buildStatCard('عدد الطلبيات', '${stats['total_orders'] ?? 0}',
+            Icons.receipt_long_rounded, primaryBlue),
+        _buildStatCard('عمولات معلقة', '${stats['pending_count'] ?? 0}',
+            Icons.pending_actions_rounded, warningOrange),
+        _buildStatCard('عمولات مدفوعة', '${stats['paid_count'] ?? 0}',
+            Icons.check_circle_rounded, successGreen),
+        _buildStatCard(
+            'إجمالي العمولة',
+            '${double.tryParse((stats['total_commissions'] ?? 0).toString())?.toStringAsFixed(2) ?? '0.00'} \$',
+            Icons.calculate_rounded,
+            dangerRed),
       ],
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3)),
+        ],
+        border: Border.all(color: Colors.grey.shade100),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,7 +318,8 @@ class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: darkColor),
+            style: GoogleFonts.cairo(
+                fontSize: 18, fontWeight: FontWeight.bold, color: darkColor),
           ),
           Text(
             label,
@@ -315,7 +345,8 @@ class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
           Expanded(
             child: Text(
               'نسبة العمولة تحددها إدارة المنصة وتطبق على جميع الطلبات التي يتم إرسالها لشركتك.',
-              style: GoogleFonts.cairo(fontSize: 12, color: mediumGray, height: 1.5),
+              style: GoogleFonts.cairo(
+                  fontSize: 12, color: mediumGray, height: 1.5),
             ),
           ),
         ],
@@ -334,6 +365,12 @@ class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
         color: cardWhite,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,63 +380,75 @@ class _CompanyCommissionScreenState extends State<CompanyCommissionScreen> {
             children: [
               Text(
                 commission['order_number'] ?? '-',
-                style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.bold, color: darkColor),
+                style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: darkColor),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   statusText,
-                  style: GoogleFonts.cairo(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor),
+                  style: GoogleFonts.cairo(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('إجمالي الطلبية', style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
-              Text('${commission['total_amount']} \$', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.bold, color: darkColor)),
-            ],
-          ),
+          _buildDetailRow(
+              'إجمالي الطلبية', '${commission['total_amount']} \$', darkColor),
           const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('نسبة العمولة', style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
-              Text('% ${commission['commission_percentage']}', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w600, color: warningOrange)),
-            ],
-          ),
+          _buildDetailRow('نسبة العمولة',
+              '% ${commission['commission_percentage']}', warningOrange),
           const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('قيمة العمولة', style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
-              Text('${commission['commission_amount']} \$', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.bold, color: warningOrange)),
-            ],
-          ),
+          _buildDetailRow('قيمة العمولة',
+              '${commission['commission_amount']} \$', warningOrange),
           const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('المدفوع', style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
-              Text('${commission['paid_amount']} \$', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.w600, color: successGreen)),
-            ],
-          ),
+          _buildDetailRow(
+              'المدفوع', '${commission['paid_amount']} \$', successGreen),
           const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('المتبقي', style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
-              Text('${commission['remaining_amount']} \$', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.bold, color: dangerRed)),
-            ],
-          ),
+          _buildDetailRow(
+              'المتبقي', '${commission['remaining_amount']} \$', dangerRed),
         ],
       ),
     );
   }
+
+  Widget _buildDetailRow(String label, String value, Color valueColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: GoogleFonts.cairo(fontSize: 11, color: mediumGray)),
+        Text(value,
+            style: GoogleFonts.cairo(
+                fontSize: 12, fontWeight: FontWeight.bold, color: valueColor)),
+      ],
+    );
+  }
+}
+
+class _BottomCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 20);
+    path.quadraticBezierTo(0, size.height, 20, size.height);
+    path.lineTo(size.width - 20, size.height);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 20);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

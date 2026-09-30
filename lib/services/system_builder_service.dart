@@ -1,11 +1,8 @@
-// ============================================================
-// الملف: lib/services/system_builder_service.dart
-// ============================================================
-
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/utils/constants.dart';
+import 'package:http/http.dart' as http;
 
 class SystemBuilderService {
   final AuthService authService;
@@ -26,7 +23,7 @@ class SystemBuilderService {
       }
 
       final uri = Uri.parse(
-          '${AppConstants.baseUrl}/v1/user/public/system-builder/products')
+              '${AppConstants.baseUrl}/v1/user/public/system-builder/products')
           .replace(queryParameters: {
         'type': type,
         'page': page.toString(),
@@ -48,12 +45,11 @@ class SystemBuilderService {
       }
       return {'success': false, 'message': 'حدث خطأ (${response.statusCode})'};
     } catch (e) {
-      print('❌ Error in getProducts: $e');
+      // print('❌ Error in getProducts: $e');
       return {'success': false, 'message': 'حدث خطأ في الاتصال'};
     }
   }
 
-  // ✅ جلب نسبة الدفع المسبق من الإعدادات العامة
   Future<Map<String, dynamic>> getPrepaidPercentage() async {
     try {
       final uri = Uri.parse(
@@ -68,19 +64,19 @@ class SystemBuilderService {
         final data = jsonDecode(response.body);
         return {
           'success': true,
-          'value': double.tryParse(data['data']?['value']?.toString() ?? '0') ?? 0,
+          'value':
+              double.tryParse(data['data']?['value']?.toString() ?? '0') ?? 0,
           'formatted_value': data['data']?['formatted_value'] ?? '0.00 %',
           'type': data['data']?['type'] ?? 'percentage',
         };
       }
       return {'success': false, 'value': 0};
     } catch (e) {
-      print('❌ Error fetching prepaid percentage: $e');
+      // print('❌ Error fetching prepaid percentage: $e');
       return {'success': false, 'value': 0};
     }
   }
 
-  // ✅ تم تعديل createOrder لإضافة الحقول الجديدة والدفع المسبق
   Future<Map<String, dynamic>> createOrder({
     required List<Map<String, dynamic>> panels,
     required List<Map<String, dynamic>> inverters,
@@ -88,14 +84,14 @@ class SystemBuilderService {
     required List<Map<String, dynamic>> cables,
     required List<Map<String, dynamic>> panelBoards,
     String? notes,
-    // ✅ الحقول الجديدة
     String? fullName,
     String? phone,
     String? shippingAddress,
     String? paymentMethod,
     String? userNotes,
-    // ✅ الدفع المسبق
     bool isPrepaid = false,
+    double additionalFees = 0,
+    bool isSyp = false,
   }) async {
     try {
       final token = await _getToken();
@@ -119,14 +115,14 @@ class SystemBuilderService {
             .map((p) => {'id': p['id'], 'quantity': p['quantity']})
             .toList(),
         'notes': notes ?? '',
-        // ✅ إرسال الحقول الجديدة
+        'additional_fees': additionalFees,
         'full_name': fullName ?? '',
         'phone': phone ?? '',
         'shipping_address': shippingAddress ?? '',
         'payment_method': paymentMethod ?? 'cash',
         'user_notes': userNotes ?? '',
-        // ✅ إرسال الدفع المسبق
         'is_prepaid': isPrepaid,
+        'is_syp': isSyp,
       };
 
       final response = await http.post(
@@ -158,7 +154,6 @@ class SystemBuilderService {
     }
   }
 
-  // ✅ دالة تحديث طلب موجود
   Future<Map<String, dynamic>> updateOrder({
     required int orderId,
     required List<Map<String, dynamic>> panels,
@@ -173,6 +168,7 @@ class SystemBuilderService {
     String? paymentMethod,
     String? userNotes,
     bool isPrepaid = false,
+    bool isSyp = false,
   }) async {
     try {
       final token = await _getToken();
@@ -202,10 +198,12 @@ class SystemBuilderService {
         'payment_method': paymentMethod ?? 'cash',
         'user_notes': userNotes ?? '',
         'is_prepaid': isPrepaid,
+        'is_syp': isSyp,
       };
 
       final response = await http.put(
-        Uri.parse('${AppConstants.baseUrl}/v1/user/system-builder/orders/$orderId'),
+        Uri.parse(
+            '${AppConstants.baseUrl}/v1/user/system-builder/orders/$orderId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -229,12 +227,11 @@ class SystemBuilderService {
         'compatibility': data['compatibility'] ?? null,
       };
     } catch (e) {
-      print('❌ Error in updateOrder: $e');
+      // print('❌ Error in updateOrder: $e');
       return {'success': false, 'message': 'حدث خطأ في الاتصال'};
     }
   }
 
-  // ✅ دالة إلغاء طلب
   Future<Map<String, dynamic>> cancelOrder(int orderId) async {
     try {
       final token = await _getToken();
@@ -242,7 +239,8 @@ class SystemBuilderService {
         return {'success': false, 'message': 'يرجى تسجيل الدخول'};
 
       final response = await http.post(
-        Uri.parse('${AppConstants.baseUrl}/v1/user/system-builder/orders/$orderId/cancel'),
+        Uri.parse(
+            '${AppConstants.baseUrl}/v1/user/system-builder/orders/$orderId/cancel'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -264,7 +262,7 @@ class SystemBuilderService {
         'message': data['message'] ?? 'حدث خطأ',
       };
     } catch (e) {
-      print('❌ Error in cancelOrder: $e');
+      // print('❌ Error in cancelOrder: $e');
       return {'success': false, 'message': 'حدث خطأ في الاتصال'};
     }
   }
@@ -336,7 +334,7 @@ class SystemBuilderService {
       }
 
       final response =
-      await http.post(uri, headers: headers, body: jsonEncode(body));
+          await http.post(uri, headers: headers, body: jsonEncode(body));
 
       final data = jsonDecode(response.body);
 
@@ -353,7 +351,7 @@ class SystemBuilderService {
         'message': data['message'] ?? 'خطأ ${response.statusCode}'
       };
     } catch (e) {
-      print('❌ Error: $e');
+      // print('❌ Error: $e');
       return {'success': false, 'message': 'خطأ في الاتصال'};
     }
   }
@@ -446,11 +444,11 @@ class SystemBuilderService {
     }
   }
 
-  // ✅ جلب سعر التركيب من الإعدادات العامة
-  Future<Map<String, dynamic>> getInstallationPrice() async {
+  Future<Map<String, dynamic>> getInstallationPrice(
+      {bool isSyp = false}) async {
     try {
       final uri = Uri.parse(
-          '${AppConstants.baseUrl}/v1/user/public/setting/installation_almnthom');
+          '${AppConstants.baseUrl}/v1/user/public/setting/installation_almnthom?is_syp=${isSyp ? 1 : 0}');
 
       final response = await http.get(uri, headers: {
         'Content-Type': 'application/json',
@@ -463,12 +461,42 @@ class SystemBuilderService {
           'success': true,
           'formatted_value': data['data']?['formatted_value'] ?? '0.00',
           'value': data['data']?['value'] ?? 0,
+          'value_usd': data['data']?['value_usd'],
+          'currency': data['data']?['currency'] ?? 'USD',
         };
       }
       return {'success': false, 'formatted_value': '0.00'};
     } catch (e) {
-      print('❌ Error fetching installation price: $e');
+      // print('❌ Error fetching installation price: $e');
       return {'success': false, 'formatted_value': '0.00'};
+    }
+  }
+
+  Future<Map<String, dynamic>> getMountingBasePrice(
+      {bool isSyp = false}) async {
+    try {
+      final uri = Uri.parse(
+          '${AppConstants.baseUrl}/v1/user/public/setting/solar_mounting_base_price_per_panel?is_syp=${isSyp ? 1 : 0}');
+
+      final response = await http.get(uri, headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'value':
+              double.tryParse(data['data']?['value']?.toString() ?? '0') ?? 0,
+          'value_usd': data['data']?['value_usd'],
+          'currency': data['data']?['currency'] ?? 'USD',
+        };
+      }
+      return {'success': false, 'value': 0};
+    } catch (e) {
+      // print('❌ Error fetching mounting base price: $e');
+      return {'success': false, 'value': 0};
     }
   }
 }
