@@ -1,5 +1,6 @@
 import 'package:GeniusHouse/screens/home_screen.dart' hide FadeInAnimation;
 import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/notification_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:GeniusHouse/utils/constants.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +59,16 @@ class _GovernorateSelectionScreenState extends State<GovernorateSelectionScreen>
       parent: _animationController,
       curve: Curves.easeOut,
     );
+
+    // ✅ طلب صلاحية الإشعارات بعد ما تظهر الشاشة
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestNotificationPermission();
+    });
+  }
+
+  // ✅ طلب صلاحية الإشعارات
+  Future<void> _requestNotificationPermission() async {
+    await NotificationService().requestPermission();
   }
 
   @override
@@ -259,7 +270,7 @@ class _GovernorateSelectionScreenState extends State<GovernorateSelectionScreen>
                               );
                             },
                             transitionDuration:
-                                const Duration(milliseconds: 500),
+                            const Duration(milliseconds: 500),
                           ),
                         );
                       },
@@ -285,7 +296,7 @@ class _GovernorateSelectionScreenState extends State<GovernorateSelectionScreen>
                 opacity: value,
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -504,15 +515,15 @@ class _GovernorateSelectionScreenState extends State<GovernorateSelectionScreen>
         decoration: BoxDecoration(
           gradient: isSelected
               ? const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [primaryBlue, secondaryBlue],
-                )
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [primaryBlue, secondaryBlue],
+          )
               : LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [lightGray, Colors.grey.shade100],
-                ),
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [lightGray, Colors.grey.shade100],
+          ),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isSelected ? primaryBlue : Colors.grey.shade200,
@@ -520,12 +531,12 @@ class _GovernorateSelectionScreenState extends State<GovernorateSelectionScreen>
           ),
           boxShadow: isSelected
               ? [
-                  BoxShadow(
-                    color: primaryBlue.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
+            BoxShadow(
+              color: primaryBlue.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ]
               : null,
         ),
         child: Row(
@@ -638,33 +649,33 @@ class _GovernorateSelectionScreenState extends State<GovernorateSelectionScreen>
               ),
               child: _isLoading
                   ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
-                      ),
-                    )
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
                   : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.visibility_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          'تصفح كزائر',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.visibility_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  SizedBox(width: 10),
+                  Text(
+                    'تصفح كزائر',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
                     ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

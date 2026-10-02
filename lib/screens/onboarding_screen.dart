@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:GeniusHouse/screens/auth/login_screen.dart';
+import 'package:GeniusHouse/screens/governorate_selection_screen.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:flutter/material.dart';
@@ -46,7 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       title: 'طاقة شمسية',
       subtitle: 'لمنزلك',
       description:
-          'وفر حتى 70% من فواتير الكهرباء مع أحدث تقنيات الطاقة الشمسية',
+      'وفر حتى 70% من فواتير الكهرباء مع أحدث تقنيات الطاقة الشمسية',
       color: primaryBlue,
       secondaryColor: secondaryBlue,
       gradientColors: [primaryBlue, secondaryBlue],
@@ -57,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       title: 'أجهزة منزلية',
       subtitle: 'ذكية ومتطورة',
       description:
-          'مجموعة واسعة من الأجهزة الكهربائية الحديثة لتجعل حياتك أكثر راحة وكفاءة.',
+      'مجموعة واسعة من الأجهزة الكهربائية الحديثة لتجعل حياتك أكثر راحة وكفاءة.',
       color: primaryBlue,
       secondaryColor: secondaryBlue,
       gradientColors: [primaryBlue, secondaryBlue],
@@ -121,39 +122,47 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     super.dispose();
   }
 
-  Future<void> _completeOnboarding() async {
-    await widget.storageService.setOnboardingSeen();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => LoginScreen(
-            authService: widget.authService,
-            storageService: widget.storageService,
-          ),
-          transitionsBuilder: (_, animation, __, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.95, end: 1).animate(animation),
-                child: child,
-              ),
-            );
-          },
-          transitionDuration: const Duration(milliseconds: 600),
+  // ✅ الذهاب إلى شاشة اختيار المحافظة
+  void _navigateToGovernorateSelection() {
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => GovernorateSelectionScreen(
+          authService: widget.authService,
+          storageService: widget.storageService,
+          isFromOnboarding: true,
         ),
-      );
-    }
-  }
-
-  void _skipToEnd() {
-    _pageController.animateToPage(
-      _onboardingData.length - 1,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOutCubic,
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.95, end: 1).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 600),
+      ),
     );
   }
 
+  // ✅ إكمال الـ Onboarding والذهاب لاختيار المحافظة
+  Future<void> _completeOnboarding() async {
+    await widget.storageService.setOnboardingSeen();
+    if (mounted) {
+      _navigateToGovernorateSelection();
+    }
+  }
+
+  // ✅ زر التخطي → يذهب مباشرة لاختيار المحافظة
+  Future<void> _skipToEnd() async {
+    await widget.storageService.setOnboardingSeen();
+    if (mounted) {
+      _navigateToGovernorateSelection();
+    }
+  }
+
+  // ✅ زر "لديك حساب؟ تسجيل دخول" → يذهب لتسجيل الدخول
   void _goToLogin() {
     Navigator.pushReplacement(
       context,
@@ -248,8 +257,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 _currentPage == 0
                     ? -0.4
                     : _currentPage == 1
-                        ? 0
-                        : 0.4,
+                    ? 0
+                    : 0.4,
                 -0.4,
               ),
               radius: 1.3,
@@ -270,7 +279,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return IgnorePointer(
       child: AnimatedBuilder(
         animation:
-            Listenable.merge([_particleController, _colorTransitionController]),
+        Listenable.merge([_particleController, _colorTransitionController]),
         builder: (context, child) {
           return CustomPaint(
             painter: ParticlePainter(
@@ -299,7 +308,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 scale: value,
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [primaryBlue, secondaryBlue],

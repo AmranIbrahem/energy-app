@@ -1,5 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:GeniusHouse/services/permission_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -9,28 +10,39 @@ class NotificationService {
   NotificationService._internal();
 
   final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
+  FlutterLocalNotificationsPlugin();
+
+  Future<bool> requestPermission() async {
+    return await PermissionService.requestNotifications();
+  }
 
   Future<void> init() async {
     const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    AndroidInitializationSettings('@mipmap/ic_launcher');
     const DarwinInitializationSettings iosSettings =
-        DarwinInitializationSettings();
+    DarwinInitializationSettings();
     const InitializationSettings settings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
     await _localNotifications.initialize(settings);
 
-    await FirebaseMessaging.instance.requestPermission();
-
-    final token = await FirebaseMessaging.instance.getToken();
+    // ✅ لا نطلب الصلاحية هنا — تُطلب لاحقًا عبر requestPermission()
 
     FirebaseMessaging.onMessage.listen((message) {
       _showLocalNotification(message);
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((message) {});
+  }
+
+  /// ✅ اجلب الـToken بعد التأكد من الصلاحية
+  Future<String?> getToken() async {
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (e) {
+      return null;
+    }
   }
 
   void _showLocalNotification(RemoteMessage message) {

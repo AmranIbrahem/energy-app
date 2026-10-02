@@ -1816,27 +1816,6 @@ class _HomeScreenState extends State<HomeScreen>
                   SliverToBoxAdapter(
                       child: _buildProductsHorizontalList(_randomProducts)),
                 ],
-                if (_cheapestOffers.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: _buildSectionHeader(
-                      title: 'أفضل الأسعار',
-                      icon: Icons.savings,
-                      onSeeAll: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => OffersListScreen(
-                            title: 'العروض الأرخص',
-                            offers: _cheapestOffers,
-                            apiService: _apiService,
-                            authService: widget.authService,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                      child: _buildOffersHorizontalList(_cheapestOffers)),
-                ],
                 if (_latestOffers.isNotEmpty) ...[
                   SliverToBoxAdapter(
                     child: _buildSectionHeader(

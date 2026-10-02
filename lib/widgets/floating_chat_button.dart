@@ -51,9 +51,15 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
   late Animation<double> _rotateAnimation;
   bool _isHovering = false;
 
-  Offset _position = const Offset(16, 80);
+  // ✅ الموضع الآن nullable — سيُحسب ديناميكياً حسب الشاشة
+  Offset? _position;
   bool _isDragging = false;
   bool _hasBeenDragged = false;
+
+  // ثوابت الأحجام
+  static const double _buttonSize = 60;
+  static const double _margin = 16;
+  static const double _navBarHeight = 90; // ارتفاع الشريط السفلي في home_screen
 
   static const Color primaryBlue = Color(0xFF1E3A8A);
   static const Color secondaryBlue = Color(0xFF3B82F6);
@@ -85,24 +91,50 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // ✅ إذا لم يُحمَّل موضع محفوظ، احسب الموضع الافتراضي (أسفل يمين)
+    if (_position == null) {
+      _position = _calculateDefaultPosition();
+    }
+  }
+
+  /// ✅ حساب الموضع الافتراضي: أسفل يمين الشاشة فوق شريط التنقل بقليل
+  Offset _calculateDefaultPosition() {
+    final screenSize = MediaQuery.of(context).size;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
+    // اليمين: عرض الشاشة - حجم الزر - الهامش
+    final double x = screenSize.width - _buttonSize - _margin;
+
+    // الأسفل: ارتفاع الشاشة - الشريط السفلي - حجم الزر - الهامش - الـ safe area
+    final double y =
+        screenSize.height - _navBarHeight - _buttonSize - _margin - bottomInset + 30;
+
+    return Offset(x, y);
+  }
+
+  @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
   }
 
   Future<void> _savePosition() async {
+    if (_position == null) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('chat_button_x', _position.dx);
-    await prefs.setDouble('chat_button_y', _position.dy);
+    await prefs.setDouble('chat_button_x', _position!.dx);
+    await prefs.setDouble('chat_button_y', _position!.dy);
   }
 
   Future<void> _loadPosition() async {
     final prefs = await SharedPreferences.getInstance();
     final x = prefs.getDouble('chat_button_x');
     final y = prefs.getDouble('chat_button_y');
-    if (x != null && y != null) {
+    if (x != null && y != null && mounted) {
       setState(() {
         _position = Offset(x, y);
+        _hasBeenDragged = true;
       });
     }
   }
@@ -124,9 +156,15 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
 
+    // حماية: إذا لم يُحسب الموضع بعد
+    if (_position == null) {
+      return const SizedBox.shrink();
+    }
+
     return Positioned(
-      left: _position.dx,
-      top: _position.dy,
+      // ✅ استخدام _position كموضع فعلي للزر
+      left: _position!.dx,
+      top: _position!.dy,
       child: GestureDetector(
         onPanStart: (details) {
           setState(() {
@@ -136,11 +174,12 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
         },
         onPanUpdate: (details) {
           setState(() {
-            double newX = _position.dx + details.delta.dx;
-            double newY = _position.dy + details.delta.dy;
+            double newX = _position!.dx + details.delta.dx;
+            double newY = _position!.dy + details.delta.dy;
 
-            newX = newX.clamp(0, screenSize.width - 60);
-            newY = newY.clamp(0, screenSize.height - 60 - kToolbarHeight);
+            newX = newX.clamp(0, screenSize.width - _buttonSize);
+            newY = newY.clamp(
+                0, screenSize.height - _buttonSize - kToolbarHeight);
 
             _position = Offset(newX, newY);
             _hasBeenDragged = true;
@@ -161,18 +200,18 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
             builder: (context, child) {
               return Transform.scale(
                 scale:
-                    (_isDragging || _isHovering) ? 1.05 : _pulseAnimation.value,
+                (_isDragging || _isHovering) ? 1.05 : _pulseAnimation.value,
                 child: Transform.rotate(
                   angle: _rotateAnimation.value * (_isHovering ? 2 : 1),
                   child: Container(
-                    width: 60,
-                    height: 60,
+                    width: _buttonSize,
+                    height: _buttonSize,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [primaryBlue, secondaryBlue, darkBlue],
-                        stops: [0.0, 0.5, 1.0],
+                        stops: const [0.0, 0.5, 1.0],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
@@ -180,12 +219,12 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
                             color: primaryBlue.withOpacity(0.5),
                             blurRadius: 20,
                             spreadRadius: 5,
-                            offset: Offset(0, 4)),
+                            offset: const Offset(0, 4)),
                         BoxShadow(
                             color: secondaryBlue.withOpacity(0.3),
                             blurRadius: 15,
                             spreadRadius: 2,
-                            offset: Offset(0, 2)),
+                            offset: const Offset(0, 2)),
                       ],
                     ),
                     child: Stack(
@@ -231,7 +270,7 @@ class _FloatingChatButtonState extends State<FloatingChatButton>
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    gradient: LinearGradient(
+                                    gradient: const LinearGradient(
                                         colors: [Colors.amber, Colors.orange],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight),
@@ -341,7 +380,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                 ),
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                  const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                   child: Row(
                     children: [
                       Container(
@@ -357,7 +396,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                             BoxShadow(
                                 color: Colors.black.withOpacity(0.3),
                                 blurRadius: 8,
-                                offset: Offset(0, 4))
+                                offset: const Offset(0, 4))
                           ],
                         ),
                         child: const Icon(Icons.auto_awesome_rounded,
@@ -374,7 +413,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                             Shadow(
                                 color: Colors.black.withOpacity(0.2),
                                 blurRadius: 4,
-                                offset: Offset(0, 2))
+                                offset: const Offset(0, 2))
                           ],
                         ),
                       ),
@@ -384,7 +423,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                 Expanded(
                   child: ListView.builder(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: _categories.length,
                     itemBuilder: (context, index) {
                       return _buildGradientCategoryCard(
@@ -424,7 +463,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                           ),
                           borderRadius: BorderRadius.circular(20),
                           border:
-                              Border.all(color: Colors.white.withOpacity(0.2)),
+                          Border.all(color: Colors.white.withOpacity(0.2)),
                         ),
                         child: Column(
                           children: [
@@ -594,7 +633,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child:
-                  Icon(item['icon'] as IconData, color: Colors.white, size: 20),
+              Icon(item['icon'] as IconData, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -641,7 +680,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
         case 1:
           Navigator.push(
@@ -651,7 +690,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
         case 2:
           Navigator.push(
@@ -661,7 +700,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
         case 3:
           Navigator.push(
@@ -671,7 +710,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
         case 4:
           Navigator.push(
@@ -681,7 +720,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
         case 5:
           Navigator.push(
@@ -691,7 +730,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
         case 6:
           Navigator.push(
@@ -701,7 +740,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
       }
     } else {
@@ -714,7 +753,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
         case 1:
           Navigator.push(
@@ -724,7 +763,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
         case 2:
           Navigator.push(
@@ -734,7 +773,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
         case 3:
           Navigator.push(
@@ -744,7 +783,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
         case 4:
           Navigator.push(
@@ -754,7 +793,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
         case 5:
           Navigator.push(
@@ -764,7 +803,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
         case 6:
           Navigator.push(
@@ -774,7 +813,7 @@ class _CategorySelectionSheetState extends State<CategorySelectionSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
       }
     }
@@ -881,7 +920,7 @@ class _SolarOptionsSheetState extends State<SolarOptionsSheet> {
                         borderRadius: BorderRadius.circular(2))),
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
                       GestureDetector(
@@ -917,7 +956,7 @@ class _SolarOptionsSheetState extends State<SolarOptionsSheet> {
                 Expanded(
                   child: ListView.builder(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: _solarOptions.length,
                     itemBuilder: (context, index) =>
                         _buildGradientOptionCard(_solarOptions[index], index),
@@ -1141,7 +1180,7 @@ class _LightingOptionsSheetState extends State<LightingOptionsSheet> {
                         borderRadius: BorderRadius.circular(2))),
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
                       GestureDetector(
@@ -1176,7 +1215,7 @@ class _LightingOptionsSheetState extends State<LightingOptionsSheet> {
                 Expanded(
                   child: ListView.builder(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: _lightingOptions.length,
                     itemBuilder: (context, index) => _buildGradientOptionCard(
                         _lightingOptions[index], index),
@@ -1201,19 +1240,19 @@ class _LightingOptionsSheetState extends State<LightingOptionsSheet> {
         decoration: BoxDecoration(
           gradient: enabled
               ? LinearGradient(
-                  colors: gradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight)
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight)
               : null,
           color: enabled ? null : Colors.grey.shade800.withOpacity(0.5),
           borderRadius: BorderRadius.circular(24),
           boxShadow: enabled
               ? [
-                  BoxShadow(
-                      color: gradient[0].withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 6))
-                ]
+            BoxShadow(
+                color: gradient[0].withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 6))
+          ]
               : null,
         ),
         child: Row(
@@ -1228,7 +1267,7 @@ class _LightingOptionsSheetState extends State<LightingOptionsSheet> {
                 borderRadius: BorderRadius.circular(20),
                 border: enabled
                     ? Border.all(
-                        color: Colors.white.withOpacity(0.3), width: 1.5)
+                    color: Colors.white.withOpacity(0.3), width: 1.5)
                     : null,
               ),
               child: Icon(option['icon'] as IconData,
@@ -1245,7 +1284,7 @@ class _LightingOptionsSheetState extends State<LightingOptionsSheet> {
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color:
-                              enabled ? Colors.white : Colors.grey.shade400)),
+                          enabled ? Colors.white : Colors.grey.shade400)),
                   const SizedBox(height: 4),
                   Text(option['subtitle'] as String,
                       style: GoogleFonts.cairo(
@@ -1391,7 +1430,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                         borderRadius: BorderRadius.circular(2))),
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
                       GestureDetector(
@@ -1426,7 +1465,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                 Expanded(
                   child: ListView.builder(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: _applianceOptions.length,
                     itemBuilder: (context, index) => _buildGradientOptionCard(
                         _applianceOptions[index], index),
@@ -1522,7 +1561,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
         case 1:
           Navigator.push(
@@ -1532,7 +1571,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
         case 2:
           Navigator.push(
@@ -1542,7 +1581,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
         case 3:
           Navigator.push(
@@ -1552,7 +1591,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
         case 4:
           Navigator.push(
@@ -1562,7 +1601,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                       apiService: ApiService(storageService: storageService),
                       storageService: storageService,
                       initialGovernorate:
-                          storageService.getGuestGovernorate())));
+                      storageService.getGuestGovernorate())));
           break;
       }
     } else {
@@ -1575,7 +1614,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
         case 1:
           Navigator.push(
@@ -1585,7 +1624,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
         case 2:
           Navigator.push(
@@ -1595,7 +1634,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
         case 3:
           Navigator.push(
@@ -1605,7 +1644,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
         case 4:
           Navigator.push(
@@ -1615,7 +1654,7 @@ class _ApplianceOptionsSheetState extends State<ApplianceOptionsSheet> {
                       authService: widget.authService!,
                       apiService: ApiService(
                           storageService:
-                              widget.authService!.storageService))));
+                          widget.authService!.storageService))));
           break;
       }
     }

@@ -8,6 +8,7 @@ import 'package:GeniusHouse/screens/governorate_selection_screen.dart';
 import 'package:GeniusHouse/screens/home_screen.dart';
 import 'package:GeniusHouse/screens/onboarding_screen.dart';
 import 'package:GeniusHouse/services/auth_service.dart';
+import 'package:GeniusHouse/services/notification_service.dart';
 import 'package:GeniusHouse/services/storage_service.dart';
 import 'package:GeniusHouse/utils/helpers.dart';
 import 'package:flutter/material.dart';
@@ -64,6 +65,16 @@ class _LoginScreenState extends State<LoginScreen>
     );
 
     _loadSavedCredentials();
+
+    // ✅ نطلب صلاحية الإشعارات بعد ما تظهر الشاشة
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestNotificationPermission();
+    });
+  }
+
+  // ✅ طلب صلاحية الإشعارات — بترجع bool لو احتجتها لاحقًا
+  Future<void> _requestNotificationPermission() async {
+    await NotificationService().requestPermission();
   }
 
   Future<void> _loadSavedCredentials() async {
@@ -153,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen>
                   opacity: animation,
                   child: ScaleTransition(
                     scale:
-                        Tween<double>(begin: 0.95, end: 1).animate(animation),
+                    Tween<double>(begin: 0.95, end: 1).animate(animation),
                     child: child,
                   ),
                 );
@@ -409,7 +420,7 @@ class _LoginScreenState extends State<LoginScreen>
                 opacity: value,
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -835,33 +846,33 @@ class _LoginScreenState extends State<LoginScreen>
               ),
               child: _isLoading
                   ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
-                      ),
-                    )
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
                   : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(
-                          Icons.login_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'تسجيل الدخول',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(
+                    Icons.login_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'تسجيل الدخول',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
                     ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

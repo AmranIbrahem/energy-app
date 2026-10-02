@@ -9,6 +9,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:GeniusHouse/services/permission_service.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key});
@@ -74,21 +75,22 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
     setState(() => _isLoading = true);
 
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          _showSnackBar('تم رفض إذن الموقع', Colors.red);
-          setState(() {
-            _selectedLocation = _defaultLocation;
-          });
-          await _getAddressFromLatLng(_defaultLocation);
-          return;
-        }
-      }
+      // ✅ استخدام PermissionService بدل Geolocator.requestPermission()
+      final hasPermission = await PermissionService.requestLocation();
 
-      if (permission == LocationPermission.deniedForever) {
-        _showSnackBar('الرجاء تفعيل إذن الموقع من الإعدادات', Colors.red);
+      if (!hasPermission) {
+        final permanentlyDenied =
+        await PermissionService.isLocationPermanentlyDenied();
+
+        if (permanentlyDenied) {
+          _showSnackBar(
+            'الرجاء تفعيل إذن الموقع من الإعدادات',
+            Colors.red,
+          );
+        } else {
+          _showSnackBar('تم رفض إذن الموقع', Colors.red);
+        }
+
         setState(() {
           _selectedLocation = _defaultLocation;
         });
@@ -96,6 +98,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
         return;
       }
 
+      // ✅ الصلاحية ممنوحة — الآن نجيب الموقع
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
